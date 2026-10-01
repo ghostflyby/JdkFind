@@ -67,11 +67,14 @@ jobs:
     # id-token: write lets NuGet/login exchange the OIDC token for a short-lived
     # NuGet API key (Trusted Publishing); attestations: write persists the build
     # provenance attestation in the repository's attestation store; contents: write
-    # is for gh release create.
+    # is for gh release create; pull-requests: write lets the housekeeping step
+    # create and auto-merge its PR (requires the repo setting "Allow GitHub Actions
+    # to create and approve pull requests").
     permissions:
       id-token: write
       attestations: write
       contents: write
+      pull-requests: write
     steps:
       # gh release create and the git history checks resolve the repository through
       # git, so this job needs the checkout even though it builds nothing.
@@ -193,5 +196,50 @@ jobs:
           gh release create "$env:GITHUB_REF_NAME" --title "$env:GITHUB_REF_NAME" `
             --notes "JDK locator library and jdkfind tool — see https://www.nuget.org/packages/JdkFind.Cli/$env:VERSION for package details." `
             "pkg/JdkFind.$env:VERSION.nupkg" "pkg/JdkFind.Cli.$env:VERSION.nupkg"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # Publish-time housekeeping: the API shipped in this release must move from
+      # Unshipped to Shipped, so Shipped stays an accurate record of what is actually
+      # published on nuget.org. The exact set is the Unshipped entries present on the
+      # tag commit (this checkout), merged into main's Shipped and removed from main's
+      # Unshipped — later additions on main stay unshipped. A failure here only marks
+      # the run red after the release itself is already done.
+      - name: Move published API into Shipped (housekeeping PR)
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          # The working tree is the tag commit: its Unshipped entries are what shipped.
+          $tagUnshipped = @(Get-Content 'JdkFind/PublicAPI.Unshipped.txt' | Where-Object { $_ -and -not $_.StartsWith('#') })
+          if ($tagUnshipped.Count -eq 0) {
+              Write-Host 'no unshipped API on this tag; nothing to move'
+              exit 0
+          }
+          git fetch origin main
+          git checkout -b "housekeeping/shipped-v$env:VERSION" FETCH_HEAD
+          $shippedPath = 'JdkFind/PublicAPI.Shipped.txt'
+          $unshippedPath = 'JdkFind/PublicAPI.Unshipped.txt'
+          $shipped = @(Get-Content $shippedPath | Where-Object { $_ -and -not $_.StartsWith('#') })
+          $unshipped = @(Get-Content $unshippedPath | Where-Object { $_ -and -not $_.StartsWith('#') })
+          $removedPrefix = '*REMOVED*'
+          $tagAdditions = @($tagUnshipped | Where-Object { -not $_.StartsWith($removedPrefix) })
+          $tagRemovals = @($tagUnshipped | Where-Object { $_.StartsWith($removedPrefix) } | ForEach-Object { $_.Substring($removedPrefix.Length) })
+          $remainingShipped = @($shipped | Where-Object { $_ -notin $tagRemovals })
+          $newShipped = @(($remainingShipped + $tagAdditions) | Select-Object -Unique)
+          $newUnshipped = @($unshipped | Where-Object { $_ -notin $tagUnshipped })
+          # Sort by the stripped symbol key, matching the existing Shipped ordering.
+          $key = { param($s) ($s -replace '^\*REMOVED\*', '') -replace '^(static |override )', '' }
+          $newShipped = @($newShipped | Sort-Object -Property @{Expression = $key})
+          $newUnshipped = @($newUnshipped | Sort-Object -Property @{Expression = $key})
+          "#nullable enable`n$($newShipped -join "`n")`n" | Set-Content -Path $shippedPath -NoNewline
+          "#nullable enable`n$($newUnshipped -join "`n")`n" | Set-Content -Path $unshippedPath -NoNewline
+          git add $shippedPath $unshippedPath
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' `
+            commit -m "chore: move shipped API to Shipped for $env:GITHUB_REF_NAME"
+          git push -u origin "housekeeping/shipped-v$env:VERSION"
+          gh pr create --base main --head "housekeeping/shipped-v$env:VERSION" `
+            --title "chore: move shipped API to Shipped for $env:GITHUB_REF_NAME" `
+            --body "Publish-time housekeeping: the API shipped in $env:GITHUB_REF_NAME moves from Unshipped to Shipped (the entries present on the tag commit)."
+          gh pr merge --auto --merge
         env:
           GH_TOKEN: ${{ github.token }}

@@ -63,6 +63,19 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
   providers live in `JdkFind.Providers`. No `.Models`/`.Helpers`-style
   namespaces; helpers are `internal`, exposed to tests via `InternalsVisibleTo`.
 
+## Public API contract
+
+`JdkFind` is guarded by Microsoft.CodeAnalysis.PublicApiAnalyzers with
+`TreatWarningsAsErrors`: every public symbol must be claimed in
+`JdkFind/PublicAPI.Shipped.txt` or `JdkFind/PublicAPI.Unshipped.txt`, or the
+build fails (RS0016 unclaimed addition, RS0017 unclaimed removal). When adding
+or changing public API, update `PublicAPI.Unshipped.txt` — mark removals with a
+`*REMOVED*<symbol>` line — then run `dotnet build`: the analyzer prints the
+exact symbol strings to claim. Never touch `PublicAPI.Shipped.txt` by hand;
+at release time the publish workflow opens a housekeeping PR moving that
+release's Unshipped entries into Shipped, so Shipped mirrors what nuget.org
+actually has.
+
 ## Tests
 
 - xunit.v3 only. No VSTest packages (`Microsoft.NET.Test.Sdk`,

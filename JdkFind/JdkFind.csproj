@@ -5,6 +5,10 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsAotCompatible>true</IsAotCompatible>
+        <!-- Every warning is a build error (same convention as dotnet-pty), so an
+             unclaimed public symbol (RS0016) or an unclaimed removal (RS0017)
+             fails the build instead of slipping past as a warning. -->
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <PackageId>JdkFind</PackageId>
         <Version>0.1.0</Version>
         <Description>Locate installed JDKs across Windows, macOS and Linux.</Description>
@@ -12,6 +16,17 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="JdkFind.Tests" />
+    </ItemGroup>
+
+    <!-- Public API contract: PublicApiAnalyzers fails the build whenever a public symbol
+         is missing from PublicAPI.Shipped.txt / PublicAPI.Unshipped.txt or the shipped
+         surface changes incompatibly. Claim new symbols in Unshipped; mark removals
+         with a *REMOVED* line. The publish workflow moves Unshipped entries into
+         Shipped at release time. PrivateAssets keeps the analyzer out of consumers. -->
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" PrivateAssets="all" />
+        <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+        <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
     </ItemGroup>
 
 </Project>
