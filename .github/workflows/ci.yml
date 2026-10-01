@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same ref supersedes the in-flight CI run: the multi-OS matrix
+# is expensive and only the latest commit's result matters for the merge gate.
+# Tag-only pushes do not match the branches filter, so publish runs (tag-triggered)
+# are never cancelled by this.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      # Report failures on every OS instead of letting one cancel the rest.
+      fail-fast: false
+      matrix:
+        # The code is fully managed, but the discovery surface is the local file
+        # system and the environment: path separators, case-sensitivity, symlink
+        # and permission semantics all differ per OS. ARM runners gate the
+        # arm64 images the tool is expected to run on; symlink/permission tests
+        # skip themselves on Windows by design.
+        os: [windows-latest, windows-11-arm, ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore JdkFind.slnx
+
+      - name: Build
+        run: dotnet build JdkFind.slnx -c Release --no-restore --nologo
+
+      - name: Test
+        # xunit.v3 runs on Microsoft.Testing.Platform, which the .NET 10 SDK's
+        # dotnet test drives natively.
+        run: dotnet test --solution JdkFind.slnx -c Release --no-build --no-restore
+
+  package:
+    name: Package and smoke-test the tool
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Pack
+        run: |
+          dotnet pack JdkFind/JdkFind.csproj -c Release --nologo -o pkg
+          dotnet pack JdkFind.Cli/JdkFind.Cli.csproj -c Release --nologo -o pkg
+
+      - name: Smoke-test the packed tool
+        # Install the exact tool package from a local folder source and run it: this
+        # proves the portable package layout, the DotnetToolSettings command
+        # registration, and the end-user invocation path in one shot. The version is
+        # pinned so a newer release on nuget.org can never shadow the local package.
+        # GitHub runners ship JDKs, so discovery must surface at least one home.
+        run: |
+          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' JdkFind.Cli/JdkFind.Cli.csproj)
+          dotnet tool install --global --add-source "$PWD/pkg" JdkFind.Cli --version "$version"
+          "$HOME/.dotnet/tools/jdkfind" --help
+          homes="$("$HOME/.dotnet/tools/jdkfind" --path)"
+          echo "$homes"
+          test -n "$homes"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: pkg
+          path: pkg/*.nupkg
+          if-no-files-found: error
+          retention-days: 7

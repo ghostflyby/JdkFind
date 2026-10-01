@@ -1,0 +1,197 @@
+name: publish
+
+# Tag-triggered release: push a vX.Y.Z tag (e.g. v0.1.0) to build, test, pack both
+# packages and publish them to nuget.org plus a GitHub release. The version is
+# derived from the tag — the single source of truth — not from the csproj.
+# Publish uses NuGet Trusted Publishing (OIDC): no long-lived API key in secrets;
+# the short-lived key is exchanged by NuGet/login@v1. Register the matching policy
+# on nuget.org for BOTH package ids (JdkFind and JdkFind.Cli):
+# owner: ghostflyby, repo: ghostflyby/JdkFind, workflow file: publish.yml.
+on:
+  push:
+    tags: ['v*.*.*']
+
+# A publish must never be cancelled mid-flight (a half-pushed release), and two
+# pushes of the same tag cannot happen — but guard anyway: same-ref publishes
+# serialize.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+# Every run: step uses pwsh (PowerShell Core), preinstalled on all runners, so the
+# same script syntax works on Windows, macOS, and Linux — no bash-isms anywhere.
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Set version from tag
+        run: |
+          "VERSION=$($env:GITHUB_REF_NAME -replace '^v','')" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
+
+      # A release candidate must pass the full suite (the multi-OS gate lives in
+      # ci.yml; this run re-validates the exact tagged commit on one platform).
+      - name: Test
+        run: dotnet test --solution JdkFind.slnx -c Release
+
+      - name: Pack
+        run: |
+          dotnet pack JdkFind/JdkFind.csproj -c Release --nologo -o pkg -p:Version=$env:VERSION
+          dotnet pack JdkFind.Cli/JdkFind.Cli.csproj -c Release --nologo -o pkg -p:Version=$env:VERSION
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: pkg
+          path: pkg/*.nupkg
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish to nuget.org + GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # id-token: write lets NuGet/login exchange the OIDC token for a short-lived
+    # NuGet API key (Trusted Publishing); attestations: write persists the build
+    # provenance attestation in the repository's attestation store; contents: write
+    # is for gh release create.
+    permissions:
+      id-token: write
+      attestations: write
+      contents: write
+    steps:
+      # gh release create and the git history checks resolve the repository through
+      # git, so this job needs the checkout even though it builds nothing.
+      # fetch-depth: 0 so the validation step can fetch main and inspect the tag commit.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          name: pkg
+          path: pkg
+
+      - name: Validate tag is SemVer, on main, with green CI, and not a downgrade
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
+              throw "tag '$env:GITHUB_REF_NAME' is not a valid vX.Y.Z[(-suffix)] version"
+          }
+          # Refuse versions nuget.org already has, before anything else runs: a
+          # re-tag of a historical version gets a clear early exit instead of a
+          # build that cannot be pushed.
+          foreach ($packageId in 'jdkfind', 'jdkfind.cli') {
+              $index = try { Invoke-RestMethod -Uri "https://api.nuget.org/v3-flatcontainer/$packageId/index.json" -TimeoutSec 30 } catch { $null }
+              if ($index -and ($index.versions -contains $version)) {
+                  throw "version '$version' of '$packageId' is already published on nuget.org — refusing to republish (traceability tag only)"
+              }
+          }
+          # The tag commit must sit on main's history: a tag on a side branch or a
+          # stray commit never reaches the production publish.
+          git merge-base --is-ancestor "$env:GITHUB_SHA" origin/main
+          if ($LASTEXITCODE -ne 0) { throw "tag commit $env:GITHUB_SHA is not an ancestor of origin/main" }
+          # And its CI must have passed: a release rides on the commit the
+          # multi-platform suite ran against.
+          $run = try {
+              gh run list --workflow ci.yml --commit "$env:GITHUB_SHA" --status success --limit 1 --json databaseId --jq '.[0].databaseId' 2>$null
+          } catch {
+              $global:LASTEXITCODE = 0
+              $null
+          }
+          if (-not $run) { throw "no successful ci.yml run found for tag commit $env:GITHUB_SHA — tag before merging, not after" }
+          Write-Host "ok: tag commit is on main with green CI (run $run)"
+          # 'gh release list' exits 1 when no release exists yet (first publish); with
+          # $PSNativeCommandUseErrorActionPreference = $true that becomes a terminating
+          # error, so wrap it. The catch must also reset $LASTEXITCODE: pwsh exits the
+          # script with the last external command's code, so a swallowed '1' would
+          # still fail the step.
+          $latest = try {
+              gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>$null
+          } catch {
+              $global:LASTEXITCODE = 0
+              $null
+          }
+          if ($latest) {
+              function Test-Newer([string]$candidate, [string]$previous) {
+                  $c = $candidate -split '-'; $p = $previous -split '-'
+                  $cNum = [version]$c[0]; $pNum = [version]$p[0]
+                  if ($cNum -gt $pNum) { return $true }
+                  if ($cNum -lt $pNum) { return $false }
+                  $cPre = if ($c.Count -gt 1) { $c[1] } else { '' }
+                  $pPre = if ($p.Count -gt 1) { $p[1] } else { '' }
+                  if ($pPre -eq '' -and $cPre -ne '') { return $false }   # 1.0.0-beta < 1.0.0
+                  if ($cPre -eq '' -and $pPre -ne '') { return $true }
+                  return $cPre -gt $pPre
+              }
+              $latestV = $latest -replace '^v', ''
+              if (-not (Test-Newer $version $latestV)) {
+                  throw "version '$version' is not newer than the latest release '$latestV'"
+              }
+              Write-Host "ok: $version > $latestV"
+          } else {
+              Write-Host 'no previous release; this is the first publish'
+          }
+          # Normal path ends cleanly even if an external command left $LASTEXITCODE set;
+          # throw paths above terminate with a non-zero exit before reaching here.
+          exit 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # Signed provenance for the exact artifacts about to be pushed: a consumer
+      # (or nuget.org's UI) can verify these bytes were built by this repository's
+      # workflow from this commit. Runs before the push so only artifacts that
+      # passed every gate above get attested.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            pkg/JdkFind.${{ env.VERSION }}.nupkg
+            pkg/JdkFind.Cli.${{ env.VERSION }}.nupkg
+
+      - name: NuGet login (OIDC → temporary API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          # nuget.org username (profile name), not an email address. The temp key is
+          # valid for 1 hour and is exchanged right before the push.
+          user: ${{ secrets.NUGET_USER }}
+
+      # No --skip-duplicate: a version that already exists must fail loudly, not be
+      # silently dropped — two different artifacts for the "same" version are
+      # exactly the accident this must never paper over. The already-published
+      # guard in the validation step catches the re-tag case before anything runs.
+      - name: Publish to nuget.org
+        run: |
+          dotnet nuget push "pkg/JdkFind.$env:VERSION.nupkg" --source https://api.nuget.org/v3/index.json --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
+          dotnet nuget push "pkg/JdkFind.Cli.$env:VERSION.nupkg" --source https://api.nuget.org/v3/index.json --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
+
+      - name: Create GitHub release
+        run: |
+          gh release create "$env:GITHUB_REF_NAME" --title "$env:GITHUB_REF_NAME" `
+            --notes "JDK locator library and jdkfind tool — see https://www.nuget.org/packages/JdkFind.Cli/$env:VERSION for package details." `
+            "pkg/JdkFind.$env:VERSION.nupkg" "pkg/JdkFind.Cli.$env:VERSION.nupkg"
+        env:
+          GH_TOKEN: ${{ github.token }}

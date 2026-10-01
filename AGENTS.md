@@ -1,0 +1,87 @@
+# AGENTS.md
+
+Guidance for coding agents working in this repository.
+
+## What this is
+
+JdkFind locates installed JDKs on Windows, macOS and Linux. It ships as:
+
+- `JdkFind/` — the library (net10.0, zero third-party dependencies)
+- `JdkFind.Cli/` — the `jdkfind` dotnet tool (`PackAsTool`, portable package)
+- `JdkFind.Tests/` — xunit.v3 tests (Exe + Microsoft.Testing.Platform)
+
+All project directories live at the repository root; there is no `src/` nesting.
+
+## Commands
+
+```bash
+ dotnet build JdkFind.slnx
+ dotnet test JdkFind.Tests/JdkFind.Tests.csproj          # MTP mode via global.json
+ dotnet pack JdkFind/JdkFind.csproj -c Release           # library package
+ dotnet pack JdkFind.Cli/JdkFind.Cli.csproj -c Release   # tool package (command: jdkfind)
+```
+
+`global.json` pins the SDK floor (10.0.100, `latestFeature`) and sets
+`test.runner = Microsoft.Testing.Platform`. Do not remove the MTP setting: the
+legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
+
+## Hard requirements
+
+- **AOT compatibility.** Both assemblies carry `IsAotCompatible`. No
+  reflection-based discovery: providers are assembled as an explicit list in
+  `JdkFindOptions.CreateDefaultProviders()`. JSON goes through the source
+  generator (`JvmJsonContext`); serialize only the primitive `JvmDto`, never
+  `Jvm` directly — `DirectoryInfo` makes the generated serializer recurse
+  without bound.
+- **Environment variables win.** Version-manager providers read their env vars
+  before falling back to default locations: `JAVA_HOME`, `GRADLE_USER_HOME`,
+  `JABBA_HOME`, `SDKMAN_CANDIDATES_DIR`/`SDKMAN_DIR`, `SCOOP`/`SCOOP_GLOBAL`,
+  `HOMEBREW_PREFIX`.
+- **Platform guards.** Windows-only code checks `OperatingSystem.IsWindows()`
+  and is annotated `[SupportedOSPlatform("windows")]`. The registry provider
+  reads the 64-bit view only (documented trade-off: 32-bit installs under
+  WOW6432Node are not covered).
+- **Resilience.** Missing and unreadable locations are skipped silently; one
+  bad directory must never abort the scan.
+
+## Architecture rules
+
+- Providers only yield candidate home paths (`IJvmProvider`). Validation
+  (`bin/java` + `release` under the plain / macOS bundle / Homebrew keg
+  layouts) and release-file parsing live in the facade (`JdkFinder`) and the
+  internals (`JavaHomeLayout`, `ReleaseFile`).
+- The deduplication key is the canonical path with every symlink expanded per
+  segment; comparison is case-insensitive on Windows and macOS.
+- Injection constructors take clean non-null roots; env-var lookups and null
+  handling stay inside the parameterless constructors' default resolution.
+- `GetDefaultAsync`: `JAVA_HOME` wins when resolvable, otherwise the newest
+  JVM by feature version with the full version as tiebreaker (`1.8.0_402`
+  style versions are handled).
+- Namespaces: the root carries the facade and core abstractions; built-in
+  providers live in `JdkFind.Providers`. No `.Models`/`.Helpers`-style
+  namespaces; helpers are `internal`, exposed to tests via `InternalsVisibleTo`.
+
+## Tests
+
+- xunit.v3 only. No VSTest packages (`Microsoft.NET.Test.Sdk`,
+  `xunit.runner.visualstudio`); the test project is an `Exe` and `dotnet test`
+  drives it through MTP directly.
+- `TreatWarningsAsErrors` is on, so xunit analyzers fail the build. Pass
+  `TestContext.Current.CancellationToken` to cancellable APIs (xUnit1051).
+- Tests run in parallel across classes: only `JdkFinderTests` may mutate
+  process environment variables, and other test classes must not construct a
+  default `JdkFindOptions` (its `JavaHomeJvmProvider` reads `JAVA_HOME`).
+  Inject providers or roots instead — every scanning provider has a
+  constructor accepting an explicit root.
+- Symlink and permission tests skip Windows (link creation needs privileges)
+  and skip when running as root (chmod has no effect).
+
+## Conventions
+
+- **English only** for code comments, XML docs, commit messages, and all
+  documentation.
+- Commit messages: imperative mood, concise subject (e.g. `Add Scoop
+  provider`).
+- Before handing off, `dotnet build JdkFind.slnx` and
+  `dotnet test JdkFind.Tests/JdkFind.Tests.csproj` must pass with zero
+  warnings.
