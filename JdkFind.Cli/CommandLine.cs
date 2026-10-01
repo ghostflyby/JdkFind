@@ -69,7 +69,7 @@ internal static class CommandLine
                 jvm.Vendor,
                 jvm.Architecture,
                 jvm.OsName,
-                jvm.Provider)).ToArray();
+                jvm.Providers)).ToArray();
             Console.WriteLine(JsonSerializer.Serialize(dtos, JvmJsonContext.Default.JvmDtoArray));
         }
         else

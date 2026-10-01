@@ -23,7 +23,7 @@ public class JdkFinderTests : IDisposable
         var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var jvm = Assert.Single(jvms);
-        Assert.Equal("stub", jvm.Provider);
+        Assert.Equal(["stub"], jvm.Providers);
         Assert.Equal("21.0.5", jvm.Version);
         Assert.Equal(21, jvm.LanguageVersion);
         Assert.Equal("Test Vendor", jvm.Vendor);
@@ -32,7 +32,7 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
-    public async Task Locate_DeduplicatesAcrossProvidersKeepingFirst()
+    public async Task Locate_DeduplicatesAndMergesAllSources()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
         var options = new JdkFindOptions
@@ -43,7 +43,19 @@ public class JdkFinderTests : IDisposable
         var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var jvm = Assert.Single(jvms);
-        Assert.Equal("first", jvm.Provider);
+        Assert.Equal(["first", "second"], jvm.Providers);
+    }
+
+    [Fact]
+    public async Task Locate_RepeatedCandidatesFromOneSource_RecordTheNameOnce()
+    {
+        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var options = new JdkFindOptions { Providers = [new StubJvmProvider("dup", jdk, jdk)] };
+
+        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var jvm = Assert.Single(jvms);
+        Assert.Equal(["dup"], jvm.Providers);
     }
 
     [Fact]
@@ -56,7 +68,52 @@ public class JdkFinderTests : IDisposable
             DeduplicateHomes = false,
         };
 
-        Assert.Equal(2, (await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken)).Count);
+        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        // Each candidate stays its own entry with a single source — the merge logic
+        // must not leak into the dedup-off branch.
+        Assert.Equal(2, jvms.Count);
+        Assert.All(jvms, jvm => Assert.Single(jvm.Providers));
+    }
+
+    [Fact]
+    public async Task Locate_PreservesFirstDiscoveryOrderAcrossProviders()
+    {
+        var a = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "a");
+        var b = TestJdk.Create(temp.FullPath, "17.0.2", "jdks", "b");
+        var c = TestJdk.Create(temp.FullPath, "11", "jdks", "c");
+        var options = new JdkFindOptions
+        {
+            // Interleaved and repeated candidates: p1=[a,b,a], p2=[b,c], p3=[a].
+            Providers =
+            [
+                new StubJvmProvider("p1", a, b, a),
+                new StubJvmProvider("p2", b, c),
+                new StubJvmProvider("p3", a),
+            ],
+        };
+
+        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal([a, b, c], jvms.Select(jvm => jvm.Home.FullName).ToArray());
+        Assert.Equal(["p1", "p3"], jvms[0].Providers);
+        Assert.Equal(["p1", "p2"], jvms[1].Providers);
+        Assert.Equal(["p2"], jvms[2].Providers);
+    }
+
+    [Fact]
+    public async Task Locate_SameNameAcrossProviderInstances_RecordsTheNameOnce()
+    {
+        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var options = new JdkFindOptions
+        {
+            Providers = [new StubJvmProvider("x", jdk), new StubJvmProvider("x", jdk), new StubJvmProvider("y", jdk)],
+        };
+
+        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        var jvm = Assert.Single(jvms);
+        Assert.Equal(["x", "y"], jvm.Providers);
     }
 
     [Fact]

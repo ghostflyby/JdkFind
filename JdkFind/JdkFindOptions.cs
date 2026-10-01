@@ -5,7 +5,7 @@ namespace JdkFind;
 /// <summary>Options controlling JVM discovery.</summary>
 public sealed class JdkFindOptions
 {
-    /// <summary>Providers consulted in order; earlier providers win deduplication.</summary>
+    /// <summary>Providers consulted in order; duplicates merge into one Jvm listing every source.</summary>
     public IList<IJvmProvider> Providers { get; init; } = CreateDefaultProviders();
 
     /// <summary>Collapse candidates that resolve to the same physical directory. Default is true.</summary>

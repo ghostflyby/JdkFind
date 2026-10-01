@@ -50,8 +50,10 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
   (`bin/java` + `release` under the plain / macOS bundle / Homebrew keg
   layouts) and release-file parsing live in the facade (`JdkFinder`) and the
   internals (`JavaHomeLayout`, `ReleaseFile`).
-- The deduplication key is the canonical path with every symlink expanded per
-  segment; comparison is case-insensitive on Windows and macOS.
+- Deduplication merges candidates by canonical path (every symlink expanded per
+  segment; case-insensitive on Windows and macOS). `Jvm.Providers` lists every
+  provider that reported the home, in provider order — enumeration therefore
+  materializes all providers before yielding, it does not stream incrementally.
 - Injection constructors take clean non-null roots; env-var lookups and null
   handling stay inside the parameterless constructors' default resolution.
 - `GetDefaultAsync`: `JAVA_HOME` wins when resolvable, otherwise the newest

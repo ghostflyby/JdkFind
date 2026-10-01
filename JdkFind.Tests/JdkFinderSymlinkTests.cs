@@ -44,7 +44,7 @@ public class JdkFinderSymlinkTests : IDisposable
             .ToListAsync(TestContext.Current.CancellationToken);
 
         var jvm = Assert.Single(jvms);
-        Assert.Equal("link", jvm.Provider);
+        Assert.Equal(["link", "real"], jvm.Providers);
     }
 
     [Fact]

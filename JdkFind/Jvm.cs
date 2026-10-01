@@ -6,8 +6,8 @@ public sealed record Jvm
     /// <summary>The Java home directory.</summary>
     public required DirectoryInfo Home { get; init; }
 
-    /// <summary>Identifier of the provider that discovered this JVM first.</summary>
-    public required string Provider { get; init; }
+    /// <summary>Identifiers of every provider that reported this home, in provider order.</summary>
+    public required IReadOnlyList<string> Providers { get; init; }
 
     /// <summary>Raw <c>JAVA_VERSION</c> value, e.g. <c>21.0.5</c> or <c>1.8.0_402</c>.</summary>
     public string? Version { get; init; }

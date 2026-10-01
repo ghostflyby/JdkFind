@@ -34,7 +34,7 @@ Exit codes: `0` found, `1` none found, `2` usage error. When both are given,
 ```csharp
 using JdkFind;
 
-// Stream every JDK found, deduplicated across providers.
+// Locate every JDK; the result merges every provider that reported the same home.
 await foreach (var jvm in JdkFinder.LocateAsync())
     Console.WriteLine($"{jvm.LanguageVersion} {jvm.Vendor} -> {jvm.Home.FullName}");
 
@@ -57,7 +57,8 @@ Jvm? defaultJvm = await JdkFinder.GetDefaultAsync();
 Environment variables always take precedence over the default locations.
 Missing or unreadable locations are skipped silently; results are
 deduplicated by canonical path (symbolic links expanded), so the same
-physical JDK is reported once no matter how many providers found it.
+physical JDK is reported once no matter how many providers found it —
+with `Providers` (the SOURCE column) faithfully listing every one of them.
 
 ## Build and test
 

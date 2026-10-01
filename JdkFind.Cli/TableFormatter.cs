@@ -12,7 +12,7 @@ internal static class TableFormatter
             jvm.Version ?? "-",
             jvm.Vendor ?? "-",
             jvm.Architecture ?? "-",
-            jvm.Provider,
+            string.Join('+', jvm.Providers),
             jvm.Home.FullName,
         }).ToArray();
 

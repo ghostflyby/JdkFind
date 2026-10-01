@@ -10,7 +10,11 @@ public static class JdkFinder
             ? StringComparer.OrdinalIgnoreCase
             : StringComparer.Ordinal;
 
-    /// <summary>Streams JVMs from all configured providers, in provider order.</summary>
+    /// <summary>
+    ///     Locates JVMs from all configured providers, in provider order. Every provider
+    ///     reports before results are produced, so each <see cref="Jvm" /> can list all
+    ///     the sources that found it.
+    /// </summary>
     public static IAsyncEnumerable<Jvm> LocateAsync(JdkFindOptions? options = null, CancellationToken cancellationToken = default)
     {
         options ??= new JdkFindOptions();
@@ -62,20 +66,42 @@ public static class JdkFinder
         JdkFindOptions options,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var seen = options.DeduplicateHomes ? new HashSet<string>(PathComparer) : null;
+        // Jvm.Providers lists every source that reported the same directory, so results
+        // can only be produced after all providers have reported — the enumeration is
+        // a full collect-then-merge pass.
+        var order = new List<(string HomePath, List<string> Providers)>();
+        var indexByKey = options.DeduplicateHomes ? new Dictionary<string, int>(PathComparer) : null;
 
         foreach (var provider in options.Providers)
             await foreach (var candidate in provider.GetJavaHomesAsync(cancellationToken))
             {
-                if (seen is not null && !seen.Add(GetDeduplicationKey(candidate)))
+                if (indexByKey is null)
+                {
+                    order.Add((candidate, [provider.Name]));
                     continue;
+                }
 
-                if (CreateJvm(candidate, provider.Name) is { } jvm)
-                    yield return jvm;
+                var key = GetDeduplicationKey(candidate);
+                if (indexByKey.TryGetValue(key, out var index))
+                {
+                    // A repeated candidate from the same source records the name once
+                    // (e.g. two PATH entries leading to the same directory).
+                    if (!order[index].Providers.Contains(provider.Name))
+                        order[index].Providers.Add(provider.Name);
+                }
+                else
+                {
+                    indexByKey[key] = order.Count;
+                    order.Add((candidate, [provider.Name]));
+                }
             }
+
+        foreach (var (homePath, providers) in order)
+            if (CreateJvm(homePath, providers) is { } jvm)
+                yield return jvm;
     }
 
-    private static Jvm? CreateJvm(string homePath, string providerName)
+    private static Jvm? CreateJvm(string homePath, IReadOnlyList<string> providers)
     {
         var releaseFilePath = Path.Combine(homePath, "release");
         if (!File.Exists(releaseFilePath))
@@ -97,7 +123,7 @@ public static class JdkFinder
         return new Jvm
         {
             Home = new DirectoryInfo(homePath),
-            Provider = providerName,
+            Providers = providers,
             Version = version,
             LanguageVersion = ReleaseFile.TryGetLanguageVersion(version),
             Vendor = release.GetValueOrDefault("IMPLEMENTOR"),

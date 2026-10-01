@@ -12,7 +12,7 @@ internal sealed record JvmDto(
     string? Vendor,
     string? Architecture,
     string? OsName,
-    string Provider);
+    IReadOnlyList<string> Providers);
 
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(JvmDto[]))]
