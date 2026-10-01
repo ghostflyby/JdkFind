@@ -97,6 +97,11 @@ actually has.
   documentation.
 - Commit messages: imperative mood, concise subject (e.g. `Add Scoop
   provider`).
+- `main` is protected: direct pushes are rejected, so land every change on a
+  feature branch and open a pull request; merge only with green CI. Tag pushes
+  (`v*.*.*`, the publish trigger) are not branch pushes and remain direct.
+  Workflows are allowed to create and approve pull requests — the publish
+  workflow's Shipped housekeeping PR relies on that setting.
 - Before handing off, `dotnet build JdkFind.slnx` and
   `dotnet test JdkFind.Tests/JdkFind.Tests.csproj` must pass with zero
   warnings.
