@@ -21,6 +21,10 @@ public class JvmClassificationTests
     [InlineData("Mandrel by Red Hat", null, false, JvmVendor.RedHat, JvmDistribution.Mandrel)]
     [InlineData("GraalVM Community", null, false, JvmVendor.GraalVm, JvmDistribution.GraalVmCommunity)]
     [InlineData("TravaOpenJDK", null, false, JvmVendor.Trava, JvmDistribution.Trava)]
+    [InlineData("OJDKBuild", null, false, JvmVendor.Community, JvmDistribution.OjdkBuild)]
+    [InlineData("OpenLogic OpenJDK", null, false, JvmVendor.OpenLogic, JvmDistribution.OpenLogic)]
+    [InlineData("Gluon GraalVM", null, false, JvmVendor.Gluon, JvmDistribution.GluonGraalVm)]
+    [InlineData("Eliya JDK", null, false, JvmVendor.Asymm, JvmDistribution.Eliya)]
     public void Classify_MapsDistributionsFromTheImplementor(
         string vendorRaw,
         string? implementorVersion,
