@@ -23,6 +23,8 @@ internal sealed class Options
 
     internal string? Vendor { get; private set; }
 
+    internal string? Distribution { get; private set; }
+
     internal string? Architecture { get; private set; }
 
     internal bool JdkOnly { get; private set; }
@@ -54,6 +56,10 @@ internal sealed class Options
 
                 case "--vendor":
                     options.Vendor = TakeValue(ref i, inlineValue, args, name);
+                    break;
+
+                case "--distribution":
+                    options.Distribution = TakeValue(ref i, inlineValue, args, name);
                     break;
 
                 case "--arch":

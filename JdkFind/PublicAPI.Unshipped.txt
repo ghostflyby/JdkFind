@@ -19,14 +19,14 @@ JdkFind.Jvm
 JdkFind.Jvm.<Clone>$() -> JdkFind.Jvm!
 JdkFind.Jvm.Architecture.get -> string?
 JdkFind.Jvm.Architecture.init -> void
+JdkFind.Jvm.Distribution.get -> JdkFind.JvmDistribution
+JdkFind.Jvm.Distribution.init -> void
 JdkFind.Jvm.Equals(JdkFind.Jvm? other) -> bool
 JdkFind.Jvm.HasCompiler.get -> bool
 JdkFind.Jvm.HasCompiler.init -> void
 JdkFind.Jvm.Home.get -> System.IO.DirectoryInfo!
 JdkFind.Jvm.Home.init -> void
 JdkFind.Jvm.Jvm() -> void
-JdkFind.Jvm.KnownVendor.get -> JdkFind.JvmVendor
-JdkFind.Jvm.KnownVendor.init -> void
 JdkFind.Jvm.LanguageVersion.get -> int?
 JdkFind.Jvm.LanguageVersion.init -> void
 JdkFind.Jvm.OsName.get -> string?
@@ -37,33 +37,56 @@ JdkFind.Jvm.RuntimeName.get -> string?
 JdkFind.Jvm.RuntimeName.init -> void
 JdkFind.Jvm.RuntimeVersion.get -> string?
 JdkFind.Jvm.RuntimeVersion.init -> void
-JdkFind.Jvm.Vendor.get -> string?
+JdkFind.Jvm.Vendor.get -> JdkFind.JvmVendor
 JdkFind.Jvm.Vendor.init -> void
-JdkFind.Jvm.VendorDisplayName.get -> string!
-JdkFind.Jvm.VendorDisplayName.init -> void
+JdkFind.Jvm.VendorRaw.get -> string?
+JdkFind.Jvm.VendorRaw.init -> void
 JdkFind.Jvm.Version.get -> JdkFind.JvmVersion
 JdkFind.Jvm.Version.init -> void
 JdkFind.Jvm.VmName.get -> string?
 JdkFind.Jvm.VmName.init -> void
 JdkFind.Jvm.VmVersion.get -> string?
 JdkFind.Jvm.VmVersion.init -> void
+JdkFind.JvmDistribution
+JdkFind.JvmDistribution.AdoptOpenJdk = 1 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Bisheng = 5 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Corretto = 2 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Dragonwell = 3 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.GraalVmCommunity = 4 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.JetBrainsRuntime = 6 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Kona = 7 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Liberica = 8 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Mandrel = 9 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Microsoft = 10 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.OracleGraalVm = 11 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.OracleOpenJdk = 12 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.RedHatBuildOfOpenJdk = 13 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.SapMachine = 14 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Semeru = 15 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Temurin = 16 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Trava = 17 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Unknown = 0 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Zulu = 18 -> JdkFind.JvmDistribution
 JdkFind.JvmVendor
-JdkFind.JvmVendor.Adoptium = 1 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.AdoptOpenJdk = 2 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Amazon = 3 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Apple = 4 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Azul = 5 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.BellSoft = 6 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.GraalVm = 7 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.HewlettPackard = 8 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Ibm = 9 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.JetBrains = 10 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Microsoft = 11 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Oracle = 12 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Sap = 13 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Tencent = 14 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Adoptium = 2 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.AdoptOpenJdk = 1 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Alibaba = 3 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Amazon = 4 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Apple = 5 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Azul = 6 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.BellSoft = 7 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.GraalVm = 8 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.HewlettPackard = 10 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Huawei = 9 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Ibm = 11 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.JetBrains = 12 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Microsoft = 13 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Oracle = 14 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.RedHat = 15 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Sap = 16 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Tencent = 17 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Trava = 18 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Unknown = 0 -> JdkFind.JvmVendor
-JdkFind.JvmVendors
 JdkFind.JvmVersion
 JdkFind.JvmVersion.CompareTo(JdkFind.JvmVersion other) -> int
 JdkFind.JvmVersion.Core.get -> System.Version!
@@ -138,8 +161,6 @@ static JdkFind.JdkFinder.Locate(JdkFind.JdkFindOptions? options = null) -> Syste
 static JdkFind.JdkFindOptions.CreateDefaultProviders() -> System.Collections.Generic.List<JdkFind.IJvmProvider!>!
 static JdkFind.Jvm.operator !=(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
 static JdkFind.Jvm.operator ==(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
-static JdkFind.JvmVendors.GetDisplayName(JdkFind.JvmVendor vendor, string? rawVendor = null) -> string!
-static JdkFind.JvmVendors.Parse(string? vendor) -> JdkFind.JvmVendor
 static JdkFind.JvmVersion.operator !=(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
 static JdkFind.JvmVersion.operator <(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
 static JdkFind.JvmVersion.operator <=(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool

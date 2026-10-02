@@ -9,17 +9,17 @@ public class CommandLineFilterTests
     {
         Home = new DirectoryInfo("/jvm/zulu"),
         Providers = ["stub"],
-        Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1"),        Vendor = "Azul Systems, Inc.",
-        KnownVendor = JvmVendor.Azul,
-        VendorDisplayName = "Azul Zulu",
+        Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1"),
+        Vendor = JvmVendor.Azul,
+        Distribution = JvmDistribution.Zulu,
+        VendorRaw = "Azul Systems, Inc.",
     };
 
     [Theory]
-    [InlineData("azul")]          // 原始串命中
-    [InlineData("Azul Systems")]  // 原始串前缀
-    [InlineData("zulu")]          // 展示名命中
+    [InlineData("azul")]          // 规范化厂商命中
+    [InlineData("Azul Systems")]  // 原始串命中
     [InlineData("AZUL")]          // 大小写不敏感
-    public void MatchesVendorFilter_HitsEveryVendorSurface(string text) =>
+    public void MatchesVendorFilter_MatchesVendorAndRawString(string text) =>
         Assert.True(CommandLine.MatchesVendorFilter(AzulJvm, text));
 
     [Fact]
@@ -32,4 +32,13 @@ public class CommandLineFilterTests
     [Fact]
     public void MatchesVendorFilter_UnknownText_Rejects() =>
         Assert.False(CommandLine.MatchesVendorFilter(AzulJvm, "corretto"));
+
+    [Fact]
+    public void MatchesDistributionFilter_MatchesFoojayName()
+    {
+        Assert.True(CommandLine.MatchesDistributionFilter(AzulJvm, "zulu"));
+        Assert.True(CommandLine.MatchesDistributionFilter(AzulJvm, "Zulu"));
+        Assert.False(CommandLine.MatchesDistributionFilter(AzulJvm, "corretto"));
+        Assert.True(CommandLine.MatchesDistributionFilter(AzulJvm, null));
+    }
 }
