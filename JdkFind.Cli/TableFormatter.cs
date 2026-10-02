@@ -6,11 +6,12 @@ internal static class TableFormatter
 {
     internal static void Write(IReadOnlyList<Jvm> jvms, TextWriter writer)
     {
-        var headers = new[] { "VERSION", "VENDOR", "ARCH", "TYPE", "SOURCE", "HOME" };
+        var headers = new[] { "VERSION", "VENDOR", "DISTRIBUTION", "ARCH", "TYPE", "SOURCE", "HOME" };
         var rows = jvms.Select(jvm => new[]
         {
             jvm.Version.Original,
-            jvm.VendorDisplayName,
+            jvm.Vendor.ToString(),
+            jvm.Distribution.ToString(),
             jvm.Architecture ?? "-",
             jvm.HasCompiler ? "jdk" : "jre",
             string.Join('+', jvm.Providers),

@@ -27,7 +27,8 @@ public class JdkFinderTests : IDisposable
         Assert.Equal("21.0.5", jvm.Version.Original);
         Assert.Equal(new Version(21, 0, 5), jvm.Version.Core);
         Assert.Equal(21, jvm.LanguageVersion);
-        Assert.Equal("Test Vendor", jvm.Vendor);
+        Assert.Equal(JvmVendor.Unknown, jvm.Vendor);
+        Assert.Equal(JvmDistribution.Unknown, jvm.Distribution);
         Assert.Equal("aarch64", jvm.Architecture);
         Assert.Equal(jdk, jvm.Home.FullName);
     }
@@ -226,7 +227,7 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
-    public void Locate_ComputesKnownVendorAndDisplayName()
+    public void Locate_ComputesVendorAndDistribution()
     {
         var jdk = TestJdk.CreateWithImplementor(temp.FullPath, "21.0.5", "Eclipse Adoptium", "jdks", "adoptium");
         var options = new JdkFindOptions
@@ -237,9 +238,9 @@ public class JdkFinderTests : IDisposable
 
         var jvm = Assert.Single(JdkFinder.Locate(options).ToList());
 
-        Assert.Equal("Eclipse Adoptium", jvm.Vendor);
-        Assert.Equal(JvmVendor.Adoptium, jvm.KnownVendor);
-        Assert.Equal("Eclipse Temurin", jvm.VendorDisplayName);
+        Assert.Equal("Eclipse Adoptium", jvm.VendorRaw);
+        Assert.Equal(JvmVendor.Adoptium, jvm.Vendor);
+        Assert.Equal(JvmDistribution.Temurin, jvm.Distribution);
     }
 
     [Fact]

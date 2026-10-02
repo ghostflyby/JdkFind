@@ -133,8 +133,10 @@ public static class JdkFinder
         // values degrade to the Unknown placeholder (sorts before every known version).
         var version = JvmVersion.Parse(release.GetValueOrDefault("JAVA_VERSION"));
 
-        var vendor = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR")) ?? runtime?.Vendor;
-        var knownVendor = JvmVendors.Parse(vendor);
+        var vendorRaw = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR")) ?? runtime?.Vendor;
+        var implementorVersion = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR_VERSION"));
+        var graalVmRelease = release.ContainsKey("GRAALVM_VERSION");
+        var (vendor, distribution) = JvmIdentity.Classify(vendorRaw, implementorVersion, graalVmRelease);
 
         return new Jvm
         {
@@ -143,9 +145,9 @@ public static class JdkFinder
             Version = version,
             LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
             HasCompiler = File.Exists(Path.Combine(homePath, "bin", JavaHomeLayout.CompilerExecutableName)),
+            VendorRaw = vendorRaw,
             Vendor = vendor,
-            KnownVendor = knownVendor,
-            VendorDisplayName = JvmVendors.GetDisplayName(knownVendor, vendor),
+            Distribution = distribution,
             RuntimeName = runtime?.RuntimeName,
             RuntimeVersion = runtime?.RuntimeVersion,
             VmName = runtime?.VmName,

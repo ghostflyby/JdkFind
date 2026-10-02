@@ -26,13 +26,13 @@ public sealed record Jvm
     public bool HasCompiler { get; init; }
 
     /// <summary>The raw vendor string (<c>IMPLEMENTOR</c>, falling back to the probed <c>java.vendor</c>).</summary>
-    public string? Vendor { get; init; }
+    public string? VendorRaw { get; init; }
 
-    /// <summary>The known vendor the raw string matched, or <see cref="JvmVendor.Unknown" />.</summary>
-    public JvmVendor KnownVendor { get; init; }
+    /// <summary>The normalized upstream vendor the raw string matched, or <see cref="JvmVendor.Unknown" />.</summary>
+    public JvmVendor Vendor { get; init; }
 
-    /// <summary>Human-friendly vendor display name; unknown vendors show their raw string.</summary>
-    public string VendorDisplayName { get; init; } = "Unknown";
+    /// <summary>The distribution per the foojay API naming, or <see cref="JvmDistribution.Unknown" />.</summary>
+    public JvmDistribution Distribution { get; init; }
 
     /// <summary><c>java.runtime.name</c> from the runtime probe; null when probing is off or failed.</summary>
     public string? RuntimeName { get; init; }
@@ -53,5 +53,5 @@ public sealed record Jvm
     public string? Architecture { get; init; }
 
     public override string ToString() =>
-        $"{LanguageVersion?.ToString() ?? "?"} ({Version}) {VendorDisplayName} — {Home.FullName}";
+        $"{LanguageVersion?.ToString() ?? "?"} ({Version}) {Distribution} — {Home.FullName}";
 }

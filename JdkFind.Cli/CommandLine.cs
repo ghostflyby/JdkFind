@@ -114,22 +114,30 @@ internal static class CommandLine
         (options.VersionPrefix is null || MatchesVersion(jvm, options.VersionPrefix)) &&
         (!options.JdkOnly || jvm.HasCompiler) &&
         MatchesVendorFilter(jvm, options.Vendor) &&
+        MatchesDistributionFilter(jvm, options.Distribution) &&
         (options.Architecture is null ||
          jvm.Architecture?.Contains(options.Architecture, StringComparison.OrdinalIgnoreCase) == true);
 
     /// <summary>
-    ///     A JVM passes the vendor filter when the text hits any of its vendor surfaces:
-    ///     the raw IMPLEMENTOR string, the normalized known-vendor name, or the display
-    ///     name. Null text means no filtering.
+    ///     A JVM passes the vendor filter when the text hits the normalized vendor name
+    ///     or the raw IMPLEMENTOR string. Null text means no filtering.
     /// </summary>
     internal static bool MatchesVendorFilter(Jvm jvm, string? text)
     {
         if (string.IsNullOrEmpty(text))
             return true;
 
-        return (jvm.Vendor?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false) ||
-               jvm.KnownVendor.ToString().Contains(text, StringComparison.OrdinalIgnoreCase) ||
-               jvm.VendorDisplayName.Contains(text, StringComparison.OrdinalIgnoreCase);
+        return (jvm.VendorRaw?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false) ||
+               jvm.Vendor.ToString().Contains(text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>A JVM passes the distribution filter when the foojay-style name contains the text.</summary>
+    internal static bool MatchesDistributionFilter(Jvm jvm, string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return true;
+
+        return jvm.Distribution.ToString().Contains(text, StringComparison.OrdinalIgnoreCase);
     }
 
     private static JvmDto ToDto(Jvm jvm) => new(
@@ -137,13 +145,13 @@ internal static class CommandLine
         jvm.Version.Original,
         jvm.LanguageVersion,
         jvm.HasCompiler,
-        jvm.KnownVendor.ToString(),
-        jvm.VendorDisplayName,
+        jvm.Vendor.ToString(),
+        jvm.Distribution.ToString(),
+        jvm.VendorRaw,
         jvm.RuntimeName,
         jvm.RuntimeVersion,
         jvm.VmName,
         jvm.VmVersion,
-        jvm.Vendor,
         jvm.Architecture,
         jvm.OsName,
         jvm.Providers);
@@ -152,7 +160,8 @@ internal static class CommandLine
     {
         writer.WriteLine($"home: {jvm.Home.FullName}");
         writer.WriteLine($"version: {jvm.Version.Original} (feature {jvm.LanguageVersion?.ToString() ?? "unknown"})");
-        writer.WriteLine($"vendor: {jvm.VendorDisplayName} ({jvm.KnownVendor})");
+        writer.WriteLine($"vendor: {jvm.Vendor}");
+        writer.WriteLine($"distribution: {jvm.Distribution}");
 
         if (!string.IsNullOrEmpty(jvm.RuntimeName))
             writer.WriteLine($"runtime: {jvm.RuntimeName} {jvm.RuntimeVersion}");
@@ -175,13 +184,15 @@ internal static class CommandLine
         newest version first, installations with a compiler preferred on ties.
 
         Options:
-          -j, --json           Write JSON to stdout (list: array; others: single object)
-              --vendor <text>  Filter by vendor substring; matches the raw string, the
-                               known vendor and the display name (case-insensitive)
-              --arch <text>    Filter by architecture substring (case-insensitive)
-              --jdk-only       Only installations that ship a compiler (skip runtimes)
-              --no-probe       Skip executing each JVM for runtime properties
-          -h, --help           Show this help
+          -j, --json                Write JSON to stdout (list: array; others: single object)
+              --vendor <text>       Filter by vendor substring; matches the normalized
+                                    vendor and the raw string (case-insensitive)
+              --distribution <t>    Filter by distribution substring per the foojay API
+                                    names (e.g. temurin, zulu, corretto)
+              --arch <text>         Filter by architecture substring (case-insensitive)
+              --jdk-only            Only installations that ship a compiler (skip runtimes)
+              --no-probe            Skip executing each JVM for runtime properties
+          -h, --help                Show this help
 
         Streams: machine-readable output goes to stdout; the human-readable list and
         details go to stderr.
