@@ -10,8 +10,8 @@ public sealed class GradleJvmProvider(string? gradleUserHome) : JvmProviderBase
 
     public GradleJvmProvider() : this(ResolveDefaultHome()) { }
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-        gradleUserHome is not null ? ScanPrefixes([Path.Combine(gradleUserHome, "jdks")]).ToAsyncEnumerable() : AsyncEnumerable.Empty<string>();
+    public override IEnumerable<string> GetJavaHomes() =>
+        gradleUserHome != null ? ScanPrefixes([Path.Combine(gradleUserHome, "jdks")]) : Enumerable.Empty<string>();
 
     private static string? ResolveDefaultHome()
     {

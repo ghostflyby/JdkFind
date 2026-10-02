@@ -7,6 +7,6 @@ public sealed class MacOsSystemJvmProvider(string? commonPrefix) : JvmProviderBa
 
     public MacOsSystemJvmProvider() : this(OperatingSystem.IsMacOS() ? "/Library/Java/JavaVirtualMachines" : null) { }
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-        commonPrefix != null ? ScanPrefixes([commonPrefix]).ToAsyncEnumerable() : AsyncEnumerable.Empty<string>();
+    public override IEnumerable<string> GetJavaHomes() =>
+        commonPrefix != null ? ScanPrefixes([commonPrefix]) : Enumerable.Empty<string>();
 }

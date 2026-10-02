@@ -1,14 +1,16 @@
 #nullable enable
+abstract JdkFind.JvmProviderBase.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
+abstract JdkFind.JvmProviderBase.Name.get -> string!
 JdkFind.IJvmProvider
-JdkFind.IJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+JdkFind.IJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.IJvmProvider.Name.get -> string!
+JdkFind.JdkFinder
 JdkFind.JdkFindOptions
 JdkFind.JdkFindOptions.DeduplicateHomes.get -> bool
 JdkFind.JdkFindOptions.DeduplicateHomes.init -> void
 JdkFind.JdkFindOptions.JdkFindOptions() -> void
 JdkFind.JdkFindOptions.Providers.get -> System.Collections.Generic.IList<JdkFind.IJvmProvider!>!
 JdkFind.JdkFindOptions.Providers.init -> void
-JdkFind.JdkFinder
 JdkFind.Jvm
 JdkFind.Jvm.<Clone>$() -> JdkFind.Jvm!
 JdkFind.Jvm.Architecture.get -> string?
@@ -53,6 +55,9 @@ JdkFind.Providers.LinuxJvmProvider.LinuxJvmProvider(string? commonPrefix) -> voi
 JdkFind.Providers.MacOsSystemJvmProvider
 JdkFind.Providers.MacOsSystemJvmProvider.MacOsSystemJvmProvider() -> void
 JdkFind.Providers.MacOsSystemJvmProvider.MacOsSystemJvmProvider(string? commonPrefix) -> void
+JdkFind.Providers.MacOsUserJvmProvider
+JdkFind.Providers.MacOsUserJvmProvider.MacOsUserJvmProvider() -> void
+JdkFind.Providers.MacOsUserJvmProvider.MacOsUserJvmProvider(string? commonPrefix) -> void
 JdkFind.Providers.PathJvmProvider
 JdkFind.Providers.PathJvmProvider.PathJvmProvider() -> void
 JdkFind.Providers.PathJvmProvider.PathJvmProvider(string? path) -> void
@@ -67,40 +72,40 @@ JdkFind.Providers.WindowsProgramFilesJvmProvider.WindowsProgramFilesJvmProvider(
 JdkFind.Providers.WindowsProgramFilesJvmProvider.WindowsProgramFilesJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
 JdkFind.Providers.WindowsRegistryJvmProvider
 JdkFind.Providers.WindowsRegistryJvmProvider.WindowsRegistryJvmProvider() -> void
-abstract JdkFind.JvmProviderBase.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
-abstract JdkFind.JvmProviderBase.Name.get -> string!
 override JdkFind.Jvm.Equals(object? obj) -> bool
 override JdkFind.Jvm.GetHashCode() -> int
 override JdkFind.Jvm.ToString() -> string!
-override JdkFind.Providers.GradleJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.GradleJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.GradleJvmProvider.Name.get -> string!
-override JdkFind.Providers.HomebrewJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.HomebrewJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.HomebrewJvmProvider.Name.get -> string!
-override JdkFind.Providers.IntelliJJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.IntelliJJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.IntelliJJvmProvider.Name.get -> string!
-override JdkFind.Providers.JabbaJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.JabbaJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.JabbaJvmProvider.Name.get -> string!
-override JdkFind.Providers.JavaHomeJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.JavaHomeJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.JavaHomeJvmProvider.Name.get -> string!
-override JdkFind.Providers.LinuxJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.LinuxJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.LinuxJvmProvider.Name.get -> string!
-override JdkFind.Providers.MacOsSystemJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.MacOsSystemJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.MacOsSystemJvmProvider.Name.get -> string!
-override JdkFind.Providers.PathJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.MacOsUserJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
+override JdkFind.Providers.MacOsUserJvmProvider.Name.get -> string!
+override JdkFind.Providers.PathJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.PathJvmProvider.Name.get -> string!
-override JdkFind.Providers.ScoopJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.ScoopJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.ScoopJvmProvider.Name.get -> string!
-override JdkFind.Providers.SdkmanJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.SdkmanJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.SdkmanJvmProvider.Name.get -> string!
-override JdkFind.Providers.WindowsProgramFilesJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.WindowsProgramFilesJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.WindowsProgramFilesJvmProvider.Name.get -> string!
-override JdkFind.Providers.WindowsRegistryJvmProvider.GetJavaHomesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<string!>!
+override JdkFind.Providers.WindowsRegistryJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 override JdkFind.Providers.WindowsRegistryJvmProvider.Name.get -> string!
+static JdkFind.JdkFinder.Find(int languageVersion, JdkFind.JdkFindOptions? options = null) -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
+static JdkFind.JdkFinder.GetDefault(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?
+static JdkFind.JdkFinder.GetNewest(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?
+static JdkFind.JdkFinder.Locate(JdkFind.JdkFindOptions? options = null) -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
 static JdkFind.JdkFindOptions.CreateDefaultProviders() -> System.Collections.Generic.List<JdkFind.IJvmProvider!>!
-static JdkFind.JdkFinder.FindAsync(int languageVersion, JdkFind.JdkFindOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<JdkFind.Jvm!>!
-static JdkFind.JdkFinder.GetDefaultAsync(JdkFind.JdkFindOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<JdkFind.Jvm?>
-static JdkFind.JdkFinder.GetNewestAsync(JdkFind.JdkFindOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.ValueTask<JdkFind.Jvm?>
-static JdkFind.JdkFinder.LocateAsync(JdkFind.JdkFindOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<JdkFind.Jvm!>!
 static JdkFind.Jvm.operator !=(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
 static JdkFind.Jvm.operator ==(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
 static JdkFind.JvmProviderBase.Probe(string! candidateDirectory) -> string?

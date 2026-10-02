@@ -7,6 +7,6 @@ public sealed class LinuxJvmProvider(string? commonPrefix) : JvmProviderBase
 
     public LinuxJvmProvider() : this(OperatingSystem.IsLinux() ? "/usr/lib/jvm" : null) { }
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-        commonPrefix != null ? ScanPrefixes([commonPrefix]).ToAsyncEnumerable() : AsyncEnumerable.Empty<string>();
+    public override IEnumerable<string> GetJavaHomes() =>
+        commonPrefix != null ? ScanPrefixes([commonPrefix]) : Enumerable.Empty<string>();
 }

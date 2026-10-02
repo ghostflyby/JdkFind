@@ -10,8 +10,8 @@ public sealed class JabbaJvmProvider(string? home) : JvmProviderBase
 
     public JabbaJvmProvider() : this(ResolveDefaultHome()) { }
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-        home != null ? ScanNested([Path.Combine(home, "jdk")]).ToAsyncEnumerable() : AsyncEnumerable.Empty<string>();
+    public override IEnumerable<string> GetJavaHomes() =>
+        home != null ? ScanNested([Path.Combine(home, "jdk")]) : Enumerable.Empty<string>();
 
     private static string? ResolveDefaultHome()
     {

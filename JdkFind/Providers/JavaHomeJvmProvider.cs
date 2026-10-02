@@ -9,8 +9,9 @@ public sealed class JavaHomeJvmProvider(string? home) : JvmProviderBase
     {
     }
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-        string.IsNullOrWhiteSpace(home) || Probe(home) is not { } javaHome
-            ? AsyncEnumerable.Empty<string>()
-            : ((IEnumerable<string>)[javaHome]).ToAsyncEnumerable();
+    public override IEnumerable<string> GetJavaHomes()
+    {
+        if (!string.IsNullOrWhiteSpace(home) && Probe(home) is { } javaHome)
+            yield return javaHome;
+    }
 }

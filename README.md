@@ -35,11 +35,11 @@ Exit codes: `0` found, `1` none found, `2` usage error. When both are given,
 using JdkFind;
 
 // Locate every JDK; the result merges every provider that reported the same home.
-await foreach (var jvm in JdkFinder.LocateAsync())
+foreach (var jvm in JdkFinder.Locate())
     Console.WriteLine($"{jvm.LanguageVersion} {jvm.Vendor} -> {jvm.Home.FullName}");
 
 // JAVA_HOME if it points at a found JDK, otherwise the newest one.
-Jvm? defaultJvm = await JdkFinder.GetDefaultAsync();
+Jvm? defaultJvm = JdkFinder.GetDefault();
 ```
 
 ## Discovery sources
@@ -47,7 +47,7 @@ Jvm? defaultJvm = await JdkFinder.GetDefaultAsync();
 | Source | Platforms |
 |---|---|
 | `JAVA_HOME`, `PATH` entries | all |
-| `/Library/Java/JavaVirtualMachines`, `~/Library/Java/JavaVirtualMachines` (IntelliJ) | macOS |
+| `/Library/Java/JavaVirtualMachines` (system) and `~/Library/Java/JavaVirtualMachines` (per-user; also IntelliJ's download target) | macOS |
 | Homebrew OpenJDK kegs (`HOMEBREW_PREFIX`, `/opt/homebrew`, …) | macOS, Linux |
 | `/usr/lib/jvm` | Linux |
 | `%ProgramFiles%` vendor directories, Windows registry (JavaSoft, Adoptium, Microsoft, Azul, Corretto) | Windows |

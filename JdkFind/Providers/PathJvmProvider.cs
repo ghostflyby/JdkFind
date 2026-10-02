@@ -12,9 +12,13 @@ public sealed class PathJvmProvider(string? path) : JvmProviderBase
     {
     }
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default)
+    public override IEnumerable<string> GetJavaHomes()
     {
-        return string.IsNullOrWhiteSpace(path) ? AsyncEnumerable.Empty<string>() : Enumerate(path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).ToAsyncEnumerable();
+        if (string.IsNullOrWhiteSpace(path))
+            yield break;
+
+        foreach (var home in Enumerate(path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)))
+            yield return home;
     }
 
     private static IEnumerable<string> Enumerate(IEnumerable<string> entries)

@@ -56,9 +56,13 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
   materializes all providers before yielding, it does not stream incrementally.
 - Injection constructors take clean non-null roots; env-var lookups and null
   handling stay inside the parameterless constructors' default resolution.
-- `GetDefaultAsync`: `JAVA_HOME` wins when resolvable, otherwise the newest
-  JVM by feature version with the full version as tiebreaker (`1.8.0_402`
-  style versions are handled).
+- `GetDefault`: `JAVA_HOME` wins when resolvable, otherwise the newest JVM
+  by feature version with the full version as tiebreaker (`1.8.0_402` style
+  versions are handled).
+- Discovery is synchronous by design: every source is local file-system or
+  registry I/O measured in milliseconds, and the BCL has no async
+  directory-enumeration API to make it real. A future genuinely-async provider
+  should add a parallel async interface instead of converting this contract.
 - Namespaces: the root carries the facade and core abstractions; built-in
   providers live in `JdkFind.Providers`. No `.Models`/`.Helpers`-style
   namespaces; helpers are `internal`, exposed to tests via `InternalsVisibleTo`.
@@ -81,8 +85,7 @@ actually has.
 - xunit.v3 only. No VSTest packages (`Microsoft.NET.Test.Sdk`,
   `xunit.runner.visualstudio`); the test project is an `Exe` and `dotnet test`
   drives it through MTP directly.
-- `TreatWarningsAsErrors` is on, so xunit analyzers fail the build. Pass
-  `TestContext.Current.CancellationToken` to cancellable APIs (xUnit1051).
+- `TreatWarningsAsErrors` is on, so xunit analyzers fail the build.
 - Tests run in parallel across classes: only `JdkFinderTests` may mutate
   process environment variables, and other test classes must not construct a
   default `JdkFindOptions` (its `JavaHomeJvmProvider` reads `JAVA_HOME`).

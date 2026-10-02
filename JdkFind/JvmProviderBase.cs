@@ -1,15 +1,16 @@
 namespace JdkFind;
 
 /// <summary>
-///     Shared plumbing for directory-scanning providers. All enumeration helpers are
-///     synchronous (directory scanning is cheap, local I/O); concrete providers wrap the
-///     results with <c>ToAsyncEnumerable</c> to satisfy the asynchronous contract.
+///     Shared plumbing for directory-scanning providers. Enumeration is synchronous
+///     by design: every source is local file-system or registry I/O measured in
+///     milliseconds, and the BCL has no async directory-enumeration API to make it
+///     real. Concrete providers are plain iterators.
 /// </summary>
 public abstract class JvmProviderBase : IJvmProvider
 {
     public abstract string Name { get; }
 
-    public abstract IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default);
+    public abstract IEnumerable<string> GetJavaHomes();
 
     /// <summary>Probes a candidate directory for a Java home under any known layout.</summary>
     protected static string? Probe(string candidateDirectory) => JavaHomeLayout.Probe(candidateDirectory);

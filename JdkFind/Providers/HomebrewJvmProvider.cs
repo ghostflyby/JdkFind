@@ -14,8 +14,7 @@ public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : JvmProvi
 
     public HomebrewJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-        EnumerateKegs().ToAsyncEnumerable();
+    public override IEnumerable<string> GetJavaHomes() => EnumerateKegs();
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {

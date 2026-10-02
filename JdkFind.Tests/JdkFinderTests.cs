@@ -10,17 +10,16 @@ public class JdkFinderTests : IDisposable
     {
         public string Name { get; } = name;
 
-        public IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-            homes.ToAsyncEnumerable();
+        public IEnumerable<string> GetJavaHomes() => homes;
     }
 
     [Fact]
-    public async Task Locate_EnrichesMetadataFromReleaseFile()
+    public void Locate_EnrichesMetadataFromReleaseFile()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
         var options = new JdkFindOptions { Providers = [new StubJvmProvider("stub", jdk)] };
 
-        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var jvms = JdkFinder.Locate(options).ToList();
 
         var jvm = Assert.Single(jvms);
         Assert.Equal(["stub"], jvm.Providers);
@@ -32,7 +31,7 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
-    public async Task Locate_DeduplicatesAndMergesAllSources()
+    public void Locate_DeduplicatesAndMergesAllSources()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
         var options = new JdkFindOptions
@@ -40,26 +39,26 @@ public class JdkFinderTests : IDisposable
             Providers = [new StubJvmProvider("first", jdk), new StubJvmProvider("second", jdk)],
         };
 
-        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var jvms = JdkFinder.Locate(options).ToList();
 
         var jvm = Assert.Single(jvms);
         Assert.Equal(["first", "second"], jvm.Providers);
     }
 
     [Fact]
-    public async Task Locate_RepeatedCandidatesFromOneSource_RecordTheNameOnce()
+    public void Locate_RepeatedCandidatesFromOneSource_RecordTheNameOnce()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
         var options = new JdkFindOptions { Providers = [new StubJvmProvider("dup", jdk, jdk)] };
 
-        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var jvms = JdkFinder.Locate(options).ToList();
 
         var jvm = Assert.Single(jvms);
         Assert.Equal(["dup"], jvm.Providers);
     }
 
     [Fact]
-    public async Task Locate_CanDisableDeduplication()
+    public void Locate_CanDisableDeduplication()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
         var options = new JdkFindOptions
@@ -68,7 +67,7 @@ public class JdkFinderTests : IDisposable
             DeduplicateHomes = false,
         };
 
-        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var jvms = JdkFinder.Locate(options).ToList();
 
         // Each candidate stays its own entry with a single source — the merge logic
         // must not leak into the dedup-off branch.
@@ -77,7 +76,7 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
-    public async Task Locate_PreservesFirstDiscoveryOrderAcrossProviders()
+    public void Locate_PreservesFirstDiscoveryOrderAcrossProviders()
     {
         var a = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "a");
         var b = TestJdk.Create(temp.FullPath, "17.0.2", "jdks", "b");
@@ -93,7 +92,7 @@ public class JdkFinderTests : IDisposable
             ],
         };
 
-        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var jvms = JdkFinder.Locate(options).ToList();
 
         Assert.Equal([a, b, c], jvms.Select(jvm => jvm.Home.FullName).ToArray());
         Assert.Equal(["p1", "p3"], jvms[0].Providers);
@@ -102,7 +101,7 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
-    public async Task Locate_SameNameAcrossProviderInstances_RecordsTheNameOnce()
+    public void Locate_SameNameAcrossProviderInstances_RecordsTheNameOnce()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
         var options = new JdkFindOptions
@@ -110,14 +109,14 @@ public class JdkFinderTests : IDisposable
             Providers = [new StubJvmProvider("x", jdk), new StubJvmProvider("x", jdk), new StubJvmProvider("y", jdk)],
         };
 
-        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var jvms = JdkFinder.Locate(options).ToList();
 
         var jvm = Assert.Single(jvms);
         Assert.Equal(["x", "y"], jvm.Providers);
     }
 
     [Fact]
-    public async Task Locate_DeduplicatesCaseInsensitivelyOnMacOs()
+    public void Locate_DeduplicatesCaseInsensitivelyOnMacOs()
     {
         if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsWindows())
             return;
@@ -132,11 +131,11 @@ public class JdkFinderTests : IDisposable
             Providers = [new StubJvmProvider("first", jdk), new StubJvmProvider("second", upper)],
         };
 
-        Assert.Single(await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Single(JdkFinder.Locate(options).ToList());
     }
 
     [Fact]
-    public async Task FindAsync_FiltersByFeatureVersion()
+    public void Find_FiltersByFeatureVersion()
     {
         var jdk8 = TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jdk8");
         TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
@@ -145,14 +144,14 @@ public class JdkFinderTests : IDisposable
             Providers = [new StubJvmProvider("stub", jdk8, Path.Combine(temp.FullPath, "jdks", "jdk21"))],
         };
 
-        var jvms = await JdkFinder.FindAsync(8, options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var jvms = JdkFinder.Find(8, options).ToList();
 
         var jvm = Assert.Single(jvms);
         Assert.Equal(jdk8, jvm.Home.FullName);
     }
 
     [Fact]
-    public async Task GetNewest_PrefersHigherFeatureVersionThenPatch()
+    public void GetNewest_PrefersHigherFeatureVersionThenPatch()
     {
         var jdk8 = TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jdk8");
         var jdk21 = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
@@ -162,7 +161,7 @@ public class JdkFinderTests : IDisposable
             Providers = [new StubJvmProvider("stub", jdk8, jdk21, jdk21Older)],
         };
 
-        var newest = await JdkFinder.GetNewestAsync(options, TestContext.Current.CancellationToken);
+        var newest = JdkFinder.GetNewest(options);
 
         Assert.NotNull(newest);
         Assert.Equal(jdk21, newest.Home.FullName);
@@ -175,7 +174,7 @@ public class JdkFinderTests : IDisposable
     // JAVA_HOME); inject providers or roots instead.
 
     [Fact]
-    public async Task GetDefault_PrefersJavaHomeWhenResolvable()
+    public void GetDefault_PrefersJavaHomeWhenResolvable()
     {
         var jdk8 = TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jdk8");
         TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
@@ -189,7 +188,7 @@ public class JdkFinderTests : IDisposable
         Environment.SetEnvironmentVariable("JAVA_HOME", jdk8);
         try
         {
-            var defaultJvm = await JdkFinder.GetDefaultAsync(options, TestContext.Current.CancellationToken);
+            var defaultJvm = JdkFinder.GetDefault(options);
             Assert.NotNull(defaultJvm);
             Assert.Equal(jdk8, defaultJvm.Home.FullName);
         }
@@ -200,7 +199,7 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
-    public async Task GetDefault_FallsBackToNewestWithoutJavaHome()
+    public void GetDefault_FallsBackToNewestWithoutJavaHome()
     {
         TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jdk8");
         var jdk21 = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
@@ -214,7 +213,7 @@ public class JdkFinderTests : IDisposable
         Environment.SetEnvironmentVariable("JAVA_HOME", null);
         try
         {
-            var defaultJvm = await JdkFinder.GetDefaultAsync(options, TestContext.Current.CancellationToken);
+            var defaultJvm = JdkFinder.GetDefault(options);
             Assert.NotNull(defaultJvm);
             Assert.Equal(jdk21, defaultJvm.Home.FullName);
         }
@@ -225,18 +224,18 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
-    public async Task Locate_MissingReleaseFile_IsSkipped()
+    public void Locate_MissingReleaseFile_IsSkipped()
     {
         var broken = Path.Combine(temp.FullPath, "broken");
         Directory.CreateDirectory(Path.Combine(broken, "bin"));
-        await File.WriteAllTextAsync(Path.Combine(broken, "bin", JavaHomeLayout.JavaExecutableName), string.Empty, TestContext.Current.CancellationToken);
+        File.WriteAllText(Path.Combine(broken, "bin", JavaHomeLayout.JavaExecutableName), string.Empty);
         var options = new JdkFindOptions { Providers = [new StubJvmProvider("stub", broken)] };
 
-        Assert.Empty(await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Empty(JdkFinder.Locate(options).ToList());
     }
 
     [Fact]
-    public async Task Locate_UnreadableReleaseFile_IsSkipped()
+    public void Locate_UnreadableReleaseFile_IsSkipped()
     {
         if (OperatingSystem.IsWindows() || Environment.UserName == "root")
             return; // Unix permission semantics; chmod has no effect when running as root.
@@ -246,11 +245,11 @@ public class JdkFinderTests : IDisposable
         var options = new JdkFindOptions { Providers = [new StubJvmProvider("stub", jdk)] };
 
         // An access denial must not crash the scan; the candidate is simply skipped.
-        Assert.Empty(await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken).ToListAsync(cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Empty(JdkFinder.Locate(options).ToList());
     }
 
     [Fact]
-    public async Task Scan_UnreadablePrefix_IsSkipped()
+    public void Scan_UnreadablePrefix_IsSkipped()
     {
         if (OperatingSystem.IsWindows() || Environment.UserName == "root")
             return;
@@ -261,7 +260,7 @@ public class JdkFinderTests : IDisposable
         File.SetUnixFileMode(locked, UnixFileMode.None);
         try
         {
-            Assert.Empty(await new IntelliJJvmProvider(locked).GetHomesAsync());
+            Assert.Empty(new IntelliJJvmProvider(locked).GetHomes());
         }
         finally
         {
