@@ -3,11 +3,14 @@ using System.Text.RegularExpressions;
 namespace JdkFind;
 
 /// <summary>
-///     Classifies installations into the normalized vendor and the foojay-style
-///     distribution. Acquisition sources follow Gradle's metadata detector: the
-///     target's own identity strings — the release file's IMPLEMENTOR /
-///     IMPLEMENTOR_VERSION plus the GRAALVM_VERSION hint, falling back to the
-///     java.vendor system property captured by the runtime probe. Matching is a
+///     Detects the normalized vendor and the foojay-style distribution of an
+///     installation as two independent axes. Both read the installation's own
+///     identity strings — the release file's IMPLEMENTOR / IMPLEMENTOR_VERSION
+///     plus the GRAALVM_VERSION hint, falling back to the java.vendor system
+///     property captured by the runtime probe. The vendor applies Gradle's
+///     known-vendor indicator set to the raw IMPLEMENTOR / java.vendor value,
+///     while the distribution runs its own pattern set with IMPLEMENTOR_VERSION
+///     taking precedence over the raw vendor string. Matching is a
 ///     case-insensitive substring search with the more specific families first
 ///     (the GraalVM community before Oracle, Mandrel before Red Hat).
 /// </summary>
@@ -85,72 +88,142 @@ internal static partial class JvmIdentity
     [GeneratedRegex("hp|hewlett", RegexOptions.IgnoreCase)]
     private static partial Regex HewlettPackardPattern { get; }
 
-    internal static (JvmVendor Vendor, JvmDistribution Distribution) Classify(
-        string? vendorRaw, string? implementorVersion = null, bool graalVmRelease = false)
+    [GeneratedRegex("graalvm", RegexOptions.IgnoreCase)]
+    private static partial Regex GraalVmPattern { get; }
+
+    /// <summary>
+    ///     Maps the raw IMPLEMENTOR / java.vendor string onto the normalized
+    ///     upstream organization using Gradle's known-vendor indicator set,
+    ///     plus the "graalvm" indicator: any string printing "graalvm" — the
+    ///     community and Oracle GraalVM editions alike — reports Oracle, the
+    ///     GraalVM family's upstream organization (foojay alignment). A bare
+    ///     vendor name without an indicator (e.g. "Gluon") stays Unknown.
+    /// </summary>
+    internal static JvmVendor DetectVendor(string? vendorRaw)
     {
         var raw = vendorRaw ?? string.Empty;
 
-        // The GraalVM family first: community builds name themselves, while Oracle builds hide
-        // behind "Oracle Corporation" and need the release-file hints.
+        if (AmazonPattern.IsMatch(raw))
+            return JvmVendor.Amazon;
+        if (AdoptiumPattern.IsMatch(raw))
+            return JvmVendor.Adoptium;
+        if (AdoptOpenJdkPattern.IsMatch(raw))
+            return JvmVendor.AdoptOpenJdk;
+        if (AzulPattern.IsMatch(raw))
+            return JvmVendor.Azul;
+        if (BellSoftPattern.IsMatch(raw))
+            return JvmVendor.BellSoft;
+        if (SapPattern.IsMatch(raw))
+            return JvmVendor.Sap;
+        if (MicrosoftPattern.IsMatch(raw))
+            return JvmVendor.Microsoft;
+        if (JetBrainsPattern.IsMatch(raw))
+            return JvmVendor.JetBrains;
+        if (SemeruPattern.IsMatch(raw))
+            return JvmVendor.Ibm;
+        if (RedHatPattern.IsMatch(raw))
+            return JvmVendor.RedHat;
+        if (KonaPattern.IsMatch(raw))
+            return JvmVendor.Tencent;
+        if (DragonwellPattern.IsMatch(raw))
+            return JvmVendor.Alibaba;
+        if (BishengPattern.IsMatch(raw))
+            return JvmVendor.Huawei;
+        if (OpenLogicPattern.IsMatch(raw))
+            return JvmVendor.OpenLogic;
+        if (EliyaPattern.IsMatch(raw))
+            return JvmVendor.Asymm;
+        if (OraclePattern.IsMatch(raw))
+            return JvmVendor.Oracle;
+        if (ApplePattern.IsMatch(raw))
+            return JvmVendor.Apple;
+        if (HewlettPackardPattern.IsMatch(raw))
+            return JvmVendor.HewlettPackard;
+        if (GraalVmPattern.IsMatch(raw))
+            return JvmVendor.Oracle;
+
+        return JvmVendor.Unknown;
+    }
+
+    /// <summary>
+    ///     Maps the installation onto its foojay-style distribution. The release
+    ///     file's IMPLEMENTOR_VERSION is the sharpest hint and wins over the raw
+    ///     vendor string; the GRAALVM_VERSION release key only decides when
+    ///     neither identity string matched.
+    /// </summary>
+    internal static JvmDistribution DetectDistribution(
+        string? implementorVersion, string? vendorRaw, bool graalVmRelease = false)
+    {
+        if (!string.IsNullOrEmpty(implementorVersion))
+        {
+            var fromImplementorVersion = MatchDistribution(implementorVersion);
+            if (fromImplementorVersion != JvmDistribution.Unknown)
+                return fromImplementorVersion;
+        }
+
+        if (!string.IsNullOrEmpty(vendorRaw))
+        {
+            var fromVendor = MatchDistribution(vendorRaw);
+            if (fromVendor != JvmDistribution.Unknown)
+                return fromVendor;
+        }
+
+        return graalVmRelease ? JvmDistribution.OracleGraalVm : JvmDistribution.Unknown;
+    }
+
+    /// <summary>
+    ///     Runs the distribution pattern set: the GraalVM family before Oracle so
+    ///     a plain "Oracle" vendor name cannot mask it, and Mandrel before Red Hat
+    ///     for the same reason. Returns Unknown when nothing matched.
+    /// </summary>
+    private static JvmDistribution MatchDistribution(string raw)
+    {
         if (GraalVmCommunityPattern.IsMatch(raw))
-            return (JvmVendor.Oracle, JvmDistribution.GraalVmCommunity);
-        if (graalVmRelease || Contains(implementorVersion, "graalvm") || OracleGraalVmPattern.IsMatch(raw))
-            return (JvmVendor.Oracle, JvmDistribution.OracleGraalVm);
+            return JvmDistribution.GraalVmCommunity;
+        if (OracleGraalVmPattern.IsMatch(raw))
+            return JvmDistribution.OracleGraalVm;
         if (MandrelPattern.IsMatch(raw))
-            return (JvmVendor.RedHat, JvmDistribution.Mandrel);
+            return JvmDistribution.Mandrel;
         if (GluonPattern.IsMatch(raw))
-            return (JvmVendor.Gluon, JvmDistribution.GluonGraalVm);
+            return JvmDistribution.GluonGraalVm;
 
         if (AmazonPattern.IsMatch(raw))
-            return (JvmVendor.Amazon, JvmDistribution.Corretto);
+            return JvmDistribution.Corretto;
         if (AdoptiumPattern.IsMatch(raw))
-            return (JvmVendor.Adoptium, JvmDistribution.Temurin);
+            return JvmDistribution.Temurin;
         if (AdoptOpenJdkPattern.IsMatch(raw))
-            return (JvmVendor.AdoptOpenJdk, JvmDistribution.AdoptOpenJdk);
+            return JvmDistribution.AdoptOpenJdk;
         if (AzulPattern.IsMatch(raw))
-            return (JvmVendor.Azul, JvmDistribution.Zulu);
+            return JvmDistribution.Zulu;
         if (BellSoftPattern.IsMatch(raw))
-            return (JvmVendor.BellSoft, JvmDistribution.Liberica);
+            return JvmDistribution.Liberica;
         if (SapPattern.IsMatch(raw))
-            return (JvmVendor.Sap, JvmDistribution.SapMachine);
+            return JvmDistribution.SapMachine;
         if (MicrosoftPattern.IsMatch(raw))
-            return (JvmVendor.Microsoft, JvmDistribution.Microsoft);
+            return JvmDistribution.Microsoft;
         if (JetBrainsPattern.IsMatch(raw))
-            return (JvmVendor.JetBrains, JvmDistribution.JetBrainsRuntime);
+            return JvmDistribution.JetBrainsRuntime;
         if (SemeruPattern.IsMatch(raw))
-            return (JvmVendor.Ibm, JvmDistribution.Semeru);
+            return JvmDistribution.Semeru;
         if (RedHatPattern.IsMatch(raw))
-            return (JvmVendor.RedHat, JvmDistribution.RedHatBuildOfOpenJdk);
+            return JvmDistribution.RedHatBuildOfOpenJdk;
         if (KonaPattern.IsMatch(raw))
-            return (JvmVendor.Tencent, JvmDistribution.Kona);
+            return JvmDistribution.Kona;
         if (DragonwellPattern.IsMatch(raw))
-            return (JvmVendor.Alibaba, JvmDistribution.Dragonwell);
+            return JvmDistribution.Dragonwell;
         if (BishengPattern.IsMatch(raw))
-            return (JvmVendor.Huawei, JvmDistribution.Bisheng);
+            return JvmDistribution.Bisheng;
         if (TravaPattern.IsMatch(raw))
-            return (JvmVendor.Unknown, JvmDistribution.Trava);
+            return JvmDistribution.Trava;
         if (OjdkBuildPattern.IsMatch(raw))
-            return (JvmVendor.Unknown, JvmDistribution.OjdkBuild);
+            return JvmDistribution.OjdkBuild;
         if (OpenLogicPattern.IsMatch(raw))
-            return (JvmVendor.OpenLogic, JvmDistribution.OpenLogic);
+            return JvmDistribution.OpenLogic;
         if (EliyaPattern.IsMatch(raw))
-            return (JvmVendor.Asymm, JvmDistribution.Eliya);
+            return JvmDistribution.Eliya;
         if (OraclePattern.IsMatch(raw))
-            return (JvmVendor.Oracle, JvmDistribution.OracleOpenJdk);
+            return JvmDistribution.OracleOpenJdk;
 
-        return VendorOnly(raw);
+        return JvmDistribution.Unknown;
     }
-
-    /// <summary>Vendors recognized only through their name, with no distinct distribution.</summary>
-    private static (JvmVendor, JvmDistribution) VendorOnly(string raw)
-    {
-        if (ApplePattern.IsMatch(raw))
-            return (JvmVendor.Apple, JvmDistribution.Unknown);
-        if (HewlettPackardPattern.IsMatch(raw))
-            return (JvmVendor.HewlettPackard, JvmDistribution.Unknown);
-        return (JvmVendor.Unknown, JvmDistribution.Unknown);
-    }
-
-    private static bool Contains(string? value, string text) =>
-        !string.IsNullOrEmpty(value) && value.Contains(text, StringComparison.OrdinalIgnoreCase);
 }

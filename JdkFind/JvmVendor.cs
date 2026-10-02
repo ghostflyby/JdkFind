@@ -12,7 +12,6 @@ public enum JvmVendor
     Asymm,
     Azul,
     BellSoft,
-    Gluon,
     Huawei,
     HewlettPackard,
     Ibm,

@@ -2,17 +2,16 @@
 JdkFind.JvmVendor.Asymm = 6 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Azul = 7 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.BellSoft = 8 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Gluon = 9 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.HewlettPackard = 11 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Huawei = 10 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Ibm = 12 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.JetBrains = 13 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Microsoft = 14 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.OpenLogic = 15 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Oracle = 16 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.RedHat = 17 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Sap = 18 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Tencent = 19 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.HewlettPackard = 10 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Huawei = 9 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Ibm = 11 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.JetBrains = 12 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Microsoft = 13 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.OpenLogic = 14 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Oracle = 15 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.RedHat = 16 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Sap = 17 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Tencent = 18 -> JdkFind.JvmVendor
 ~override JdkFind.JvmVersion.Equals(object obj) -> bool
 JdkFind.ICommonPrefixesJvmProvider
 JdkFind.ICommonPrefixJvmProvider
