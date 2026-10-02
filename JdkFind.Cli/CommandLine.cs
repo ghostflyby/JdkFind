@@ -17,7 +17,11 @@ internal static class CommandLine
         return version != 0 ? version : a.HasCompiler.CompareTo(b.HasCompiler);
     });
 
-    internal static int Run(string[] args)
+    internal static int Run(string[] args) => Run(args, findOptions: null);
+
+    /// <summary>Injection seam for tests: pass explicit locate options to run against
+    /// controlled fixtures instead of the real machine.</summary>
+    internal static int Run(string[] args, JdkFindOptions? findOptions)
     {
         Options options;
         try
@@ -37,9 +41,12 @@ internal static class CommandLine
             return ExitSuccess;
         }
 
-        var matches = JdkFinder.Locate(new JdkFindOptions { ProbeRuntimeProperties = !options.NoProbe })
+        var matches = JdkFinder.Locate(findOptions ?? new JdkFindOptions { ProbeRuntimeProperties = !options.NoProbe })
             .Where(jvm => MatchesFilters(jvm, options))
             .ToList();
+
+        if (matches.Count == 0)
+            return ExitNotFound;
 
         // --json wins over the human formats on every command.
         if (options.OutputJson)
