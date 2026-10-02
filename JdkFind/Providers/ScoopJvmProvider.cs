@@ -5,16 +5,16 @@ namespace JdkFind.Providers;
 ///     <c>SCOOP</c> and <c>SCOOP_GLOBAL</c> environment variables with the default
 ///     <c>~\scoop</c>.
 /// </summary>
-public sealed class ScoopJvmProvider(IEnumerable<string> prefixes) : JvmProviderBase
+public sealed class ScoopJvmProvider(IEnumerable<string> prefixes) : IJvmProvider
 {
-    public override string Name => "scoop";
+    public string Name => "scoop";
 
-    private readonly string[] prefixes = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
+    private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
     public ScoopJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
-    public override IEnumerable<string> GetJavaHomes() =>
-        ScanNested(prefixes.Select(prefix => Path.Combine(prefix, "apps")), "current");
+    public IEnumerable<string> GetJavaHomes() =>
+        JvmScanning.ScanNested(prefixList.Select(prefix => Path.Combine(prefix, "apps")), "current");
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {

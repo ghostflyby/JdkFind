@@ -6,15 +6,15 @@ namespace JdkFind.Providers;
 ///     Silicon, Intel Macs and Linuxbrew. The keg layout resolves through
 ///     <c>libexec/openjdk.jdk/Contents/Home</c>.
 /// </summary>
-public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : JvmProviderBase
+public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : IJvmProvider
 {
-    public override string Name => "homebrew";
+    public string Name => "homebrew";
 
-    private readonly string[] prefixes = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
+    private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
     public HomebrewJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
-    public override IEnumerable<string> GetJavaHomes() => EnumerateKegs();
+    public IEnumerable<string> GetJavaHomes() => EnumerateKegs();
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {
@@ -30,14 +30,14 @@ public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : JvmProvi
 
     private IEnumerable<string> EnumerateKegs()
     {
-        foreach (var prefix in prefixes)
+        foreach (var prefix in prefixList)
         {
             var opt = Path.Combine(prefix, "opt");
             if (!Directory.Exists(opt))
                 continue;
 
             foreach (var keg in Directory.EnumerateDirectories(opt, "openjdk*"))
-                if (Probe(keg) is { } javaHome)
+                if (JavaHomeLayout.Probe(keg) is { } javaHome)
                     yield return javaHome;
         }
     }

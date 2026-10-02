@@ -5,14 +5,13 @@ namespace JdkFind.Providers;
 ///     Together with <see cref="MacOsSystemJvmProvider" /> this covers everything
 ///     <c>/usr/libexec/java_home</c> reports, without spawning it.
 /// </summary>
-public sealed class MacOsUserJvmProvider(string? commonPrefix) : JvmProviderBase
+public sealed class MacOsUserJvmProvider(string? commonPrefix) : ICommonPrefixJvmProvider
 {
-    public override string Name => "macos-user";
+    public string Name => "macos-user";
 
     public MacOsUserJvmProvider() : this(ResolveDefaultPrefix()) { }
 
-    public override IEnumerable<string> GetJavaHomes() =>
-        commonPrefix != null ? ScanPrefixes([commonPrefix]) : Enumerable.Empty<string>();
+    public string? CommonPrefix => commonPrefix;
 
     private static string? ResolveDefaultPrefix()
     {

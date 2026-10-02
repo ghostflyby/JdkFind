@@ -12,7 +12,7 @@ namespace JdkFind.Providers;
 ///     under WOW6432Node are not covered), and vendor roots outside this list
 ///     (Red Hat, BellSoft, ...) are intentionally out of scope.
 /// </summary>
-public sealed class WindowsRegistryJvmProvider : JvmProviderBase
+public sealed class WindowsRegistryJvmProvider : IJvmProvider
 {
     private static readonly (string Path, int Depth)[] RegistryRoots =
     [
@@ -23,9 +23,9 @@ public sealed class WindowsRegistryJvmProvider : JvmProviderBase
         (@"SOFTWARE\Amazon Corretto", 3),
     ];
 
-    public override string Name => "windows-registry";
+    public string Name => "windows-registry";
 
-    public override IEnumerable<string> GetJavaHomes() =>
+    public IEnumerable<string> GetJavaHomes() =>
         OperatingSystem.IsWindows() ? CollectHomes() : Enumerable.Empty<string>();
 
     [SupportedOSPlatform("windows")]

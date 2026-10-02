@@ -4,14 +4,14 @@ namespace JdkFind.Providers;
 ///     Scans JDK toolchains Gradle auto-provisioned into <c>&lt;GRADLE_USER_HOME&gt;/jdks</c>,
 ///     honoring <c>GRADLE_USER_HOME</c> with the default <c>~/.gradle</c>.
 /// </summary>
-public sealed class GradleJvmProvider(string? gradleUserHome) : JvmProviderBase
+public sealed class GradleJvmProvider(string? gradleUserHome) : ICommonPrefixJvmProvider
 {
-    public override string Name => "gradle";
+    public string Name => "gradle";
 
     public GradleJvmProvider() : this(ResolveDefaultHome()) { }
 
-    public override IEnumerable<string> GetJavaHomes() =>
-        gradleUserHome != null ? ScanPrefixes([Path.Combine(gradleUserHome, "jdks")]) : Enumerable.Empty<string>();
+    public string? CommonPrefix =>
+        gradleUserHome != null ? Path.Combine(gradleUserHome, "jdks") : null;
 
     private static string? ResolveDefaultHome()
     {
