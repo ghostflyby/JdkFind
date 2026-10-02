@@ -29,7 +29,12 @@ internal static class CommandLine
         }
 
         var jvms = new List<Jvm>();
-        foreach (var jvm in JdkFinder.Locate())
+        var findOptions = new JdkFindOptions
+        {
+            // --path only needs homes; probing every installation would be wasted latency.
+            ProbeRuntimeProperties = !options.NoProbe && !options.PathsOnly,
+        };
+        foreach (var jvm in JdkFinder.Locate(findOptions))
         {
             if (options.LanguageVersion is { } version && jvm.LanguageVersion != version)
                 continue;
@@ -66,6 +71,12 @@ internal static class CommandLine
                 jvm.Home.FullName,
                 jvm.Version.Original,
                 jvm.LanguageVersion,
+                jvm.KnownVendor.ToString(),
+                jvm.VendorDisplayName,
+                jvm.RuntimeName,
+                jvm.RuntimeVersion,
+                jvm.VmName,
+                jvm.VmVersion,
                 jvm.Vendor,
                 jvm.Architecture,
                 jvm.OsName,
@@ -86,12 +97,13 @@ internal static class CommandLine
         Usage: jdkfind [options]
 
         Options:
-          -p, --path           Print home directory paths only (wins over --json)
+          -p, --path           Print home directory paths only (wins over --json; implies --no-probe)
           -j, --json           Print results as JSON
           -l, --latest         Print only the newest match
           -v, --version <n>    Filter by feature version (e.g. 21)
               --vendor <text>  Filter by vendor substring (case-insensitive)
               --arch <text>    Filter by architecture substring (case-insensitive)
+              --no-probe       Skip executing each JVM for runtime properties
           -h, --help           Show this help
 
         Exit codes: 0 = found, 1 = none found, 2 = usage error

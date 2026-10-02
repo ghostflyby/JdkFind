@@ -1,6 +1,10 @@
 namespace JdkFind;
 
-/// <summary>A located JVM installation. Metadata comes from the JEP 223 <c>release</c> file.</summary>
+/// <summary>
+///     A located JVM installation. Core metadata comes from the JEP 223 <c>release</c>
+///     file; runtime properties (when probed) come from executing the installation's
+///     own java executable.
+/// </summary>
 public sealed record Jvm
 {
     /// <summary>The Java home directory.</summary>
@@ -12,18 +16,36 @@ public sealed record Jvm
     /// <summary>The JDK version — a comparable value that also carries the raw <c>JAVA_VERSION</c> string.</summary>
     public required JvmVersion Version { get; init; }
 
-    /// <summary>Feature version, e.g. 21 for <c>21.0.5</c> and 8 for <c>1.8.0_402</c>.</summary>
+    /// <summary>The feature version extracted from <c>JAVA_VERSION</c>; null when it is unparseable.</summary>
     public int? LanguageVersion { get; init; }
 
-    /// <summary>Raw <c>IMPLEMENTOR</c> value, e.g. <c>Eclipse Adoptium</c>.</summary>
+    /// <summary>The raw vendor string (<c>IMPLEMENTOR</c>, falling back to the probed <c>java.vendor</c>).</summary>
     public string? Vendor { get; init; }
 
-    /// <summary>Raw <c>OS_ARCH</c> value, e.g. <c>aarch64</c>.</summary>
-    public string? Architecture { get; init; }
+    /// <summary>The known vendor the raw string matched, or <see cref="JvmVendor.Unknown" />.</summary>
+    public JvmVendor KnownVendor { get; init; }
+
+    /// <summary>Human-friendly vendor display name; unknown vendors show their raw string.</summary>
+    public string VendorDisplayName { get; init; } = "Unknown";
+
+    /// <summary><c>java.runtime.name</c> from the runtime probe; null when probing is off or failed.</summary>
+    public string? RuntimeName { get; init; }
+
+    /// <summary><c>java.runtime.version</c> from the runtime probe (includes build metadata).</summary>
+    public string? RuntimeVersion { get; init; }
+
+    /// <summary><c>java.vm.name</c> from the runtime probe.</summary>
+    public string? VmName { get; init; }
+
+    /// <summary><c>java.vm.version</c> from the runtime probe.</summary>
+    public string? VmVersion { get; init; }
 
     /// <summary>Raw <c>OS_NAME</c> value, e.g. <c>Darwin</c>.</summary>
     public string? OsName { get; init; }
 
+    /// <summary>Raw <c>OS_ARCH</c> value, falling back to the probed <c>os.arch</c>.</summary>
+    public string? Architecture { get; init; }
+
     public override string ToString() =>
-        $"{LanguageVersion?.ToString() ?? "?"} ({Version}) {Vendor ?? "?"} — {Home.FullName}";
+        $"{LanguageVersion?.ToString() ?? "?"} ({Version}) {VendorDisplayName} — {Home.FullName}";
 }

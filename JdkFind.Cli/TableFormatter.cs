@@ -10,7 +10,7 @@ internal static class TableFormatter
         var rows = jvms.Select(jvm => new[]
         {
             jvm.Version.Original,
-            jvm.Vendor ?? "-",
+            jvm.VendorDisplayName,
             jvm.Architecture ?? "-",
             string.Join('+', jvm.Providers),
             jvm.Home.FullName,
