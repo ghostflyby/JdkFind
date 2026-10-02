@@ -50,10 +50,10 @@ public interface ICommonPrefixesJvmProvider : IJvmProvider
     }
 
     /// <summary>The prefix directories whose immediate subdirectories are candidates.</summary>
-    protected abstract IEnumerable<string> GetCommonPrefixes();
+    protected IEnumerable<string> GetCommonPrefixes();
 
     /// <summary>Maps a scanned subdirectory to the Java home inside it, or null when it is not one.</summary>
-    protected abstract string? GetJavaHome(string subDirectory);
+    protected string? GetJavaHome(string subDirectory);
 }
 
 /// <summary>
