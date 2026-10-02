@@ -12,6 +12,9 @@ public sealed record Jvm
     /// <summary>Raw <c>JAVA_VERSION</c> value, e.g. <c>21.0.5</c> or <c>1.8.0_402</c>.</summary>
     public string? Version { get; init; }
 
+    /// <summary>The parsed, comparable version number; null when <see cref="Version" /> is unparseable.</summary>
+    public JvmVersion? VersionNumber { get; init; }
+
     /// <summary>Feature version, e.g. 21 for <c>21.0.5</c> and 8 for <c>1.8.0_402</c>.</summary>
     public int? LanguageVersion { get; init; }
 

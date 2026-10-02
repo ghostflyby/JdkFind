@@ -43,21 +43,6 @@ internal static class ReleaseFile
         return segments.Length > 1 && first == 1 ? LeadingDigits(segments[1]) : first;
     }
 
-    /// <summary>Turns <c>JAVA_VERSION</c> into a comparable <see cref="Version" />; null when unparseable.</summary>
-    internal static Version? TryParseVersion(string? javaVersion)
-    {
-        if (string.IsNullOrWhiteSpace(javaVersion))
-            return null;
-
-        var head = CutAt(javaVersion, '-', '+').Replace('_', '.');
-
-        // System.Version requires at least two segments; pad "25" to "25.0".
-        if (!head.Contains('.'))
-            head += ".0";
-
-        return Version.TryParse(head, out var version) ? version : null;
-    }
-
     private static string CutAt(string value, params char[] separators)
     {
         var cut = value.IndexOfAny(separators);

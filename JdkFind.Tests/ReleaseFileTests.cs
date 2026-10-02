@@ -20,20 +20,6 @@ public class ReleaseFileTests : IDisposable
         Assert.Equal(expected, ReleaseFile.TryGetLanguageVersion(javaVersion));
 
     [Fact]
-    public void TryParseVersion_ComparesAcrossNotations()
-    {
-        var modern = ReleaseFile.TryParseVersion("21.0.5");
-        var legacy = ReleaseFile.TryParseVersion("1.8.0_402");
-        var ea = ReleaseFile.TryParseVersion("25-ea");
-
-        Assert.Equal(new Version(21, 0, 5), modern);
-        Assert.Equal(new Version(1, 8, 0, 402), legacy);
-        Assert.Equal(new Version(25, 0), ea);
-        Assert.Null(ReleaseFile.TryParseVersion("not-a-version"));
-        Assert.True(modern > legacy);
-    }
-
-    [Fact]
     public void Parse_ReadsQuotedEntriesAndSkipsNoise()
     {
         var releasePath = Path.Combine(temp.FullPath, "release");

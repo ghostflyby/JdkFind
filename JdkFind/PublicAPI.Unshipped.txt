@@ -1,4 +1,5 @@
 #nullable enable
+~override JdkFind.JvmVersion.Equals(object obj) -> bool
 JdkFind.ICommonPrefixesJvmProvider
 JdkFind.ICommonPrefixJvmProvider
 JdkFind.IJvmProvider
@@ -30,6 +31,15 @@ JdkFind.Jvm.Vendor.get -> string?
 JdkFind.Jvm.Vendor.init -> void
 JdkFind.Jvm.Version.get -> string?
 JdkFind.Jvm.Version.init -> void
+JdkFind.Jvm.VersionNumber.get -> JdkFind.JvmVersion?
+JdkFind.Jvm.VersionNumber.init -> void
+JdkFind.JvmVersion
+JdkFind.JvmVersion.CompareTo(JdkFind.JvmVersion other) -> int
+JdkFind.JvmVersion.Core.get -> System.Version!
+JdkFind.JvmVersion.Equals(JdkFind.JvmVersion other) -> bool
+JdkFind.JvmVersion.IsPreRelease.get -> bool
+JdkFind.JvmVersion.JvmVersion() -> void
+JdkFind.JvmVersion.Original.get -> string!
 JdkFind.JvmVersionComparer
 JdkFind.JvmVersionComparer.Compare(JdkFind.Jvm? x, JdkFind.Jvm? y) -> int
 JdkFind.JvmVersionComparer.JvmVersionComparer() -> void
@@ -90,6 +100,8 @@ JdkFind.Providers.WindowsRegistryJvmProvider.WindowsRegistryJvmProvider() -> voi
 override JdkFind.Jvm.Equals(object? obj) -> bool
 override JdkFind.Jvm.GetHashCode() -> int
 override JdkFind.Jvm.ToString() -> string!
+override JdkFind.JvmVersion.GetHashCode() -> int
+override JdkFind.JvmVersion.ToString() -> string!
 static JdkFind.JavaHomeLayout.Probe(string! candidateDirectory) -> string?
 static JdkFind.JdkFinder.Find(int languageVersion, JdkFind.JdkFindOptions? options = null) -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
 static JdkFind.JdkFinder.GetDefault(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?
@@ -98,4 +110,11 @@ static JdkFind.JdkFinder.Locate(JdkFind.JdkFindOptions? options = null) -> Syste
 static JdkFind.JdkFindOptions.CreateDefaultProviders() -> System.Collections.Generic.List<JdkFind.IJvmProvider!>!
 static JdkFind.Jvm.operator !=(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
 static JdkFind.Jvm.operator ==(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
+static JdkFind.JvmVersion.operator !=(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
+static JdkFind.JvmVersion.operator <(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
+static JdkFind.JvmVersion.operator <=(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
+static JdkFind.JvmVersion.operator ==(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
+static JdkFind.JvmVersion.operator >(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
+static JdkFind.JvmVersion.operator >=(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
+static JdkFind.JvmVersion.TryParse(string? javaVersion, out JdkFind.JvmVersion version) -> bool
 static JdkFind.JvmVersionComparer.Default.get -> JdkFind.JvmVersionComparer!
