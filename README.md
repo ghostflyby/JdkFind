@@ -24,7 +24,13 @@ $ jdkfind --latest --path     # best single match — handy for shells:
 $ export JAVA_HOME="$(jdkfind --latest --path)"
 $ jdkfind -v 21               # filter by feature version
 $ jdkfind --vendor azul --arch aarch64
+$ jdkfind --no-probe          # skip executing JVMs for runtime properties
 ```
+
+By default `jdkfind` executes each installation's own java executable
+once to enrich the metadata with runtime properties (runtime and VM
+name/version — the Gradle approach); failures degrade silently to the
+release-file metadata.
 
 Exit codes: `0` found, `1` none found, `2` usage error. When both are given,
 `--path` wins over `--json`.
