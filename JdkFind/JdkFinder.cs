@@ -119,6 +119,7 @@ public static class JdkFinder
             Home = new DirectoryInfo(homePath),
             Providers = providers,
             Version = version,
+            VersionNumber = JvmVersion.TryParse(version, out var versionNumber) ? versionNumber : null,
             LanguageVersion = ReleaseFile.TryGetLanguageVersion(version),
             Vendor = release.GetValueOrDefault("IMPLEMENTOR"),
             Architecture = release.GetValueOrDefault("OS_ARCH"),

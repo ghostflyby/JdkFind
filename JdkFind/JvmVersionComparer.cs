@@ -1,8 +1,8 @@
 namespace JdkFind;
 
 /// <summary>
-///     Orders JVMs from oldest to newest: by feature version first, then by the full
-///     version number. Unknown values always sort last.
+///     Orders JVMs from oldest to newest by their parsed version number
+///     (<see cref="Jvm.VersionNumber" />); unparsed values always sort last.
 /// </summary>
 public sealed class JvmVersionComparer : IComparer<Jvm?>
 {
@@ -15,17 +15,12 @@ public sealed class JvmVersionComparer : IComparer<Jvm?>
         if (y is null)
             return 1;
 
-        var languageComparison = (x.LanguageVersion ?? -1).CompareTo(y.LanguageVersion ?? -1);
-        if (languageComparison != 0)
-            return languageComparison;
-
-        var xVersion = ReleaseFile.TryParseVersion(x.Version);
-        var yVersion = ReleaseFile.TryParseVersion(y.Version);
-        return xVersion switch
+        return (x.VersionNumber, y.VersionNumber) switch
         {
-            null when yVersion is null => 0,
-            null => -1,
-            _ => yVersion is null ? 1 : xVersion.CompareTo(yVersion)
+            (null, null) => 0,
+            (null, _) => -1,
+            (_, null) => 1,
+            _ => x.VersionNumber.Value.CompareTo(y.VersionNumber.Value)
         };
     }
 }
