@@ -225,6 +225,23 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
+    public void Locate_ComputesKnownVendorAndDisplayName()
+    {
+        var jdk = TestJdk.CreateWithImplementor(temp.FullPath, "21.0.5", "Eclipse Adoptium", "jdks", "adoptium");
+        var options = new JdkFindOptions
+        {
+            Providers = [new StubJvmProvider("stub", jdk)],
+            ProbeRuntimeProperties = false, // 假 java 不可执行，探测会静默失败——本用例只验证 release 侧。
+        };
+
+        var jvm = Assert.Single(JdkFinder.Locate(options).ToList());
+
+        Assert.Equal("Eclipse Adoptium", jvm.Vendor);
+        Assert.Equal(JvmVendor.Adoptium, jvm.KnownVendor);
+        Assert.Equal("Eclipse Temurin", jvm.VendorDisplayName);
+    }
+
+    [Fact]
     public void GetNewest_UnparseableVersion_SortsBeforeParsedVersions()
     {
         // An exotic JAVA_VERSION must not lose the JVM — it just sorts as unknown.

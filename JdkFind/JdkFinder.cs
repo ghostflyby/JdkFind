@@ -93,11 +93,11 @@ public static class JdkFinder
         }
 
         return order
-            .Select(entry => CreateJvm(entry.HomePath, entry.Providers))
+            .Select(entry => CreateJvm(entry.HomePath, entry.Providers, options.ProbeRuntimeProperties))
             .OfType<Jvm>();
     }
 
-    private static Jvm? CreateJvm(string homePath, IReadOnlyList<string> providers)
+    private static Jvm? CreateJvm(string homePath, IReadOnlyList<string> providers, bool probeRuntime)
     {
         // The provider contract guarantees validated homes, so the release file is
         // expected to exist; parse failures (missing or unreadable) count as no JVM.
@@ -113,20 +113,37 @@ public static class JdkFinder
             return null;
         }
 
+        // The runtime probe executes the installation's own java executable; anything
+        // it adds is enrichment — release-file values keep precedence.
+        var runtime = probeRuntime ? JvmRuntimeProbe.Probe(homePath) : null;
+
         // The raw JAVA_VERSION string is preserved on JvmVersion.Original; unparseable
         // values degrade to the Unknown placeholder (sorts before every known version).
         var version = JvmVersion.Parse(release.GetValueOrDefault("JAVA_VERSION"));
+
+        var vendor = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR")) ?? runtime?.Vendor;
+        var knownVendor = JvmVendors.Parse(vendor);
+
         return new Jvm
         {
             Home = new DirectoryInfo(homePath),
             Providers = providers,
             Version = version,
             LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
-            Vendor = release.GetValueOrDefault("IMPLEMENTOR"),
-            Architecture = release.GetValueOrDefault("OS_ARCH"),
+            Vendor = vendor,
+            KnownVendor = knownVendor,
+            VendorDisplayName = JvmVendors.GetDisplayName(knownVendor, vendor),
+            RuntimeName = runtime?.RuntimeName,
+            RuntimeVersion = runtime?.RuntimeVersion,
+            VmName = runtime?.VmName,
+            VmVersion = runtime?.VmVersion,
             OsName = release.GetValueOrDefault("OS_NAME"),
+            Architecture = NonEmpty(release.GetValueOrDefault("OS_ARCH")) ?? runtime?.OsArch,
         };
     }
+
+    private static string? NonEmpty(string? value) =>
+        string.IsNullOrEmpty(value) ? null : value;
 
     /// <summary>
     ///     Deduplication key: the canonical path of the home (every path component's

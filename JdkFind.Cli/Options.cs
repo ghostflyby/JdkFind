@@ -16,6 +16,8 @@ internal sealed class Options
 
     internal string? Architecture { get; private set; }
 
+    internal bool NoProbe { get; private set; }
+
     internal static Options Parse(string[] args)
     {
         var options = new Options();
@@ -50,6 +52,10 @@ internal sealed class Options
 
                 case "--arch":
                     options.Architecture = TakeValue(ref i, inlineValue, args, name);
+                    break;
+
+                case "--no-probe":
+                    options.NoProbe = true;
                     break;
 
                 default:

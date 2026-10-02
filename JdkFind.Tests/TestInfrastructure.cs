@@ -26,7 +26,11 @@ internal sealed class TempDirectory : IDisposable
 internal static class TestJdk
 {
     /// <summary>Creates a minimal fake JDK home: <c>bin/java</c> plus a <c>release</c> file.</summary>
-    internal static string Create(string root, string javaVersion, params string[] segments)
+    internal static string Create(string root, string javaVersion, params string[] segments) =>
+        CreateWithImplementor(root, javaVersion, "Test Vendor", segments);
+
+    /// <summary>Same as <see cref="Create" />, but controls the <c>IMPLEMENTOR</c> value.</summary>
+    internal static string CreateWithImplementor(string root, string javaVersion, string implementor, params string[] segments)
     {
         var home = Path.Combine([root, .. segments]);
         Directory.CreateDirectory(Path.Combine(home, "bin"));
@@ -35,7 +39,7 @@ internal static class TestJdk
             Path.Combine(home, "release"),
             $"""
              JAVA_VERSION="{javaVersion}"
-             IMPLEMENTOR="Test Vendor"
+             IMPLEMENTOR="{implementor}"
              OS_ARCH="aarch64"
              """);
         return home;

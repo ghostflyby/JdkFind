@@ -11,6 +11,14 @@ public sealed class JdkFindOptions
     /// <summary>Collapse candidates that resolve to the same physical directory. Default is true.</summary>
     public bool DeduplicateHomes { get; init; } = true;
 
+    /// <summary>
+    ///     Execute each candidate's own java executable to enrich the metadata with
+    ///     runtime properties (runtime/VM name and version, vendor fallback). Adds a
+    ///     few hundred milliseconds per installation; failures degrade silently to the
+    ///     release-file metadata. Default is true.
+    /// </summary>
+    public bool ProbeRuntimeProperties { get; init; } = true;
+
     /// <summary>The built-in provider set for the current platform, in priority order.</summary>
     public static List<IJvmProvider> CreateDefaultProviders() =>
     [

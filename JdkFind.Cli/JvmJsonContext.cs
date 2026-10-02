@@ -7,8 +7,14 @@ namespace JdkFind.Cli;
 /// chain recurses without bound).</summary>
 internal sealed record JvmDto(
     string Home,
-    string? Version,
+    string Version,
     int? LanguageVersion,
+    string KnownVendor,
+    string VendorDisplayName,
+    string? RuntimeName,
+    string? RuntimeVersion,
+    string? VmName,
+    string? VmVersion,
     string? Vendor,
     string? Architecture,
     string? OsName,
