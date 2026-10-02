@@ -10,6 +10,7 @@ internal sealed record JvmDto(
     string Version,
     int? LanguageVersion,
     bool HasCompiler,
+    bool Prerelease,
     string Vendor,
     string Distribution,
     string? VendorRaw,
