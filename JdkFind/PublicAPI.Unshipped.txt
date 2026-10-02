@@ -1,6 +1,5 @@
 #nullable enable
 JdkFind.ICommonPrefixesJvmProvider
-JdkFind.ICommonPrefixesJvmProvider.GetJavaHomeDefault(string! subDirectory) -> string?
 JdkFind.ICommonPrefixJvmProvider
 JdkFind.IJvmProvider
 JdkFind.IJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!

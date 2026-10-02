@@ -19,7 +19,7 @@ public sealed class ScoopJvmProvider(IEnumerable<string> prefixes) : ICommonPref
 
     string? ICommonPrefixesJvmProvider.GetJavaHome(string subDirectory) =>
         string.Equals(Path.GetFileName(subDirectory), "current", StringComparison.OrdinalIgnoreCase)
-            ? ICommonPrefixesJvmProvider.GetJavaHomeDefault(subDirectory)
+            ? JavaHomeLayout.Probe(subDirectory)
             : null;
 
     private static IEnumerable<string> ResolveDefaultPrefixes()

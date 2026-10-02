@@ -47,14 +47,9 @@ public interface ICommonPrefixesJvmProvider : IJvmProvider
     protected IEnumerable<string> GetCommonPrefixes();
 
     /// <summary>Maps a scanned subdirectory to the Java home inside it, or null when it is not one.
-    /// Defaults to the layout probe; implementations overriding it can call
-    /// <see cref="GetJavaHomeDefault" /> to keep the probe and add extra checks.</summary>
-    protected string? GetJavaHome(string subDirectory) => GetJavaHomeDefault(subDirectory);
-
-    /// <summary>The default validation: probes the known layouts via <see cref="JavaHomeLayout" />.
-    /// Exposed so implementations can combine it with extra checks when overriding
-    /// <see cref="GetJavaHome" />.</summary>
-    public static string? GetJavaHomeDefault(string subDirectory) => JavaHomeLayout.Probe(subDirectory);
+    /// Defaults to <see cref="JavaHomeLayout.Probe" />; implementations overriding it can
+    /// call the probe directly and add extra checks.</summary>
+    protected string? GetJavaHome(string subDirectory) => JavaHomeLayout.Probe(subDirectory);
 }
 
 /// <summary>
