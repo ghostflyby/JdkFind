@@ -16,23 +16,22 @@ public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : ICommonP
     {
     }
 
-    string? ICommonPrefixesJvmProvider.SearchPattern => "openjdk*";
+    string ICommonPrefixesJvmProvider.SearchPattern => "openjdk*";
 
-    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes()
-    {
-        foreach (var prefix in prefixList)
-            yield return Path.Combine(prefix, "opt");
-    }
+    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() =>
+        prefixList.Select(prefix => Path.Combine(prefix, "opt"));
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {
+        if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsLinux())
+            return [];
+
+        var prefixes = new List<string>();
         var env = Environment.GetEnvironmentVariable("HOMEBREW_PREFIX");
         if (!string.IsNullOrWhiteSpace(env))
-            yield return env;
+            prefixes.Add(env);
 
-        if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsLinux()) yield break;
-        yield return "/opt/homebrew";
-        yield return "/usr/local";
-        yield return "/home/linuxbrew/.linuxbrew";
+        prefixes.AddRange(["/opt/homebrew", "/usr/local", "/home/linuxbrew/.linuxbrew"]);
+        return prefixes;
     }
 }

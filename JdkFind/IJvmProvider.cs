@@ -24,13 +24,11 @@ public interface IJvmProvider
 /// </summary>
 public interface ICommonPrefixesJvmProvider : IJvmProvider
 {
-    IEnumerable<string> IJvmProvider.GetJavaHomes()
-    {
-        foreach (var prefix in GetCommonPrefixes())
-        foreach (var subDirectory in JvmScanning.EnumerateGuarded(prefix, SearchPattern))
-            if (GetJavaHome(subDirectory) is { } javaHome)
-                yield return javaHome;
-    }
+    IEnumerable<string> IJvmProvider.GetJavaHomes() =>
+        GetCommonPrefixes()
+            .SelectMany(prefix => JvmScanning.EnumerateGuarded(prefix, SearchPattern))
+            .Select(GetJavaHome)
+            .OfType<string>();
 
     /// <summary>
     ///     Optional search pattern applied when enumerating a prefix's children

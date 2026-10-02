@@ -92,9 +92,9 @@ public static class JdkFinder
             }
         }
 
-        foreach (var (homePath, providers) in order)
-            if (CreateJvm(homePath, providers) is { } jvm)
-                yield return jvm;
+        return order
+            .Select(entry => CreateJvm(entry.HomePath, entry.Providers))
+            .OfType<Jvm>();
     }
 
     private static Jvm? CreateJvm(string homePath, IReadOnlyList<string> providers)

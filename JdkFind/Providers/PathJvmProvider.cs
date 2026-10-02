@@ -15,30 +15,24 @@ public sealed class PathJvmProvider(string? path) : IJvmProvider
     public IEnumerable<string> GetJavaHomes()
     {
         if (string.IsNullOrWhiteSpace(path))
-            yield break;
+            return [];
 
-        foreach (var home in Enumerate(path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)))
-            yield return home;
+        return Enumerate(path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
 
-    private static IEnumerable<string> Enumerate(IEnumerable<string> entries)
-    {
-        foreach (var entry in entries)
-        {
-            if (JavaHomeLayout.Probe(entry) is { } home)
-            {
-                yield return home;
-                continue;
-            }
+    private static IEnumerable<string> Enumerate(IEnumerable<string> entries) =>
+        entries.Select(HomeFromEntry).OfType<string>();
 
-            // PATH entries are often <home>/bin; probe one level up.
-            var trimmed = entry.TrimEnd('/', '\\');
-            if (Path.GetFileName(trimmed).Equals("bin", StringComparison.OrdinalIgnoreCase) &&
-                Path.GetDirectoryName(trimmed) is { } parent &&
-                JavaHomeLayout.Probe(parent) is { } parentHome)
-            {
-                yield return parentHome;
-            }
-        }
+    private static string? HomeFromEntry(string entry)
+    {
+        if (JavaHomeLayout.Probe(entry) is { } home)
+            return home;
+
+        // PATH entries are often <home>/bin; probe one level up.
+        var trimmed = entry.TrimEnd('/', '\\');
+        return Path.GetFileName(trimmed).Equals("bin", StringComparison.OrdinalIgnoreCase) &&
+               Path.GetDirectoryName(trimmed) is { } parent
+            ? JavaHomeLayout.Probe(parent)
+            : null;
     }
 }

@@ -25,22 +25,25 @@ public sealed class ScoopJvmProvider(IEnumerable<string> prefixes) : ICommonPref
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {
         if (!OperatingSystem.IsWindows())
-            yield break;
+            return [];
 
+        var prefixes = new List<string>();
         var scoop = Environment.GetEnvironmentVariable("SCOOP");
         if (!string.IsNullOrWhiteSpace(scoop))
         {
-            yield return scoop;
+            prefixes.Add(scoop);
         }
         else
         {
             var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             if (!string.IsNullOrEmpty(profile))
-                yield return Path.Combine(profile, "scoop");
+                prefixes.Add(Path.Combine(profile, "scoop"));
         }
 
         var global = Environment.GetEnvironmentVariable("SCOOP_GLOBAL");
         if (!string.IsNullOrWhiteSpace(global))
-            yield return global;
+            prefixes.Add(global);
+
+        return prefixes;
     }
 }

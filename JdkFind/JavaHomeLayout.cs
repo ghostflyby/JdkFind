@@ -13,7 +13,7 @@ internal static class JavaHomeLayout
         if (string.IsNullOrWhiteSpace(candidateDirectory))
             return null;
 
-        foreach (var layout in EnumerateLayouts(candidateDirectory))
+        foreach (var layout in CandidateLayouts(candidateDirectory))
             if (IsJavaHome(layout))
                 return layout;
 
@@ -26,10 +26,10 @@ internal static class JavaHomeLayout
         File.Exists(Path.Combine(homeDirectory, "bin", JavaExecutableName)) &&
         File.Exists(Path.Combine(homeDirectory, "release"));
 
-    private static IEnumerable<string> EnumerateLayouts(string candidateDirectory)
-    {
-        yield return candidateDirectory;
-        yield return Path.Combine(candidateDirectory, "Contents", "Home");
-        yield return Path.Combine(candidateDirectory, "libexec", "openjdk.jdk", "Contents", "Home");
-    }
+    private static string[] CandidateLayouts(string candidateDirectory) =>
+    [
+        candidateDirectory,
+        Path.Combine(candidateDirectory, "Contents", "Home"),
+        Path.Combine(candidateDirectory, "libexec", "openjdk.jdk", "Contents", "Home"),
+    ];
 }

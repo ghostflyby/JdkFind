@@ -10,20 +10,31 @@ public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes)
 
     private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
-    public WindowsProgramFilesJvmProvider() : this(ResolveDefaultPrefixes()) { }
+    private static readonly string[] SourceArray =
+    [
+        "Java",
+        "Eclipse Adoptium",
+        "Microsoft",
+        "Zulu",
+        "Amazon Corretto",
+        "BellSoft"
+    ];
+
+    public WindowsProgramFilesJvmProvider() : this(ResolveDefaultPrefixes())
+    {
+    }
 
     IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => prefixList;
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {
         if (!OperatingSystem.IsWindows())
-            yield break;
+            return [];
 
         var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
         if (string.IsNullOrEmpty(programFiles))
-            yield break;
+            return [];
 
-        foreach (var vendor in new[] { "Java", "Eclipse Adoptium", "Microsoft", "Zulu", "Amazon Corretto", "BellSoft" })
-            yield return Path.Combine(programFiles, vendor);
+        return SourceArray.Select(vendor => Path.Combine(programFiles, vendor));
     }
 }

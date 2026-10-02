@@ -13,20 +13,16 @@ internal static class JvmScanning
     internal static IEnumerable<string> EnumerateGuarded(string directory, string? searchPattern = null)
     {
         if (!Directory.Exists(directory))
-            yield break;
+            return [];
 
-        string[] subDirectories;
         try
         {
-            subDirectories = [.. Directory.EnumerateDirectories(directory, searchPattern ?? "*")];
+            return [.. Directory.EnumerateDirectories(directory, searchPattern ?? "*")];
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            yield break;
+            return [];
         }
-
-        foreach (var subDirectory in subDirectories)
-            yield return subDirectory;
     }
 }
