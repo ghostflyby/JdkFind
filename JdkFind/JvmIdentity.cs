@@ -99,6 +99,8 @@ internal static partial class JvmIdentity
             return (JvmVendor.GraalVm, JvmDistribution.GraalVmCommunity);
         if (graalVmRelease || Contains(implementorVersion, "graalvm") || OracleGraalVmPattern.IsMatch(raw))
             return (JvmVendor.Oracle, JvmDistribution.OracleGraalVm);
+        if (GraalVmPattern.IsMatch(raw))
+            return (JvmVendor.GraalVm, JvmDistribution.GraalVmCommunity);
         if (MandrelPattern.IsMatch(raw))
             return (JvmVendor.RedHat, JvmDistribution.Mandrel);
         if (GluonPattern.IsMatch(raw))
