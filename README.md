@@ -31,6 +31,29 @@ once to enrich the metadata with runtime properties (runtime and VM
 name/version — the Gradle approach); failures degrade silently to the
 release-file metadata.
 
+## JSON output
+
+`--json` writes a stable, machine-readable contract: camelCase keys,
+UTF-8, one object per installation (`list` emits an array). Every key
+is always present — unknown values are `null` — and within the same
+major version the shape is additive-only: keys are never renamed or
+removed.
+
+| Key | Type | Meaning |
+|---|---|---|
+| `home` | string | Installation home directory |
+| `version` | string | Raw `JAVA_VERSION` from the release file |
+| `languageVersion` | number \| null | Feature version (e.g. `21`) |
+| `hasCompiler` | boolean | Ships `javac` |
+| `prerelease` | boolean | Early-access build (e.g. `25-ea`) |
+| `vendor` | string | Normalized upstream vendor (e.g. `Azul`) |
+| `distribution` | string | foojay-style distribution name (e.g. `Zulu`) |
+| `vendorRaw` | string \| null | Raw `IMPLEMENTOR` string |
+| `runtimeName` / `runtimeVersion` | string \| null | Probed `java.runtime.*` |
+| `vmName` / `vmVersion` | string \| null | Probed `java.vm.*` |
+| `architecture` / `osName` | string \| null | Release file or probe |
+| `providers` | string[] | Detection sources that reported this home |
+
 Exit codes: `0` found, `1` none found, `2` usage error. When both are given,
 `--path` wins over `--json`.
 

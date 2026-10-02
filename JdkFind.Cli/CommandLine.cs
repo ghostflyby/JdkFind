@@ -152,6 +152,7 @@ internal static class CommandLine
         jvm.Version.Original,
         jvm.LanguageVersion,
         jvm.HasCompiler,
+        jvm.Version.IsPreRelease,
         jvm.Vendor.ToString(),
         jvm.Distribution.ToString(),
         jvm.VendorRaw,
