@@ -18,6 +18,8 @@ public class OptionsTests
         Assert.True(Options.Parse(["--json"]).OutputJson);
         Assert.True(Options.Parse(["-l"]).Latest);
         Assert.True(Options.Parse(["--latest"]).Latest);
+        Assert.True(Options.Parse(["--no-probe"]).NoProbe);
+        Assert.True(Options.Parse(["--jdk-only"]).JdkOnly);
         Assert.True(Options.Parse(["-h"]).ShowHelp);
         Assert.True(Options.Parse(["--help"]).ShowHelp);
     }

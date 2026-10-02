@@ -30,6 +30,8 @@ public static class JavaHomeLayout
 
     internal static string JavaExecutableName => OperatingSystem.IsWindows() ? "java.exe" : "java";
 
+    internal static string CompilerExecutableName => OperatingSystem.IsWindows() ? "javac.exe" : "javac";
+
     private static bool IsJavaHome(string homeDirectory) =>
         File.Exists(Path.Combine(homeDirectory, "bin", JavaExecutableName)) &&
         File.Exists(Path.Combine(homeDirectory, "release"));

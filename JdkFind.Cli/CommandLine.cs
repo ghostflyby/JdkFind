@@ -38,6 +38,8 @@ internal static class CommandLine
         {
             if (options.LanguageVersion is { } version && jvm.LanguageVersion != version)
                 continue;
+            if (options.JdkOnly && !jvm.HasCompiler)
+                continue;
             if (options.Vendor is { } vendor && jvm.Vendor?.Contains(vendor, StringComparison.OrdinalIgnoreCase) != true)
                 continue;
             if (options.Architecture is { } architecture &&
@@ -71,6 +73,7 @@ internal static class CommandLine
                 jvm.Home.FullName,
                 jvm.Version.Original,
                 jvm.LanguageVersion,
+                jvm.HasCompiler,
                 jvm.KnownVendor.ToString(),
                 jvm.VendorDisplayName,
                 jvm.RuntimeName,
@@ -103,6 +106,7 @@ internal static class CommandLine
           -v, --version <n>    Filter by feature version (e.g. 21)
               --vendor <text>  Filter by vendor substring (case-insensitive)
               --arch <text>    Filter by architecture substring (case-insensitive)
+              --jdk-only       Only installations that ship a compiler (skip runtimes)
               --no-probe       Skip executing each JVM for runtime properties
           -h, --help           Show this help
 
