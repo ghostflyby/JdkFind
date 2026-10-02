@@ -3,14 +3,14 @@ namespace JdkFind;
 /// <summary>Well-known JVM vendors. Unrecognized implementors map to <see cref="Unknown" />.</summary>
 public enum JvmVendor
 {
-    Unknown,
+    Unknown = 0,
     Adoptium,
-    AdoptOpenJDK,
+    AdoptOpenJdk,
     Amazon,
     Apple,
     Azul,
     BellSoft,
-    GraalVM,
+    GraalVm,
     HewlettPackard,
     Ibm,
     JetBrains,

@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace JdkFind;
 
 /// <summary>
@@ -7,7 +9,8 @@ namespace JdkFind;
 ///     SemVer — real JDK versions like <c>21.0.12.1</c> and <c>1.8.0_402</c> are
 ///     outside the SemVer grammar.
 /// </summary>
-public readonly record struct JvmVersion : IComparable<JvmVersion>
+public readonly record struct JvmVersion : IComparable<JvmVersion>,
+    IComparisonOperators<JvmVersion, JvmVersion, bool>
 {
     /// <summary>The normalized numeric version (up to four components; missing components are zero).</summary>
     public Version Core { get; }
