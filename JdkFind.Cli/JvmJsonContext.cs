@@ -23,4 +23,5 @@ internal sealed record JvmDto(
 
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(JvmDto[]))]
+[JsonSerializable(typeof(string[]))]
 internal sealed partial class JvmJsonContext : JsonSerializerContext;

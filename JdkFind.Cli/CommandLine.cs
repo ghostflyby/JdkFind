@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace JdkFind.Cli;
@@ -7,6 +8,14 @@ internal static class CommandLine
     private const int ExitSuccess = 0;
     private const int ExitNotFound = 1;
     private const int ExitUsage = 2;
+
+    /// <summary>Selection among matching installations: newest version first, then
+    /// compiler-carrying installations preferred — stable per machine state.</summary>
+    private static readonly Comparer<Jvm> SelectionOrder = Comparer<Jvm>.Create((a, b) =>
+    {
+        var version = a.Version.CompareTo(b.Version);
+        return version != 0 ? version : a.HasCompiler.CompareTo(b.HasCompiler);
+    });
 
     internal static int Run(string[] args)
     {
@@ -28,74 +37,85 @@ internal static class CommandLine
             return ExitSuccess;
         }
 
-        var jvms = new List<Jvm>();
-        var findOptions = new JdkFindOptions
+        var matches = JdkFinder.Locate(new JdkFindOptions { ProbeRuntimeProperties = !options.NoProbe })
+            .Where(jvm => MatchesFilters(jvm, options))
+            .ToList();
+
+        // --json wins over the human formats on every command.
+        if (options.OutputJson)
         {
-            // --path only needs homes; probing every installation would be wasted latency.
-            ProbeRuntimeProperties = !options.NoProbe && !options.PathsOnly,
-        };
-        foreach (var jvm in JdkFinder.Locate(findOptions))
-        {
-            if (options.LanguageVersion is { } version && jvm.LanguageVersion != version)
-                continue;
-            if (options.JdkOnly && !jvm.HasCompiler)
-                continue;
-            if (!MatchesVendorFilter(jvm, options.Vendor))
-                continue;
-            if (options.Architecture is { } architecture &&
-                jvm.Architecture?.Contains(architecture, StringComparison.OrdinalIgnoreCase) != true)
-                continue;
-
-            jvms.Add(jvm);
-        }
-
-        if (jvms.Count == 0)
-            return ExitNotFound;
-
-        if (options.Latest)
-        {
-            Jvm? newest = null;
-            foreach (var jvm in jvms)
-                if (newest is null || jvm.Version > newest.Version)
-                    newest = jvm;
-
-            jvms = [newest!];
-        }
-
-        if (options.PathsOnly)
-        {
-            foreach (var jvm in jvms)
+            if (options.Command == SubCommand.List)
             {
-                Console.Out.Write(jvm.Home.FullName);
-                Console.Out.Write(options.Print0 ? '\0' : '\n');
+                Console.WriteLine(JsonSerializer.Serialize(
+                    matches.Select(ToDto).ToArray(), JvmJsonContext.Default.JvmDtoArray));
             }
-        }
-        else if (options.OutputJson)
-        {
-            var dtos = jvms.Select(jvm => new JvmDto(
-                jvm.Home.FullName,
-                jvm.Version.Original,
-                jvm.LanguageVersion,
-                jvm.HasCompiler,
-                jvm.KnownVendor.ToString(),
-                jvm.VendorDisplayName,
-                jvm.RuntimeName,
-                jvm.RuntimeVersion,
-                jvm.VmName,
-                jvm.VmVersion,
-                jvm.Vendor,
-                jvm.Architecture,
-                jvm.OsName,
-                jvm.Providers)).ToArray();
-            Console.WriteLine(JsonSerializer.Serialize(dtos, JvmJsonContext.Default.JvmDtoArray));
-        }
-        else
-        {
-            TableFormatter.Write(jvms, Console.Out);
+            else
+            {
+                var selected = matches.OrderByDescending(jvm => jvm, SelectionOrder).First();
+                Console.WriteLine(JsonSerializer.Serialize(ToDto(selected), JvmJsonContext.Default.JvmDto));
+            }
+
+            return ExitSuccess;
         }
 
+        if (options.Command == SubCommand.List)
+        {
+            TableFormatter.Write(matches, Console.Error);
+            return ExitSuccess;
+        }
+
+        // Every other command selects exactly one installation: newest version first,
+        // then compiler-carrying preferred, then first-discovered. Same machine state
+        // always produces the same selection.
+        var chosen = matches.OrderByDescending(jvm => jvm, SelectionOrder).First();
+
+        if (options.Command == SubCommand.Info)
+        {
+            WriteInfo(chosen, Console.Error);
+            return ExitSuccess;
+        }
+
+        Console.Out.WriteLine(options.Tool is null
+            ? chosen.Home.FullName
+            : ToolPath(chosen, options.Tool));
         return ExitSuccess;
     }
+
+    internal static string ToolPath(Jvm jvm, string? tool)
+    {
+        if (string.IsNullOrEmpty(tool))
+            return jvm.Home.FullName;
+
+        var fileName = OperatingSystem.IsWindows() ? tool + ".exe" : tool;
+        return Path.Combine(jvm.Home.FullName, "bin", fileName);
+    }
+
+    /// <summary>A JVM matches the version prefix when its core version starts with it segment-wise.</summary>
+    internal static bool MatchesVersion(Jvm jvm, string versionPrefix)
+    {
+        var segments = versionPrefix.Split('.');
+        var core = jvm.Version.Core;
+        for (var index = 0; index < segments.Length; index++)
+            if (Segment(core, index) != int.Parse(segments[index], CultureInfo.InvariantCulture))
+                return false;
+
+        return true;
+    }
+
+    private static int Segment(Version version, int index) => index switch
+    {
+        0 => version.Major,
+        1 => version.Minor,
+        2 => Math.Max(version.Build, 0),
+        _ => Math.Max(version.Revision, 0),
+    };
+
+    private static bool MatchesFilters(Jvm jvm, Options options) =>
+        (options.VersionPrefix is null || MatchesVersion(jvm, options.VersionPrefix)) &&
+        (!options.JdkOnly || jvm.HasCompiler) &&
+        MatchesVendorFilter(jvm, options.Vendor) &&
+        (options.Architecture is null ||
+         jvm.Architecture?.Contains(options.Architecture, StringComparison.OrdinalIgnoreCase) == true);
 
     /// <summary>
     ///     A JVM passes the vendor filter when the text hits any of its vendor surfaces:
@@ -112,23 +132,59 @@ internal static class CommandLine
                jvm.VendorDisplayName.Contains(text, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void PrintHelp() => Console.WriteLine("""
-        jdkfind — locate installed JDKs
+    private static JvmDto ToDto(Jvm jvm) => new(
+        jvm.Home.FullName,
+        jvm.Version.Original,
+        jvm.LanguageVersion,
+        jvm.HasCompiler,
+        jvm.KnownVendor.ToString(),
+        jvm.VendorDisplayName,
+        jvm.RuntimeName,
+        jvm.RuntimeVersion,
+        jvm.VmName,
+        jvm.VmVersion,
+        jvm.Vendor,
+        jvm.Architecture,
+        jvm.OsName,
+        jvm.Providers);
 
-        Usage: jdkfind [options]
+    internal static void WriteInfo(Jvm jvm, TextWriter writer)
+    {
+        writer.WriteLine($"home: {jvm.Home.FullName}");
+        writer.WriteLine($"version: {jvm.Version.Original} (feature {jvm.LanguageVersion?.ToString() ?? "unknown"})");
+        writer.WriteLine($"vendor: {jvm.VendorDisplayName} ({jvm.KnownVendor})");
+
+        if (!string.IsNullOrEmpty(jvm.RuntimeName))
+            writer.WriteLine($"runtime: {jvm.RuntimeName} {jvm.RuntimeVersion}");
+        if (!string.IsNullOrEmpty(jvm.VmName))
+            writer.WriteLine($"vm: {jvm.VmName} {jvm.VmVersion}");
+        if (!string.IsNullOrEmpty(jvm.Architecture))
+            writer.WriteLine($"arch: {jvm.Architecture}");
+
+        writer.WriteLine($"type: {(jvm.HasCompiler ? "jdk" : "jre")}");
+        writer.WriteLine($"providers: {string.Join(", ", jvm.Providers)}");
+    }
+
+    private static void PrintHelp() => Console.WriteLine("""
+        Usage:
+          jdkfind [version] [tool] [options]    Print the selected home, or bin/<tool> path
+          jdkfind info [version] [options]      Print one installation's details
+          jdkfind list [options]                List all matching installations
+
+        The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
+        newest version first, installations with a compiler preferred on ties.
 
         Options:
-          -p, --path           Print home directory paths only (wins over --json; implies --no-probe)
-          -0, --print0         With --path: separate paths with NUL (for xargs -0)
-          -j, --json           Print results as JSON
-          -l, --latest         Print only the newest match
-          -v, --version <n>    Filter by feature version (e.g. 21)
+          -j, --json           Write JSON to stdout (list: array; others: single object)
               --vendor <text>  Filter by vendor substring; matches the raw string, the
                                known vendor and the display name (case-insensitive)
               --arch <text>    Filter by architecture substring (case-insensitive)
               --jdk-only       Only installations that ship a compiler (skip runtimes)
               --no-probe       Skip executing each JVM for runtime properties
           -h, --help           Show this help
+
+        Streams: machine-readable output goes to stdout; the human-readable list and
+        details go to stderr.
 
         Exit codes: 0 = found, 1 = none found, 2 = usage error
         """);
