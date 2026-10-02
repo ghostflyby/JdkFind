@@ -20,6 +20,8 @@ public class OptionsTests
         Assert.True(Options.Parse(["--latest"]).Latest);
         Assert.True(Options.Parse(["--no-probe"]).NoProbe);
         Assert.True(Options.Parse(["--jdk-only"]).JdkOnly);
+        Assert.True(Options.Parse(["-0"]).Print0);
+        Assert.True(Options.Parse(["--print0"]).Print0);
         Assert.True(Options.Parse(["-h"]).ShowHelp);
         Assert.True(Options.Parse(["--help"]).ShowHelp);
     }

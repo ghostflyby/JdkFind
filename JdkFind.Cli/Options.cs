@@ -20,6 +20,8 @@ internal sealed class Options
 
     internal bool JdkOnly { get; private set; }
 
+    internal bool Print0 { get; private set; }
+
     internal static Options Parse(string[] args)
     {
         var options = new Options();
@@ -62,6 +64,10 @@ internal sealed class Options
 
                 case "--jdk-only":
                     options.JdkOnly = true;
+                    break;
+
+                case "-0" or "--print0":
+                    options.Print0 = true;
                     break;
 
                 default:

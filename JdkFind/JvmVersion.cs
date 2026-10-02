@@ -21,7 +21,7 @@ public readonly record struct JvmVersion : IComparable<JvmVersion>,
     /// <summary>The raw <c>JAVA_VERSION</c> string as found in the release file.</summary>
     public string Original { get; }
 
-    private JvmVersion(Version core, bool isPreRelease, string original)
+    internal JvmVersion(Version core, bool isPreRelease, string original)
     {
         Core = core;
         IsPreRelease = isPreRelease;
