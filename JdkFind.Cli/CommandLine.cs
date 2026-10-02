@@ -40,7 +40,7 @@ internal static class CommandLine
                 continue;
             if (options.JdkOnly && !jvm.HasCompiler)
                 continue;
-            if (options.Vendor is { } vendor && jvm.Vendor?.Contains(vendor, StringComparison.OrdinalIgnoreCase) != true)
+            if (!MatchesVendorFilter(jvm, options.Vendor))
                 continue;
             if (options.Architecture is { } architecture &&
                 jvm.Architecture?.Contains(architecture, StringComparison.OrdinalIgnoreCase) != true)
@@ -65,7 +65,10 @@ internal static class CommandLine
         if (options.PathsOnly)
         {
             foreach (var jvm in jvms)
-                Console.WriteLine(jvm.Home.FullName);
+            {
+                Console.Out.Write(jvm.Home.FullName);
+                Console.Out.Write(options.Print0 ? '\0' : '\n');
+            }
         }
         else if (options.OutputJson)
         {
@@ -94,6 +97,21 @@ internal static class CommandLine
         return ExitSuccess;
     }
 
+    /// <summary>
+    ///     A JVM passes the vendor filter when the text hits any of its vendor surfaces:
+    ///     the raw IMPLEMENTOR string, the normalized known-vendor name, or the display
+    ///     name. Null text means no filtering.
+    /// </summary>
+    internal static bool MatchesVendorFilter(Jvm jvm, string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return true;
+
+        return (jvm.Vendor?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false) ||
+               jvm.KnownVendor.ToString().Contains(text, StringComparison.OrdinalIgnoreCase) ||
+               jvm.VendorDisplayName.Contains(text, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static void PrintHelp() => Console.WriteLine("""
         jdkfind — locate installed JDKs
 
@@ -101,10 +119,12 @@ internal static class CommandLine
 
         Options:
           -p, --path           Print home directory paths only (wins over --json; implies --no-probe)
+          -0, --print0         With --path: separate paths with NUL (for xargs -0)
           -j, --json           Print results as JSON
           -l, --latest         Print only the newest match
           -v, --version <n>    Filter by feature version (e.g. 21)
-              --vendor <text>  Filter by vendor substring (case-insensitive)
+              --vendor <text>  Filter by vendor substring; matches the raw string, the
+                               known vendor and the display name (case-insensitive)
               --arch <text>    Filter by architecture substring (case-insensitive)
               --jdk-only       Only installations that ship a compiler (skip runtimes)
               --no-probe       Skip executing each JVM for runtime properties

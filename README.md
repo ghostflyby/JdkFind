@@ -26,6 +26,7 @@ $ jdkfind -v 21               # filter by feature version
 $ jdkfind --vendor azul --arch aarch64
 $ jdkfind --latest --jdk-only --path   # newest JDK (ships javac)
 $ jdkfind --no-probe          # skip executing JVMs for runtime properties
+$ jdkfind --path -0 | xargs -0 -I{} echo {}   # space-safe piping
 ```
 
 By default `jdkfind` executes each installation's own java executable
