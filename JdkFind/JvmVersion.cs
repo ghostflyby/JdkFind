@@ -48,6 +48,17 @@ public readonly record struct JvmVersion : IComparable<JvmVersion>
         return true;
     }
 
+    /// <summary>
+    ///     Parses a raw <c>JAVA_VERSION</c> value. Unparseable input degrades to an
+    ///     <see cref="Unknown" /> placeholder, so a JVM is never lost over its version
+    ///     string.
+    /// </summary>
+    public static JvmVersion Parse(string? javaVersion) =>
+        TryParse(javaVersion, out var version) ? version : Unknown(javaVersion ?? string.Empty);
+
+    /// <summary>A placeholder for unparseable values; it sorts before every known version.</summary>
+    public static JvmVersion Unknown(string original = "") => new(new Version(0, 0), false, original);
+
     public int CompareTo(JvmVersion other)
     {
         var core = Core.CompareTo(other.Core);

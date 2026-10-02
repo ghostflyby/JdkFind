@@ -28,7 +28,7 @@ public static class JdkFinder
     {
         Jvm? newest = null;
         foreach (var jvm in Locate(options))
-            if (JvmVersionComparer.Default.Compare(jvm, newest) > 0)
+            if (newest is null || jvm.Version > newest.Version)
                 newest = jvm;
 
         return newest;
@@ -54,7 +54,7 @@ public static class JdkFinder
 
         Jvm? newest = null;
         foreach (var jvm in jvms)
-            if (JvmVersionComparer.Default.Compare(jvm, newest) > 0)
+            if (newest is null || jvm.Version > newest.Version)
                 newest = jvm;
 
         return newest;
@@ -113,14 +113,15 @@ public static class JdkFinder
             return null;
         }
 
-        var version = release.GetValueOrDefault("JAVA_VERSION");
+        // The raw JAVA_VERSION string is preserved on JvmVersion.Original; unparseable
+        // values degrade to the Unknown placeholder (sorts before every known version).
+        var version = JvmVersion.Parse(release.GetValueOrDefault("JAVA_VERSION"));
         return new Jvm
         {
             Home = new DirectoryInfo(homePath),
             Providers = providers,
             Version = version,
-            VersionNumber = JvmVersion.TryParse(version, out var versionNumber) ? versionNumber : null,
-            LanguageVersion = ReleaseFile.TryGetLanguageVersion(version),
+            LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
             Vendor = release.GetValueOrDefault("IMPLEMENTOR"),
             Architecture = release.GetValueOrDefault("OS_ARCH"),
             OsName = release.GetValueOrDefault("OS_NAME"),

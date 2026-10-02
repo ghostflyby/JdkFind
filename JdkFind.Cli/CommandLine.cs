@@ -49,7 +49,7 @@ internal static class CommandLine
         {
             Jvm? newest = null;
             foreach (var jvm in jvms)
-                if (JvmVersionComparer.Default.Compare(jvm, newest) > 0)
+                if (newest is null || jvm.Version > newest.Version)
                     newest = jvm;
 
             jvms = [newest!];
@@ -64,7 +64,7 @@ internal static class CommandLine
         {
             var dtos = jvms.Select(jvm => new JvmDto(
                 jvm.Home.FullName,
-                jvm.Version,
+                jvm.Version.Original,
                 jvm.LanguageVersion,
                 jvm.Vendor,
                 jvm.Architecture,
