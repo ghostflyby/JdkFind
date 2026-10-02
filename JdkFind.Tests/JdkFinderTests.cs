@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using JdkFind.Providers;
 
 namespace JdkFind.Tests;
@@ -256,6 +257,29 @@ public class JdkFinderTests : IDisposable
 
         Assert.NotNull(newest);
         Assert.Equal(jdk21, newest.Home.FullName);
+    }
+
+    [Fact]
+    public void Locate_ProbesInstallationsConcurrently()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The fake java executable is a POSIX shell script.
+
+        var slow1 = TestJdk.CreateSlowProbe(temp.FullPath, "21.0.5", "jdks", "slow1");
+        var slow2 = TestJdk.CreateSlowProbe(temp.FullPath, "17.0.2", "jdks", "slow2");
+        var options = new JdkFindOptions
+        {
+            Providers = [new StubJvmProvider("stub", slow1, slow2)],
+        };
+
+        var watch = Stopwatch.StartNew();
+        var jvms = JdkFinder.Locate(options).ToList();
+        watch.Stop();
+
+        Assert.Equal(2, jvms.Count);
+        // Sequential probing would take at least 2 × 1s; concurrent probing finishes
+        // around 1s plus spawn overhead.
+        Assert.True(watch.Elapsed < TimeSpan.FromMilliseconds(1600), $"probes did not overlap: {watch.Elapsed}");
     }
 
     [Fact]
