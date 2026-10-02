@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-
 namespace JdkFind;
 
 /// <summary>Facade for locating JVM installations across all configured providers.</summary>
@@ -71,32 +69,32 @@ public static class JdkFinder
         var indexByKey = options.DeduplicateHomes ? new Dictionary<string, int>(PathComparer) : null;
 
         foreach (var provider in options.Providers)
-            foreach (var candidate in provider.GetJavaHomes())
+        foreach (var candidate in provider.GetJavaHomes())
+        {
+            if (indexByKey is null)
             {
-                if (indexByKey is null)
-                {
-                    order.Add((candidate, [provider.Name]));
-                    continue;
-                }
-
-                var key = GetDeduplicationKey(candidate);
-                if (indexByKey.TryGetValue(key, out var index))
-                {
-                    // A repeated candidate from the same source records the name once
-                    // (e.g. two PATH entries leading to the same directory).
-                    if (!order[index].Providers.Contains(provider.Name))
-                        order[index].Providers.Add(provider.Name);
-                }
-                else
-                {
-                    indexByKey[key] = order.Count;
-                    order.Add((candidate, [provider.Name]));
-                }
+                order.Add((candidate, [provider.Name]));
+                continue;
             }
 
-        foreach (var (homePath, providers) in order)
-            if (CreateJvm(homePath, providers) is { } jvm)
-                yield return jvm;
+            var key = GetDeduplicationKey(candidate);
+            if (indexByKey.TryGetValue(key, out var index))
+            {
+                // A repeated candidate from the same source records the name once
+                // (e.g. two PATH entries leading to the same directory).
+                if (!order[index].Providers.Contains(provider.Name))
+                    order[index].Providers.Add(provider.Name);
+            }
+            else
+            {
+                indexByKey[key] = order.Count;
+                order.Add((candidate, [provider.Name]));
+            }
+        }
+
+        return order
+            .Select(entry => CreateJvm(entry.HomePath, entry.Providers))
+            .OfType<Jvm>();
     }
 
     private static Jvm? CreateJvm(string homePath, IReadOnlyList<string> providers)
@@ -142,7 +140,8 @@ public static class JdkFinder
         {
             return ResolveSymlinks(Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)));
         }
-        catch (Exception exception) when (exception is IOException or System.Security.SecurityException or ArgumentException)
+        catch (Exception exception) when (exception is IOException or System.Security.SecurityException
+                                              or ArgumentException)
         {
             return path;
         }

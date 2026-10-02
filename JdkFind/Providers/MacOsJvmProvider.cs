@@ -16,17 +16,20 @@ public sealed class MacOsJvmProvider(IEnumerable<string> prefixes) : ICommonPref
 
     IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => prefixList;
 
-    string? ICommonPrefixesJvmProvider.GetJavaHome(string subDirectory) => JavaHomeLayout.Probe(subDirectory);
-
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {
         if (!OperatingSystem.IsMacOS())
-            yield break;
+            return [];
 
-        yield return "/Library/Java/JavaVirtualMachines";
+        var prefixes = new List<string>
+        {
+            "/Library/Java/JavaVirtualMachines",
+        };
 
         var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (!string.IsNullOrEmpty(profile))
-            yield return Path.Combine(profile, "Library", "Java", "JavaVirtualMachines");
+            prefixes.Add(Path.Combine(profile, "Library", "Java", "JavaVirtualMachines"));
+
+        return prefixes;
     }
 }

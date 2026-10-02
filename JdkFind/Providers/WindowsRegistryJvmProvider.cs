@@ -26,10 +26,10 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
     public string Name => "windows-registry";
 
     public IEnumerable<string> GetJavaHomes() =>
-        OperatingSystem.IsWindows() ? CollectHomes() : Enumerable.Empty<string>();
+        OperatingSystem.IsWindows() ? CollectHomes() : [];
 
     [SupportedOSPlatform("windows")]
-    private static IEnumerable<string> CollectHomes()
+    private static List<string> CollectHomes()
     {
         var homes = new List<string>();
         try

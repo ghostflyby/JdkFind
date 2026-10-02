@@ -1,5 +1,6 @@
 #nullable enable
 JdkFind.ICommonPrefixesJvmProvider
+JdkFind.ICommonPrefixesJvmProvider.GetJavaHomeDefault(string! subDirectory) -> string?
 JdkFind.ICommonPrefixJvmProvider
 JdkFind.IJvmProvider
 JdkFind.IJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
@@ -38,7 +39,6 @@ JdkFind.Providers.GradleJvmProvider.GradleJvmProvider() -> void
 JdkFind.Providers.GradleJvmProvider.GradleJvmProvider(string? gradleUserHome) -> void
 JdkFind.Providers.GradleJvmProvider.Name.get -> string!
 JdkFind.Providers.HomebrewJvmProvider
-JdkFind.Providers.HomebrewJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.Providers.HomebrewJvmProvider.HomebrewJvmProvider() -> void
 JdkFind.Providers.HomebrewJvmProvider.HomebrewJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
 JdkFind.Providers.HomebrewJvmProvider.Name.get -> string!
@@ -48,7 +48,6 @@ JdkFind.Providers.IntelliJJvmProvider.IntelliJJvmProvider() -> void
 JdkFind.Providers.IntelliJJvmProvider.IntelliJJvmProvider(string? commonPrefix) -> void
 JdkFind.Providers.IntelliJJvmProvider.Name.get -> string!
 JdkFind.Providers.JabbaJvmProvider
-JdkFind.Providers.JabbaJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.Providers.JabbaJvmProvider.JabbaJvmProvider() -> void
 JdkFind.Providers.JabbaJvmProvider.JabbaJvmProvider(string? home) -> void
 JdkFind.Providers.JabbaJvmProvider.Name.get -> string!
@@ -72,7 +71,6 @@ JdkFind.Providers.PathJvmProvider.Name.get -> string!
 JdkFind.Providers.PathJvmProvider.PathJvmProvider() -> void
 JdkFind.Providers.PathJvmProvider.PathJvmProvider(string? path) -> void
 JdkFind.Providers.ScoopJvmProvider
-JdkFind.Providers.ScoopJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.Providers.ScoopJvmProvider.Name.get -> string!
 JdkFind.Providers.ScoopJvmProvider.ScoopJvmProvider() -> void
 JdkFind.Providers.ScoopJvmProvider.ScoopJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void

@@ -11,7 +11,10 @@ public sealed class JavaHomeJvmProvider(string? home) : IJvmProvider
 
     public IEnumerable<string> GetJavaHomes()
     {
-        if (!string.IsNullOrWhiteSpace(home) && JavaHomeLayout.Probe(home) is { } javaHome)
-            yield return javaHome;
+        if (string.IsNullOrWhiteSpace(home))
+            return [];
+
+        var javaHome = JavaHomeLayout.Probe(home);
+        return javaHome != null ? [javaHome] : Array.Empty<string>();
     }
 }
