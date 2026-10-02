@@ -23,6 +23,7 @@ $ jdkfind 21 java                                # newest 21.x bin/java
 $ jdkfind info 21                                # one installation's details (stderr)
 $ jdkfind list                                   # human-readable table (stderr)
 $ jdkfind list --json                            # all installations as JSON (stdout)
+$ jdkfind list --distribution corretto           # filter by foojay distribution name
 ```
 
 By default `jdkfind` executes each installation's own java executable
