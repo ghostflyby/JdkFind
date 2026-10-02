@@ -5,14 +5,13 @@ namespace JdkFind.Providers;
 ///     the downloads land in the per-user JVM directory, which is
 ///     <see cref="MacOsUserJvmProvider" />'s territory, so this provider no-ops there.
 /// </summary>
-public sealed class IntelliJJvmProvider(string? commonPrefix) : JvmProviderBase
+public sealed class IntelliJJvmProvider(string? commonPrefix) : ICommonPrefixJvmProvider
 {
-    public override string Name => "intellij";
+    public string Name => "intellij";
 
     public IntelliJJvmProvider() : this(ResolveDefaultPrefix()) { }
 
-    public override IEnumerable<string> GetJavaHomes() =>
-        commonPrefix != null ? ScanPrefixes([commonPrefix]) : Enumerable.Empty<string>();
+    public string? CommonPrefix => commonPrefix;
 
     private static string? ResolveDefaultPrefix()
     {

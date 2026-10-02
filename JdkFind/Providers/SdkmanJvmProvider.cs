@@ -4,14 +4,13 @@ namespace JdkFind.Providers;
 ///     Scans SDKMAN! candidate installs at <c>&lt;candidates&gt;/java</c>, resolved from
 ///     <c>SDKMAN_CANDIDATES_DIR</c>, <c>SDKMAN_DIR</c>, or the default <c>~/.sdkman</c>.
 /// </summary>
-public sealed class SdkmanJvmProvider(string? commonPrefix) : JvmProviderBase
+public sealed class SdkmanJvmProvider(string? commonPrefix) : ICommonPrefixJvmProvider
 {
-    public override string Name => "sdkman";
+    public string Name => "sdkman";
 
     public SdkmanJvmProvider() : this(ResolveDefaultPrefix()) { }
 
-    public override IEnumerable<string> GetJavaHomes() =>
-        commonPrefix != null ? ScanPrefixes([commonPrefix]) : Enumerable.Empty<string>();
+    public string? CommonPrefix => commonPrefix;
 
     private static string? ResolveDefaultPrefix()
     {

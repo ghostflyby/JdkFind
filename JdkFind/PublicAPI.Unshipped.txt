@@ -1,6 +1,6 @@
 #nullable enable
-abstract JdkFind.JvmProviderBase.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-abstract JdkFind.JvmProviderBase.Name.get -> string!
+JdkFind.ICommonPrefixesJvmProvider
+JdkFind.ICommonPrefixJvmProvider
 JdkFind.IJvmProvider
 JdkFind.IJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.IJvmProvider.Name.get -> string!
@@ -29,78 +29,75 @@ JdkFind.Jvm.Vendor.get -> string?
 JdkFind.Jvm.Vendor.init -> void
 JdkFind.Jvm.Version.get -> string?
 JdkFind.Jvm.Version.init -> void
-JdkFind.JvmProviderBase
-JdkFind.JvmProviderBase.JvmProviderBase() -> void
 JdkFind.JvmVersionComparer
 JdkFind.JvmVersionComparer.Compare(JdkFind.Jvm? x, JdkFind.Jvm? y) -> int
 JdkFind.JvmVersionComparer.JvmVersionComparer() -> void
 JdkFind.Providers.GradleJvmProvider
+JdkFind.Providers.GradleJvmProvider.CommonPrefix.get -> string?
 JdkFind.Providers.GradleJvmProvider.GradleJvmProvider() -> void
 JdkFind.Providers.GradleJvmProvider.GradleJvmProvider(string? gradleUserHome) -> void
+JdkFind.Providers.GradleJvmProvider.Name.get -> string!
 JdkFind.Providers.HomebrewJvmProvider
+JdkFind.Providers.HomebrewJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.Providers.HomebrewJvmProvider.HomebrewJvmProvider() -> void
 JdkFind.Providers.HomebrewJvmProvider.HomebrewJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
+JdkFind.Providers.HomebrewJvmProvider.Name.get -> string!
 JdkFind.Providers.IntelliJJvmProvider
+JdkFind.Providers.IntelliJJvmProvider.CommonPrefix.get -> string?
 JdkFind.Providers.IntelliJJvmProvider.IntelliJJvmProvider() -> void
 JdkFind.Providers.IntelliJJvmProvider.IntelliJJvmProvider(string? commonPrefix) -> void
+JdkFind.Providers.IntelliJJvmProvider.Name.get -> string!
 JdkFind.Providers.JabbaJvmProvider
+JdkFind.Providers.JabbaJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.Providers.JabbaJvmProvider.JabbaJvmProvider() -> void
 JdkFind.Providers.JabbaJvmProvider.JabbaJvmProvider(string? home) -> void
+JdkFind.Providers.JabbaJvmProvider.Name.get -> string!
 JdkFind.Providers.JavaHomeJvmProvider
+JdkFind.Providers.JavaHomeJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.Providers.JavaHomeJvmProvider.JavaHomeJvmProvider() -> void
 JdkFind.Providers.JavaHomeJvmProvider.JavaHomeJvmProvider(string? home) -> void
+JdkFind.Providers.JavaHomeJvmProvider.Name.get -> string!
 JdkFind.Providers.LinuxJvmProvider
+JdkFind.Providers.LinuxJvmProvider.CommonPrefix.get -> string?
 JdkFind.Providers.LinuxJvmProvider.LinuxJvmProvider() -> void
 JdkFind.Providers.LinuxJvmProvider.LinuxJvmProvider(string? commonPrefix) -> void
+JdkFind.Providers.LinuxJvmProvider.Name.get -> string!
 JdkFind.Providers.MacOsSystemJvmProvider
+JdkFind.Providers.MacOsSystemJvmProvider.CommonPrefix.get -> string?
 JdkFind.Providers.MacOsSystemJvmProvider.MacOsSystemJvmProvider() -> void
 JdkFind.Providers.MacOsSystemJvmProvider.MacOsSystemJvmProvider(string? commonPrefix) -> void
+JdkFind.Providers.MacOsSystemJvmProvider.Name.get -> string!
 JdkFind.Providers.MacOsUserJvmProvider
+JdkFind.Providers.MacOsUserJvmProvider.CommonPrefix.get -> string?
 JdkFind.Providers.MacOsUserJvmProvider.MacOsUserJvmProvider() -> void
 JdkFind.Providers.MacOsUserJvmProvider.MacOsUserJvmProvider(string? commonPrefix) -> void
+JdkFind.Providers.MacOsUserJvmProvider.Name.get -> string!
 JdkFind.Providers.PathJvmProvider
+JdkFind.Providers.PathJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
+JdkFind.Providers.PathJvmProvider.Name.get -> string!
 JdkFind.Providers.PathJvmProvider.PathJvmProvider() -> void
 JdkFind.Providers.PathJvmProvider.PathJvmProvider(string? path) -> void
 JdkFind.Providers.ScoopJvmProvider
+JdkFind.Providers.ScoopJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
+JdkFind.Providers.ScoopJvmProvider.Name.get -> string!
 JdkFind.Providers.ScoopJvmProvider.ScoopJvmProvider() -> void
 JdkFind.Providers.ScoopJvmProvider.ScoopJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
 JdkFind.Providers.SdkmanJvmProvider
+JdkFind.Providers.SdkmanJvmProvider.CommonPrefix.get -> string?
+JdkFind.Providers.SdkmanJvmProvider.Name.get -> string!
 JdkFind.Providers.SdkmanJvmProvider.SdkmanJvmProvider() -> void
 JdkFind.Providers.SdkmanJvmProvider.SdkmanJvmProvider(string? commonPrefix) -> void
 JdkFind.Providers.WindowsProgramFilesJvmProvider
+JdkFind.Providers.WindowsProgramFilesJvmProvider.Name.get -> string!
 JdkFind.Providers.WindowsProgramFilesJvmProvider.WindowsProgramFilesJvmProvider() -> void
 JdkFind.Providers.WindowsProgramFilesJvmProvider.WindowsProgramFilesJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
 JdkFind.Providers.WindowsRegistryJvmProvider
+JdkFind.Providers.WindowsRegistryJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
+JdkFind.Providers.WindowsRegistryJvmProvider.Name.get -> string!
 JdkFind.Providers.WindowsRegistryJvmProvider.WindowsRegistryJvmProvider() -> void
 override JdkFind.Jvm.Equals(object? obj) -> bool
 override JdkFind.Jvm.GetHashCode() -> int
 override JdkFind.Jvm.ToString() -> string!
-override JdkFind.Providers.GradleJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.GradleJvmProvider.Name.get -> string!
-override JdkFind.Providers.HomebrewJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.HomebrewJvmProvider.Name.get -> string!
-override JdkFind.Providers.IntelliJJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.IntelliJJvmProvider.Name.get -> string!
-override JdkFind.Providers.JabbaJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.JabbaJvmProvider.Name.get -> string!
-override JdkFind.Providers.JavaHomeJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.JavaHomeJvmProvider.Name.get -> string!
-override JdkFind.Providers.LinuxJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.LinuxJvmProvider.Name.get -> string!
-override JdkFind.Providers.MacOsSystemJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.MacOsSystemJvmProvider.Name.get -> string!
-override JdkFind.Providers.MacOsUserJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.MacOsUserJvmProvider.Name.get -> string!
-override JdkFind.Providers.PathJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.PathJvmProvider.Name.get -> string!
-override JdkFind.Providers.ScoopJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.ScoopJvmProvider.Name.get -> string!
-override JdkFind.Providers.SdkmanJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.SdkmanJvmProvider.Name.get -> string!
-override JdkFind.Providers.WindowsProgramFilesJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.WindowsProgramFilesJvmProvider.Name.get -> string!
-override JdkFind.Providers.WindowsRegistryJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-override JdkFind.Providers.WindowsRegistryJvmProvider.Name.get -> string!
 static JdkFind.JdkFinder.Find(int languageVersion, JdkFind.JdkFindOptions? options = null) -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
 static JdkFind.JdkFinder.GetDefault(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?
 static JdkFind.JdkFinder.GetNewest(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?
@@ -108,7 +105,4 @@ static JdkFind.JdkFinder.Locate(JdkFind.JdkFindOptions? options = null) -> Syste
 static JdkFind.JdkFindOptions.CreateDefaultProviders() -> System.Collections.Generic.List<JdkFind.IJvmProvider!>!
 static JdkFind.Jvm.operator !=(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
 static JdkFind.Jvm.operator ==(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
-static JdkFind.JvmProviderBase.Probe(string! candidateDirectory) -> string?
-static JdkFind.JvmProviderBase.ScanNested(System.Collections.Generic.IEnumerable<string!>! prefixes, string? leafName = null) -> System.Collections.Generic.IEnumerable<string!>!
-static JdkFind.JvmProviderBase.ScanPrefixes(System.Collections.Generic.IEnumerable<string!>! prefixes) -> System.Collections.Generic.IEnumerable<string!>!
 static JdkFind.JvmVersionComparer.Default.get -> JdkFind.JvmVersionComparer!

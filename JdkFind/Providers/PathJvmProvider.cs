@@ -4,15 +4,15 @@ namespace JdkFind.Providers;
 ///     Scans the <c>PATH</c> environment variable. Entries are probed as Java homes
 ///     directly, and entries of the form <c>&lt;home&gt;/bin</c> are probed one level up.
 /// </summary>
-public sealed class PathJvmProvider(string? path) : JvmProviderBase
+public sealed class PathJvmProvider(string? path) : IJvmProvider
 {
-    public override string Name => "path";
+    public string Name => "path";
 
     public PathJvmProvider() : this(Environment.GetEnvironmentVariable("PATH"))
     {
     }
 
-    public override IEnumerable<string> GetJavaHomes()
+    public IEnumerable<string> GetJavaHomes()
     {
         if (string.IsNullOrWhiteSpace(path))
             yield break;
@@ -25,7 +25,7 @@ public sealed class PathJvmProvider(string? path) : JvmProviderBase
     {
         foreach (var entry in entries)
         {
-            if (Probe(entry) is { } home)
+            if (JavaHomeLayout.Probe(entry) is { } home)
             {
                 yield return home;
                 continue;
@@ -35,7 +35,7 @@ public sealed class PathJvmProvider(string? path) : JvmProviderBase
             var trimmed = entry.TrimEnd('/', '\\');
             if (Path.GetFileName(trimmed).Equals("bin", StringComparison.OrdinalIgnoreCase) &&
                 Path.GetDirectoryName(trimmed) is { } parent &&
-                Probe(parent) is { } parentHome)
+                JavaHomeLayout.Probe(parent) is { } parentHome)
             {
                 yield return parentHome;
             }
