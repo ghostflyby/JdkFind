@@ -23,7 +23,8 @@ public class JdkFinderTests : IDisposable
 
         var jvm = Assert.Single(jvms);
         Assert.Equal(["stub"], jvm.Providers);
-        Assert.Equal("21.0.5", jvm.Version);
+        Assert.Equal("21.0.5", jvm.Version.Original);
+        Assert.Equal(new Version(21, 0, 5), jvm.Version.Core);
         Assert.Equal(21, jvm.LanguageVersion);
         Assert.Equal("Test Vendor", jvm.Vendor);
         Assert.Equal("aarch64", jvm.Architecture);
@@ -221,6 +222,23 @@ public class JdkFinderTests : IDisposable
         {
             Environment.SetEnvironmentVariable("JAVA_HOME", original);
         }
+    }
+
+    [Fact]
+    public void GetNewest_UnparseableVersion_SortsBeforeParsedVersions()
+    {
+        // An exotic JAVA_VERSION must not lose the JVM — it just sorts as unknown.
+        var exotic = TestJdk.Create(temp.FullPath, "unknown", "jdks", "exotic");
+        var jdk21 = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
+        var options = new JdkFindOptions
+        {
+            Providers = [new StubJvmProvider("stub", exotic, jdk21)],
+        };
+
+        var newest = JdkFinder.GetNewest(options);
+
+        Assert.NotNull(newest);
+        Assert.Equal(jdk21, newest.Home.FullName);
     }
 
     [Fact]

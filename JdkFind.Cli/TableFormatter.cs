@@ -9,7 +9,7 @@ internal static class TableFormatter
         var headers = new[] { "VERSION", "VENDOR", "ARCH", "SOURCE", "HOME" };
         var rows = jvms.Select(jvm => new[]
         {
-            jvm.Version ?? "-",
+            jvm.Version.Original,
             jvm.Vendor ?? "-",
             jvm.Architecture ?? "-",
             string.Join('+', jvm.Providers),
