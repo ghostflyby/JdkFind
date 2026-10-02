@@ -1,5 +1,3 @@
-using System.Runtime.Versioning;
-using System.Text;
 using JdkFind.Cli;
 
 namespace JdkFind.Tests;

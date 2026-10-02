@@ -63,7 +63,7 @@ public class OptionsTests
     }
 
     [Theory]
-    [InlineData("home", "javac")]     // home 子命令已被默认命令取代
+    [InlineData("home", "javac")]     // the home subcommand was superseded by the default command
     [InlineData("--path")]
     [InlineData("--latest")]
     [InlineData("-v", "21")]
@@ -72,14 +72,14 @@ public class OptionsTests
         Assert.Throws<ArgumentException>(() => Options.Parse(args));
 
     [Theory]
-    [InlineData("info", "java")]          // info 不接受工具
+    [InlineData("info", "java")]          // info takes no tool
     [InlineData("list", "java")]
-    [InlineData("21", "17")]              // 两个版本前缀
-    [InlineData("21.0.5", "21")]          // 重复版本
-    [InlineData("home", "javac", "java")] // 多余位置参数
-    [InlineData("21.0.5.1")]              // 超过 3 段
-    [InlineData("21..5")]                 // 空段
-    [InlineData("21.x")]                  // 非数字段
+    [InlineData("21", "17")]              // two version prefixes
+    [InlineData("21.0.5", "21")]          // duplicate version
+    [InlineData("home", "javac", "java")] // extra positional
+    [InlineData("21.0.5.1")]              // more than three segments
+    [InlineData("21..5")]                 // empty segment
+    [InlineData("21.x")]                  // non-numeric segment
     public void Parse_RejectsInvalidPositionals(params string[] args) =>
         Assert.Throws<ArgumentException>(() => Options.Parse(args));
 }
