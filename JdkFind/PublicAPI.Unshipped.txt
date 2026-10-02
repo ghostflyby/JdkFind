@@ -62,16 +62,10 @@ JdkFind.Providers.LinuxJvmProvider.CommonPrefix.get -> string?
 JdkFind.Providers.LinuxJvmProvider.LinuxJvmProvider() -> void
 JdkFind.Providers.LinuxJvmProvider.LinuxJvmProvider(string? commonPrefix) -> void
 JdkFind.Providers.LinuxJvmProvider.Name.get -> string!
-JdkFind.Providers.MacOsSystemJvmProvider
-JdkFind.Providers.MacOsSystemJvmProvider.CommonPrefix.get -> string?
-JdkFind.Providers.MacOsSystemJvmProvider.MacOsSystemJvmProvider() -> void
-JdkFind.Providers.MacOsSystemJvmProvider.MacOsSystemJvmProvider(string? commonPrefix) -> void
-JdkFind.Providers.MacOsSystemJvmProvider.Name.get -> string!
-JdkFind.Providers.MacOsUserJvmProvider
-JdkFind.Providers.MacOsUserJvmProvider.CommonPrefix.get -> string?
-JdkFind.Providers.MacOsUserJvmProvider.MacOsUserJvmProvider() -> void
-JdkFind.Providers.MacOsUserJvmProvider.MacOsUserJvmProvider(string? commonPrefix) -> void
-JdkFind.Providers.MacOsUserJvmProvider.Name.get -> string!
+JdkFind.Providers.MacOsJvmProvider
+JdkFind.Providers.MacOsJvmProvider.MacOsJvmProvider() -> void
+JdkFind.Providers.MacOsJvmProvider.MacOsJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
+JdkFind.Providers.MacOsJvmProvider.Name.get -> string!
 JdkFind.Providers.PathJvmProvider
 JdkFind.Providers.PathJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.Providers.PathJvmProvider.Name.get -> string!

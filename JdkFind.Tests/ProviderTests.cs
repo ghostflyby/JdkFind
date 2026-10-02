@@ -76,12 +76,24 @@ public class ProviderTests : IDisposable
     }
 
     [Fact]
-    public void PlatformDirectories_ScanInjectedPrefix()
+    public void MacOs_ScansSystemAndUserPrefixes()
+    {
+        var system = TestJdk.Create(temp.FullPath, "21.0.5", "system-jvms", "jdk-21");
+        var user = TestJdk.Create(temp.FullPath, "17.0.2", "user-jvms", "jdk-17");
+        var provider = new MacOsJvmProvider(
+        [
+            Path.Combine(temp.FullPath, "system-jvms"),
+            Path.Combine(temp.FullPath, "user-jvms"),
+        ]);
+
+        Assert.Equal([system, user], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Linux_ScansInjectedPrefix()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
 
-        Assert.Equal([jdk], new MacOsSystemJvmProvider(temp.FullPath).GetHomes());
-        Assert.Equal([jdk], new MacOsUserJvmProvider(temp.FullPath).GetHomes());
         Assert.Equal([jdk], new LinuxJvmProvider(temp.FullPath).GetHomes());
     }
 

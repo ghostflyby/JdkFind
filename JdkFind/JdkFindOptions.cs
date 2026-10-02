@@ -16,8 +16,7 @@ public sealed class JdkFindOptions
     [
         new JavaHomeJvmProvider(),
         new PathJvmProvider(),
-        new MacOsSystemJvmProvider(),
-        new MacOsUserJvmProvider(),
+        new MacOsJvmProvider(),
         new LinuxJvmProvider(),
         new HomebrewJvmProvider(),
         new WindowsProgramFilesJvmProvider(),
