@@ -19,7 +19,7 @@ public class JvmClassificationTests
     [InlineData("Huawei", null, false, JvmVendor.Huawei, JvmDistribution.Bisheng)]
     [InlineData("Tencent Kona 21", null, false, JvmVendor.Tencent, JvmDistribution.Kona)]
     [InlineData("Mandrel by Red Hat", null, false, JvmVendor.RedHat, JvmDistribution.Mandrel)]
-    [InlineData("GraalVM Community", null, false, JvmVendor.GraalVm, JvmDistribution.GraalVmCommunity)]
+    [InlineData("GraalVM Community", null, false, JvmVendor.Oracle, JvmDistribution.GraalVmCommunity)]
     [InlineData("TravaOpenJDK", null, false, JvmVendor.Trava, JvmDistribution.Trava)]
     [InlineData("OJDKBuild", null, false, JvmVendor.Community, JvmDistribution.OjdkBuild)]
     [InlineData("OpenLogic OpenJDK", null, false, JvmVendor.OpenLogic, JvmDistribution.OpenLogic)]

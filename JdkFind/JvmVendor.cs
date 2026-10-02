@@ -14,7 +14,6 @@ public enum JvmVendor
     BellSoft,
     Community,
     Gluon,
-    GraalVm,
     Huawei,
     HewlettPackard,
     Ibm,

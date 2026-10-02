@@ -64,9 +64,6 @@ internal static partial class JvmIdentity
     [GeneratedRegex("oracle graalvm", RegexOptions.IgnoreCase)]
     private static partial Regex OracleGraalVmPattern { get; }
 
-    [GeneratedRegex("graalvm|graal vm", RegexOptions.IgnoreCase)]
-    private static partial Regex GraalVmPattern { get; }
-
     [GeneratedRegex("gluon", RegexOptions.IgnoreCase)]
     private static partial Regex GluonPattern { get; }
 
@@ -96,11 +93,9 @@ internal static partial class JvmIdentity
         // The GraalVM family first: community builds name themselves, while Oracle builds hide
         // behind "Oracle Corporation" and need the release-file hints.
         if (GraalVmCommunityPattern.IsMatch(raw))
-            return (JvmVendor.GraalVm, JvmDistribution.GraalVmCommunity);
+            return (JvmVendor.Oracle, JvmDistribution.GraalVmCommunity);
         if (graalVmRelease || Contains(implementorVersion, "graalvm") || OracleGraalVmPattern.IsMatch(raw))
             return (JvmVendor.Oracle, JvmDistribution.OracleGraalVm);
-        if (GraalVmPattern.IsMatch(raw))
-            return (JvmVendor.GraalVm, JvmDistribution.GraalVmCommunity);
         if (MandrelPattern.IsMatch(raw))
             return (JvmVendor.RedHat, JvmDistribution.Mandrel);
         if (GluonPattern.IsMatch(raw))
