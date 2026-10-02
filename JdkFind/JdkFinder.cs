@@ -92,7 +92,13 @@ public static class JdkFinder
             }
         }
 
-        return order
+        // Runtime probing is the slow part (one process per installation): probe
+        // candidates concurrently while keeping the first-discovery order.
+        ParallelQuery<(string HomePath, List<string> Providers)> candidates = options.ProbeRuntimeProperties
+            ? order.AsParallel().AsOrdered()
+            : order.AsParallel().AsOrdered();
+
+        return candidates
             .Select(entry => CreateJvm(entry.HomePath, entry.Providers, options.ProbeRuntimeProperties))
             .OfType<Jvm>();
     }
