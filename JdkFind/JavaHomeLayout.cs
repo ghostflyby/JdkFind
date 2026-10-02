@@ -4,11 +4,19 @@ namespace JdkFind;
 ///     Recognizes Java home directories across the layouts found in the wild:
 ///     a plain home (<c>bin/java</c> + <c>release</c>), the macOS bundle layout
 ///     (<c>&lt;name&gt;.jdk/Contents/Home</c>) and the Homebrew keg layout
-///     (<c>libexec/openjdk.jdk/Contents/Home</c>).
+///     (<c>libexec/openjdk.jdk/Contents/Home</c>). This is the shared validation
+///     contract behind <see cref="IJvmProvider" /> — providers return paths that
+///     pass <see cref="Probe" />, and custom implementations should validate the
+///     same way.
 /// </summary>
-internal static class JavaHomeLayout
+public static class JavaHomeLayout
 {
-    internal static string? Probe(string candidateDirectory)
+    /// <summary>
+    ///     Probes a candidate directory for a Java home under any known layout and
+    ///     returns the home directory itself — which may be a subdirectory of the
+    ///     candidate for bundle and keg layouts — or null when no layout matches.
+    /// </summary>
+    public static string? Probe(string candidateDirectory)
     {
         if (string.IsNullOrWhiteSpace(candidateDirectory))
             return null;

@@ -1,8 +1,11 @@
 namespace JdkFind;
 
 /// <summary>
-///     A source of candidate Java home directories. Implementations only enumerate
-///     candidate paths; validation and metadata extraction are done by <see cref="JdkFinder" />.
+///     A source of candidate Java home directories. Every path returned from
+///     <see cref="GetJavaHomes" /> must be a validated home — i.e. pass
+///     <see cref="JavaHomeLayout.Probe" />; the capability interfaces enforce this by
+///     default through their validation seam. The facade deduplicates by canonical
+///     path and extracts metadata — it does not re-validate.
 ///     Enumeration is synchronous by design: every source is local file-system or
 ///     registry I/O measured in milliseconds, and the BCL has no async
 ///     directory-enumeration API to make it real.
@@ -12,7 +15,11 @@ public interface IJvmProvider
     /// <summary>Stable lowercase identifier of this provider (e.g. <c>java-home</c>, <c>sdkman</c>).</summary>
     string Name { get; }
 
-    /// <summary>Enumerates candidate Java home directories. Nonexistent locations must yield an empty sequence.</summary>
+    /// <summary>
+    ///     Enumerates validated Java home directories. Nonexistent locations must yield
+    ///     an empty sequence, and every returned path must pass
+    ///     <see cref="JavaHomeLayout.Probe" />.
+    /// </summary>
     IEnumerable<string> GetJavaHomes();
 }
 
