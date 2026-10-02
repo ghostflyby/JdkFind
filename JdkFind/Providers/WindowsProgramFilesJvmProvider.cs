@@ -14,8 +14,6 @@ public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes)
 
     IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => prefixList;
 
-    string? ICommonPrefixesJvmProvider.GetJavaHome(string subDirectory) => JavaHomeLayout.Probe(subDirectory);
-
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {
         if (!OperatingSystem.IsWindows())

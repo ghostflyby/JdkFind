@@ -6,15 +6,23 @@ namespace JdkFind.Providers;
 ///     Silicon, Intel Macs and Linuxbrew. The keg layout resolves through
 ///     <c>libexec/openjdk.jdk/Contents/Home</c>.
 /// </summary>
-public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : IJvmProvider
+public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : ICommonPrefixesJvmProvider
 {
     public string Name => "homebrew";
 
     private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
-    public HomebrewJvmProvider() : this(ResolveDefaultPrefixes()) { }
+    public HomebrewJvmProvider() : this(ResolveDefaultPrefixes())
+    {
+    }
 
-    public IEnumerable<string> GetJavaHomes() => EnumerateKegs();
+    string? ICommonPrefixesJvmProvider.SearchPattern => "openjdk*";
+
+    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes()
+    {
+        foreach (var prefix in prefixList)
+            yield return Path.Combine(prefix, "opt");
+    }
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {
@@ -26,19 +34,5 @@ public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : IJvmProv
         yield return "/opt/homebrew";
         yield return "/usr/local";
         yield return "/home/linuxbrew/.linuxbrew";
-    }
-
-    private IEnumerable<string> EnumerateKegs()
-    {
-        foreach (var prefix in prefixList)
-        {
-            var opt = Path.Combine(prefix, "opt");
-            if (!Directory.Exists(opt))
-                continue;
-
-            foreach (var keg in Directory.EnumerateDirectories(opt, "openjdk*"))
-                if (JavaHomeLayout.Probe(keg) is { } javaHome)
-                    yield return javaHome;
-        }
     }
 }
