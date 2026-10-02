@@ -99,14 +99,12 @@ public static class JdkFinder
 
     private static Jvm? CreateJvm(string homePath, IReadOnlyList<string> providers)
     {
-        var releaseFilePath = Path.Combine(homePath, "release");
-        if (!File.Exists(releaseFilePath))
-            return null;
-
+        // The provider contract guarantees validated homes, so the release file is
+        // expected to exist; parse failures (missing or unreadable) count as no JVM.
         IReadOnlyDictionary<string, string> release;
         try
         {
-            release = ReleaseFile.Parse(releaseFilePath);
+            release = ReleaseFile.Parse(Path.Combine(homePath, "release"));
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)

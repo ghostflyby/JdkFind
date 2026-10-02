@@ -5,6 +5,7 @@ JdkFind.ICommonPrefixJvmProvider
 JdkFind.IJvmProvider
 JdkFind.IJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.IJvmProvider.Name.get -> string!
+JdkFind.JavaHomeLayout
 JdkFind.JdkFinder
 JdkFind.JdkFindOptions
 JdkFind.JdkFindOptions.DeduplicateHomes.get -> bool
@@ -90,6 +91,7 @@ JdkFind.Providers.WindowsRegistryJvmProvider.WindowsRegistryJvmProvider() -> voi
 override JdkFind.Jvm.Equals(object? obj) -> bool
 override JdkFind.Jvm.GetHashCode() -> int
 override JdkFind.Jvm.ToString() -> string!
+static JdkFind.JavaHomeLayout.Probe(string! candidateDirectory) -> string?
 static JdkFind.JdkFinder.Find(int languageVersion, JdkFind.JdkFindOptions? options = null) -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
 static JdkFind.JdkFinder.GetDefault(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?
 static JdkFind.JdkFinder.GetNewest(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?

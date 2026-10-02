@@ -46,10 +46,12 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
 
 ## Architecture rules
 
-- Providers only yield candidate home paths (`IJvmProvider`). Validation
-  (`bin/java` + `release` under the plain / macOS bundle / Homebrew keg
-  layouts) and release-file parsing live in the facade (`JdkFinder`) and the
-  internals (`JavaHomeLayout`, `ReleaseFile`).
+- Providers return **validated** home paths: the `IJvmProvider` contract
+  requires every path to pass the public `JavaHomeLayout.Probe`, and the
+  capability interfaces apply it by default through the `GetJavaHome` seam
+  (which may resolve a subpath — macOS bundle / Homebrew keg layouts). The
+  facade trusts the contract (no re-validation) and owns deduplication plus
+  release-file parsing (internal `ReleaseFile`).
 - Deduplication merges candidates by canonical path (every symlink expanded per
   segment; case-insensitive on Windows and macOS). `Jvm.Providers` lists every
   provider that reported the home, in provider order — enumeration therefore
