@@ -1,6 +1,4 @@
 #nullable enable
-JdkFind.JvmVendor.AdoptOpenJdk = 2 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.GraalVm = 7 -> JdkFind.JvmVendor
 ~override JdkFind.JvmVersion.Equals(object obj) -> bool
 JdkFind.ICommonPrefixesJvmProvider
 JdkFind.ICommonPrefixJvmProvider
@@ -22,6 +20,8 @@ JdkFind.Jvm.<Clone>$() -> JdkFind.Jvm!
 JdkFind.Jvm.Architecture.get -> string?
 JdkFind.Jvm.Architecture.init -> void
 JdkFind.Jvm.Equals(JdkFind.Jvm? other) -> bool
+JdkFind.Jvm.HasCompiler.get -> bool
+JdkFind.Jvm.HasCompiler.init -> void
 JdkFind.Jvm.Home.get -> System.IO.DirectoryInfo!
 JdkFind.Jvm.Home.init -> void
 JdkFind.Jvm.Jvm() -> void
@@ -49,10 +49,12 @@ JdkFind.Jvm.VmVersion.get -> string?
 JdkFind.Jvm.VmVersion.init -> void
 JdkFind.JvmVendor
 JdkFind.JvmVendor.Adoptium = 1 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.AdoptOpenJdk = 2 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Amazon = 3 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Apple = 4 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Azul = 5 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.BellSoft = 6 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.GraalVm = 7 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.HewlettPackard = 8 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Ibm = 9 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.JetBrains = 10 -> JdkFind.JvmVendor

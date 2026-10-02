@@ -283,6 +283,25 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
+    public void Locate_FlagsCompilerInstallations()
+    {
+        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        File.WriteAllText(Path.Combine(jdk, "bin", JavaHomeLayout.CompilerExecutableName), string.Empty);
+        var runtime = TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jre");
+        var options = new JdkFindOptions
+        {
+            Providers = [new StubJvmProvider("stub", jdk, runtime)],
+            ProbeRuntimeProperties = false,
+        };
+
+        var jvms = JdkFinder.Locate(options).ToList();
+
+        Assert.Equal(2, jvms.Count);
+        Assert.True(jvms[0].HasCompiler);
+        Assert.False(jvms[1].HasCompiler);
+    }
+
+    [Fact]
     public void Locate_MissingReleaseFile_IsSkipped()
     {
         var broken = Path.Combine(temp.FullPath, "broken");

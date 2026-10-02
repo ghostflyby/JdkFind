@@ -142,6 +142,7 @@ public static class JdkFinder
             Providers = providers,
             Version = version,
             LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
+            HasCompiler = File.Exists(Path.Combine(homePath, "bin", JavaHomeLayout.CompilerExecutableName)),
             Vendor = vendor,
             KnownVendor = knownVendor,
             VendorDisplayName = JvmVendors.GetDisplayName(knownVendor, vendor),

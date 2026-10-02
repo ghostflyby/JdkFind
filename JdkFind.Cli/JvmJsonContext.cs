@@ -9,6 +9,7 @@ internal sealed record JvmDto(
     string Home,
     string Version,
     int? LanguageVersion,
+    bool HasCompiler,
     string KnownVendor,
     string VendorDisplayName,
     string? RuntimeName,

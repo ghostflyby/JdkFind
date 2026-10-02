@@ -24,6 +24,7 @@ $ jdkfind --latest --path     # best single match — handy for shells:
 $ export JAVA_HOME="$(jdkfind --latest --path)"
 $ jdkfind -v 21               # filter by feature version
 $ jdkfind --vendor azul --arch aarch64
+$ jdkfind --latest --jdk-only --path   # newest JDK (ships javac)
 $ jdkfind --no-probe          # skip executing JVMs for runtime properties
 ```
 

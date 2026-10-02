@@ -18,6 +18,8 @@ internal sealed class Options
 
     internal bool NoProbe { get; private set; }
 
+    internal bool JdkOnly { get; private set; }
+
     internal static Options Parse(string[] args)
     {
         var options = new Options();
@@ -56,6 +58,10 @@ internal sealed class Options
 
                 case "--no-probe":
                     options.NoProbe = true;
+                    break;
+
+                case "--jdk-only":
+                    options.JdkOnly = true;
                     break;
 
                 default:

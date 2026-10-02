@@ -19,6 +19,12 @@ public sealed record Jvm
     /// <summary>The feature version extracted from <c>JAVA_VERSION</c>; null when it is unparseable.</summary>
     public int? LanguageVersion { get; init; }
 
+    /// <summary>
+    ///     True when the installation ships a compiler (<c>bin/javac</c>), i.e. it is a
+    ///     JDK rather than a runtime-only image (standalone JREs, jlink runtimes).
+    /// </summary>
+    public bool HasCompiler { get; init; }
+
     /// <summary>The raw vendor string (<c>IMPLEMENTOR</c>, falling back to the probed <c>java.vendor</c>).</summary>
     public string? Vendor { get; init; }
 
