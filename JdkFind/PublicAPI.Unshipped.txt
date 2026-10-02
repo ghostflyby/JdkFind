@@ -1,4 +1,18 @@
 #nullable enable
+JdkFind.JvmVendor.Asymm = 6 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Azul = 7 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.BellSoft = 8 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Gluon = 9 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.HewlettPackard = 11 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Huawei = 10 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Ibm = 12 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.JetBrains = 13 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Microsoft = 14 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.OpenLogic = 15 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Oracle = 16 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.RedHat = 17 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Sap = 18 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Tencent = 19 -> JdkFind.JvmVendor
 ~override JdkFind.JvmVersion.Equals(object obj) -> bool
 JdkFind.ICommonPrefixesJvmProvider
 JdkFind.ICommonPrefixJvmProvider
@@ -78,22 +92,6 @@ JdkFind.JvmVendor.AdoptOpenJdk = 1 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Alibaba = 3 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Amazon = 4 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Apple = 5 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Asymm = 6 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Azul = 7 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.BellSoft = 8 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Community = 9 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Gluon = 10 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.HewlettPackard = 12 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Huawei = 11 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Ibm = 13 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.JetBrains = 14 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Microsoft = 15 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.OpenLogic = 16 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Oracle = 17 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.RedHat = 18 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Sap = 19 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Tencent = 20 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Trava = 21 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Unknown = 0 -> JdkFind.JvmVendor
 JdkFind.JvmVersion
 JdkFind.JvmVersion.CompareTo(JdkFind.JvmVersion other) -> int

@@ -12,7 +12,6 @@ public enum JvmVendor
     Asymm,
     Azul,
     BellSoft,
-    Community,
     Gluon,
     Huawei,
     HewlettPackard,
@@ -24,5 +23,4 @@ public enum JvmVendor
     RedHat,
     Sap,
     Tencent,
-    Trava,
 }

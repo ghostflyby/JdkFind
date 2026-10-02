@@ -128,9 +128,9 @@ internal static partial class JvmIdentity
         if (BishengPattern.IsMatch(raw))
             return (JvmVendor.Huawei, JvmDistribution.Bisheng);
         if (TravaPattern.IsMatch(raw))
-            return (JvmVendor.Trava, JvmDistribution.Trava);
+            return (JvmVendor.Unknown, JvmDistribution.Trava);
         if (OjdkBuildPattern.IsMatch(raw))
-            return (JvmVendor.Community, JvmDistribution.OjdkBuild);
+            return (JvmVendor.Unknown, JvmDistribution.OjdkBuild);
         if (OpenLogicPattern.IsMatch(raw))
             return (JvmVendor.OpenLogic, JvmDistribution.OpenLogic);
         if (EliyaPattern.IsMatch(raw))
