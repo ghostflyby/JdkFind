@@ -1,5 +1,4 @@
 using JdkFind.Cli;
-using JdkFind.Providers;
 
 namespace JdkFind.Tests;
 
@@ -16,9 +15,9 @@ public class CommandLineFilterTests
     };
 
     [Theory]
-    [InlineData("azul")]          // 规范化厂商命中
-    [InlineData("Azul Systems")]  // 原始串命中
-    [InlineData("AZUL")]          // 大小写不敏感
+    [InlineData("azul")]          // normalized vendor hit
+    [InlineData("Azul Systems")]  // raw string hit
+    [InlineData("AZUL")]          // case-insensitive
     public void MatchesVendorFilter_MatchesVendorAndRawString(string text) =>
         Assert.True(CommandLine.MatchesVendorFilter(AzulJvm, text));
 

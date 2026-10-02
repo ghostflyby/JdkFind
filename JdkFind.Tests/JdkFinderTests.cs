@@ -233,7 +233,7 @@ public class JdkFinderTests : IDisposable
         var options = new JdkFindOptions
         {
             Providers = [new StubJvmProvider("stub", jdk)],
-            ProbeRuntimeProperties = false, // 假 java 不可执行，探测会静默失败——本用例只验证 release 侧。
+            ProbeRuntimeProperties = false, // The fake java is not executable, so probing fails silently — this test only verifies the release side.
         };
 
         var jvm = Assert.Single(JdkFinder.Locate(options).ToList());

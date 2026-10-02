@@ -1,5 +1,4 @@
 using JdkFind.Cli;
-using JdkFind.Providers;
 
 namespace JdkFind.Tests;
 
@@ -169,7 +168,8 @@ public class CommandLineIntegrationTests : IDisposable
         Assert.Equal(0, jdkOnly.ExitCode);
         Assert.Equal(jdk + Environment.NewLine, jdkOnly.StdOut);
 
-        // list 是唯一的多安装输出：表格在 stderr（1 行表头 + 2 行数据）。
+        // list is the only multi-installation output: the table goes to stderr
+        // (1 header row + 2 data rows).
         var listed = RunCli(["list"], options);
         Assert.Equal(string.Empty, listed.StdOut);
         Assert.Contains("VERSION", listed.StdErr);

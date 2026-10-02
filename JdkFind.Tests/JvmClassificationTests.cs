@@ -37,7 +37,8 @@ public class JvmClassificationTests
     [Fact]
     public void Classify_OracleNeedsHints_ToTellItsDistributionsApart()
     {
-        // Oracle 的 IMPLEMENTOR 一律是 "Oracle Corporation"，只能靠辅助线索区分发行版。
+        // Oracle reports "Oracle Corporation" as IMPLEMENTOR for all of its
+        // builds — only secondary hints tell its distributions apart.
         var (plainVendor, plainDistribution) = JvmIdentity.Classify("Oracle Corporation");
         Assert.Equal(JvmVendor.Oracle, plainVendor);
         Assert.Equal(JvmDistribution.OracleOpenJdk, plainDistribution);
@@ -55,7 +56,7 @@ public class JvmClassificationTests
     [Fact]
     public void Classify_ProbeVendorFallback_StillClassifies()
     {
-        // release 文件缺失 IMPLEMENTOR 时，用探测到的 java.vendor 兜底。
+        // When the release file lacks IMPLEMENTOR, the probed java.vendor is the fallback.
         var (vendor, distribution) = JvmIdentity.Classify("Azul Systems, Inc.");
 
         Assert.Equal(JvmVendor.Azul, vendor);
