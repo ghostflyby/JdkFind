@@ -10,8 +10,8 @@ public sealed class SdkmanJvmProvider(string? commonPrefix) : JvmProviderBase
 
     public SdkmanJvmProvider() : this(ResolveDefaultPrefix()) { }
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-        commonPrefix is not null ? ScanPrefixes([commonPrefix]).ToAsyncEnumerable() : AsyncEnumerable.Empty<string>();
+    public override IEnumerable<string> GetJavaHomes() =>
+        commonPrefix != null ? ScanPrefixes([commonPrefix]) : Enumerable.Empty<string>();
 
     private static string? ResolveDefaultPrefix()
     {

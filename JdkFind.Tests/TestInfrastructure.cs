@@ -41,10 +41,10 @@ internal static class TestJdk
         return home;
     }
 
-    internal static async Task<List<string>> GetHomesAsync(this IJvmProvider provider)
+    internal static List<string> GetHomes(this IJvmProvider provider)
     {
         var homes = new List<string>();
-        await foreach (var home in provider.GetJavaHomesAsync())
+        foreach (var home in provider.GetJavaHomes())
             homes.Add(home);
 
         return homes;

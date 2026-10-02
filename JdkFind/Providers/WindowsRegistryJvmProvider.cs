@@ -25,8 +25,8 @@ public sealed class WindowsRegistryJvmProvider : JvmProviderBase
 
     public override string Name => "windows-registry";
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-        OperatingSystem.IsWindows() ? CollectHomes().ToAsyncEnumerable() : AsyncEnumerable.Empty<string>();
+    public override IEnumerable<string> GetJavaHomes() =>
+        OperatingSystem.IsWindows() ? CollectHomes() : Enumerable.Empty<string>();
 
     [SupportedOSPlatform("windows")]
     private static IEnumerable<string> CollectHomes()

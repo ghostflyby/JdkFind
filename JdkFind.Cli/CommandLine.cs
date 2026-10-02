@@ -8,7 +8,7 @@ internal static class CommandLine
     private const int ExitNotFound = 1;
     private const int ExitUsage = 2;
 
-    internal static async Task<int> RunAsync(string[] args)
+    internal static int Run(string[] args)
     {
         Options options;
         try
@@ -17,8 +17,8 @@ internal static class CommandLine
         }
         catch (ArgumentException exception)
         {
-            await Console.Error.WriteLineAsync(exception.Message);
-            await Console.Error.WriteLineAsync("Run 'jdkfind --help' for usage.");
+            Console.Error.WriteLine(exception.Message);
+            Console.Error.WriteLine("Run 'jdkfind --help' for usage.");
             return ExitUsage;
         }
 
@@ -29,7 +29,7 @@ internal static class CommandLine
         }
 
         var jvms = new List<Jvm>();
-        await foreach (var jvm in JdkFinder.LocateAsync())
+        foreach (var jvm in JdkFinder.Locate())
         {
             if (options.LanguageVersion is { } version && jvm.LanguageVersion != version)
                 continue;

@@ -15,21 +15,21 @@ public static class JdkFinder
     ///     reports before results are produced, so each <see cref="Jvm" /> can list all
     ///     the sources that found it.
     /// </summary>
-    public static IAsyncEnumerable<Jvm> LocateAsync(JdkFindOptions? options = null, CancellationToken cancellationToken = default)
+    public static IEnumerable<Jvm> Locate(JdkFindOptions? options = null)
     {
         options ??= new JdkFindOptions();
-        return Enumerate(options, cancellationToken);
+        return Enumerate(options);
     }
 
-    /// <summary>Streams only the JVMs whose feature version matches.</summary>
-    public static IAsyncEnumerable<Jvm> FindAsync(int languageVersion, JdkFindOptions? options = null, CancellationToken cancellationToken = default) =>
-        LocateAsync(options, cancellationToken).Where(jvm => jvm.LanguageVersion == languageVersion);
+    /// <summary>Enumerates only the JVMs whose feature version matches.</summary>
+    public static IEnumerable<Jvm> Find(int languageVersion, JdkFindOptions? options = null) =>
+        Locate(options).Where(jvm => jvm.LanguageVersion == languageVersion);
 
     /// <summary>Returns the newest JVM found, or null when none is found.</summary>
-    public static async ValueTask<Jvm?> GetNewestAsync(JdkFindOptions? options = null, CancellationToken cancellationToken = default)
+    public static Jvm? GetNewest(JdkFindOptions? options = null)
     {
         Jvm? newest = null;
-        await foreach (var jvm in LocateAsync(options, cancellationToken))
+        foreach (var jvm in Locate(options))
             if (JvmVersionComparer.Default.Compare(jvm, newest) > 0)
                 newest = jvm;
 
@@ -40,10 +40,10 @@ public static class JdkFinder
     ///     Returns the JVM pointed to by <c>JAVA_HOME</c> when it is among the results,
     ///     otherwise the newest JVM found. Returns null when none is found.
     /// </summary>
-    public static async ValueTask<Jvm?> GetDefaultAsync(JdkFindOptions? options = null, CancellationToken cancellationToken = default)
+    public static Jvm? GetDefault(JdkFindOptions? options = null)
     {
         // Single pass: when JAVA_HOME misses, take the newest from the same results instead of a second full enumeration.
-        var jvms = await LocateAsync(options, cancellationToken).ToListAsync(cancellationToken);
+        var jvms = Locate(options).ToList();
 
         var javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
         if (!string.IsNullOrWhiteSpace(javaHome))
@@ -62,9 +62,7 @@ public static class JdkFinder
         return newest;
     }
 
-    private static async IAsyncEnumerable<Jvm> Enumerate(
-        JdkFindOptions options,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    private static IEnumerable<Jvm> Enumerate(JdkFindOptions options)
     {
         // Jvm.Providers lists every source that reported the same directory, so results
         // can only be produced after all providers have reported — the enumeration is
@@ -73,7 +71,7 @@ public static class JdkFinder
         var indexByKey = options.DeduplicateHomes ? new Dictionary<string, int>(PathComparer) : null;
 
         foreach (var provider in options.Providers)
-            await foreach (var candidate in provider.GetJavaHomesAsync(cancellationToken))
+            foreach (var candidate in provider.GetJavaHomes())
             {
                 if (indexByKey is null)
                 {

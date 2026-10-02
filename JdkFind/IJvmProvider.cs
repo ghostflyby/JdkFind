@@ -9,6 +9,6 @@ public interface IJvmProvider
     /// <summary>Stable lowercase identifier of this provider (e.g. <c>java-home</c>, <c>sdkman</c>).</summary>
     string Name { get; }
 
-    /// <summary>Streams candidate Java home directories. Nonexistent locations must yield an empty stream.</summary>
-    IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default);
+    /// <summary>Enumerates candidate Java home directories. Nonexistent locations must yield an empty sequence.</summary>
+    IEnumerable<string> GetJavaHomes();
 }

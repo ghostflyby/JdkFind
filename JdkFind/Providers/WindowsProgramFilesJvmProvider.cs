@@ -12,8 +12,7 @@ public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes)
 
     public WindowsProgramFilesJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-        ScanPrefixes(prefixes).ToAsyncEnumerable();
+    public override IEnumerable<string> GetJavaHomes() => ScanPrefixes(prefixes);
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {

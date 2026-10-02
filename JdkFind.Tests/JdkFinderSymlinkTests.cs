@@ -8,8 +8,7 @@ public class JdkFinderSymlinkTests : IDisposable
     {
         public string Name { get; } = name;
 
-        public IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-            homes.ToAsyncEnumerable();
+        public IEnumerable<string> GetJavaHomes() => homes;
     }
 
     [Fact]
@@ -26,7 +25,7 @@ public class JdkFinderSymlinkTests : IDisposable
     }
 
     [Fact]
-    public async Task Locate_DeduplicatesSymbolicLinkAgainstTarget()
+    public void Locate_DeduplicatesSymbolicLinkAgainstTarget()
     {
         if (OperatingSystem.IsWindows())
             return;
@@ -40,10 +39,7 @@ public class JdkFinderSymlinkTests : IDisposable
             Providers = [new StubJvmProvider("link", link), new StubJvmProvider("real", real)],
         };
 
-        var jvms = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken)
-            .ToListAsync(TestContext.Current.CancellationToken);
-
-        var jvm = Assert.Single(jvms);
+        var jvm = Assert.Single(JdkFinder.Locate(options).ToList());
         Assert.Equal(["link", "real"], jvm.Providers);
     }
 

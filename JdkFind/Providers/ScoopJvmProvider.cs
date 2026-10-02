@@ -13,8 +13,8 @@ public sealed class ScoopJvmProvider(IEnumerable<string> prefixes) : JvmProvider
 
     public ScoopJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
-    public override IAsyncEnumerable<string> GetJavaHomesAsync(CancellationToken cancellationToken = default) =>
-        ScanNested(prefixes.Select(prefix => Path.Combine(prefix, "apps")), "current").ToAsyncEnumerable();
+    public override IEnumerable<string> GetJavaHomes() =>
+        ScanNested(prefixes.Select(prefix => Path.Combine(prefix, "apps")), "current");
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {
