@@ -178,3 +178,4 @@ static JdkFind.JvmVersion.operator >=(JdkFind.JvmVersion left, JdkFind.JvmVersio
 static JdkFind.JvmVersion.Parse(string? javaVersion) -> JdkFind.JvmVersion
 static JdkFind.JvmVersion.TryParse(string? javaVersion, out JdkFind.JvmVersion version) -> bool
 static JdkFind.JvmVersion.Unknown(string! original = "") -> JdkFind.JvmVersion
+JdkFind.Jvm.SupportsSource(int sourceLevel) -> bool

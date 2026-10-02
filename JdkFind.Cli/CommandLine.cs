@@ -119,6 +119,7 @@ internal static class CommandLine
 
     private static bool MatchesFilters(Jvm jvm, Options options) =>
         (options.VersionPrefix is null || MatchesVersion(jvm, options.VersionPrefix)) &&
+        (options.Release is null || jvm.SupportsSource(options.Release.Value)) &&
         (!options.JdkOnly || jvm.HasCompiler) &&
         MatchesVendorFilter(jvm, options.Vendor) &&
         MatchesDistributionFilter(jvm, options.Distribution) &&
@@ -198,6 +199,8 @@ internal static class CommandLine
               --distribution <t>    Filter by distribution substring per the foojay API
                                     names (e.g. temurin, zulu, corretto)
               --arch <text>         Filter by architecture substring (case-insensitive)
+              --release <n>         Filter by supported javac language level; covers
+                                    --release/-source/-target compilation
               --jdk-only            Only installations that ship a compiler (skip runtimes)
               --no-probe            Skip executing each JVM for runtime properties
           -h, --help                Show this help

@@ -36,6 +36,14 @@ public class CommandLineTests
         Assert.Equal(expected, CommandLine.MatchesVersion(ZuluJvm, prefix));
 
     [Fact]
+    public void SupportsSource_FollowsMajorVersion()
+    {
+        Assert.True(ZuluJvm.SupportsSource(21));
+        Assert.True(ZuluJvm.SupportsSource(8));
+        Assert.False(ZuluJvm.SupportsSource(22));
+    }
+
+    [Fact]
     public void ToolPath_ReturnsHomeWithoutTool() =>
         Assert.Equal(HomePath, CommandLine.ToolPath(ZuluJvm, null));
 

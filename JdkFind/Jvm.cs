@@ -20,6 +20,16 @@ public sealed record Jvm
     public int? LanguageVersion { get; init; }
 
     /// <summary>
+    ///     Whether this installation's javac accepts language level
+    ///     <paramref name="sourceLevel" /> via <c>--release</c> / <c>-source</c> /
+    ///     <c>-target</c>. Derived from the major version — javac N supports every
+    ///     level up to N, so no separate extraction is needed. Floors below 8
+    ///     (dropped across older javac releases) are not modeled; the filter
+    ///     horizon is 8+.
+    /// </summary>
+    public bool SupportsSource(int sourceLevel) => (LanguageVersion ?? 0) >= sourceLevel;
+
+    /// <summary>
     ///     True when the installation ships a compiler (<c>bin/javac</c>), i.e. it is a
     ///     JDK rather than a runtime-only image (standalone JREs, jlink runtimes).
     /// </summary>

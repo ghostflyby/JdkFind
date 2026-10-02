@@ -41,13 +41,14 @@ public class OptionsTests
     [Fact]
     public void Parse_FlagsApplyToAnyCommand()
     {
-        var options = Options.Parse(["info", "--jdk-only", "--no-probe", "--vendor", "zulu", "--arch=aarch64", "--json"]);
+        var options = Options.Parse(["info", "--jdk-only", "--no-probe", "--vendor", "zulu", "--arch=aarch64", "--release=8", "--json"]);
 
         Assert.Equal(SubCommand.Info, options.Command);
         Assert.True(options.JdkOnly);
         Assert.True(options.NoProbe);
         Assert.Equal("zulu", options.Vendor);
         Assert.Equal("aarch64", options.Architecture);
+        Assert.Equal(8, options.Release);
         Assert.True(options.OutputJson);
     }
 
