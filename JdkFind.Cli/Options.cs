@@ -27,6 +27,8 @@ internal sealed class Options
 
     internal string? Architecture { get; private set; }
 
+    internal int? Release { get; private set; }
+
     internal bool JdkOnly { get; private set; }
 
     internal bool NoProbe { get; private set; }
@@ -64,6 +66,12 @@ internal sealed class Options
 
                 case "--arch":
                     options.Architecture = TakeValue(ref i, inlineValue, args, name);
+                    break;
+
+                case "--release":
+                    options.Release = int.Parse(
+                        ValidateVersionPrefix(TakeValue(ref i, inlineValue, args, name)),
+                        System.Globalization.CultureInfo.InvariantCulture);
                     break;
 
                 case "--jdk-only":
