@@ -17,16 +17,12 @@ dotnet tool install --global JdkFind.Cli
 ## CLI usage
 
 ```console
-$ jdkfind                     # table: VERSION / VENDOR / ARCH / SOURCE / HOME
-$ jdkfind --json              # machine-readable output (source-generated serializer)
-$ jdkfind --path              # bare home paths, one per line
-$ jdkfind --latest --path     # best single match — handy for shells:
-$ export JAVA_HOME="$(jdkfind --latest --path)"
-$ jdkfind -v 21               # filter by feature version
-$ jdkfind --vendor azul --arch aarch64
-$ jdkfind --latest --jdk-only --path   # newest JDK (ships javac)
-$ jdkfind --no-probe          # skip executing JVMs for runtime properties
-$ jdkfind --path -0 | xargs -0 -I{} echo {}   # space-safe piping
+$ jdkfind                                        # newest home (stdout)
+$ jdkfind 21                                     # newest 21.x home
+$ jdkfind 21 java                                # newest 21.x bin/java
+$ jdkfind info 21                                # one installation's details (stderr)
+$ jdkfind list                                   # human-readable table (stderr)
+$ jdkfind list --json                            # all installations as JSON (stdout)
 ```
 
 By default `jdkfind` executes each installation's own java executable
