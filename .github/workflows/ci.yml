@@ -75,7 +75,9 @@ jobs:
           version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' JdkFind.Cli/JdkFind.Cli.csproj)
           dotnet tool install --global --add-source "$PWD/pkg" JdkFind.Cli --version "$version"
           "$HOME/.dotnet/tools/jdkfind" --help
-          homes="$("$HOME/.dotnet/tools/jdkfind" --path)"
+          # The default command prints the newest home on stdout; GitHub runners
+          # ship JDKs, so discovery must surface at least one.
+          homes="$("$HOME/.dotnet/tools/jdkfind")"
           echo "$homes"
           test -n "$homes"
 
