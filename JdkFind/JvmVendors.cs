@@ -12,12 +12,12 @@ public static class JvmVendors
     private static readonly (JvmVendor Vendor, Regex Pattern, string DisplayName)[] Known =
     [
         (JvmVendor.Adoptium, Pattern("temurin|adoptium|eclipse foundation"), "Eclipse Temurin"),
-        (JvmVendor.AdoptOpenJDK, Pattern("aoj|adoptopenjdk"), "AdoptOpenJDK"),
+        (JvmVendor.AdoptOpenJdk, Pattern("aoj|adoptopenjdk"), "AdoptOpenJDK"),
         (JvmVendor.Amazon, Pattern("amazon|corretto"), "Amazon Corretto"),
         (JvmVendor.Apple, Pattern("apple"), "Apple"),
         (JvmVendor.Azul, Pattern("azul|zulu"), "Azul Zulu"),
         (JvmVendor.BellSoft, Pattern("bellsoft|liberica"), "BellSoft Liberica"),
-        (JvmVendor.GraalVM, Pattern("graalvm|graal vm"), "GraalVM Community"),
+        (JvmVendor.GraalVm, Pattern("graalvm|graal vm"), "GraalVM Community"),
         (JvmVendor.HewlettPackard, Pattern("hp|hewlett"), "HP"),
         (JvmVendor.Ibm, Pattern("ibm|semeru|international business machines corporation"), "IBM Semeru"),
         (JvmVendor.JetBrains, Pattern("jbr|jetbrains"), "JetBrains"),
