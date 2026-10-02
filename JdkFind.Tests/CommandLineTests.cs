@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Text;
 using JdkFind.Cli;
 
@@ -5,9 +6,12 @@ namespace JdkFind.Tests;
 
 public class CommandLineTests
 {
+    // Path.GetFullPath normalizes separators per OS, so the fixture works on Windows too.
+    private static readonly string HomePath = Path.GetFullPath("/jvm/zulu");
+
     private static readonly Jvm ZuluJvm = new()
     {
-        Home = new DirectoryInfo("/jvm/zulu"),
+        Home = new DirectoryInfo(HomePath),
         Providers = ["macos"],
         Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1"),
         LanguageVersion = 21,
@@ -35,13 +39,13 @@ public class CommandLineTests
 
     [Fact]
     public void ToolPath_ReturnsHomeWithoutTool() =>
-        Assert.Equal("/jvm/zulu", CommandLine.ToolPath(ZuluJvm, null));
+        Assert.Equal(HomePath, CommandLine.ToolPath(ZuluJvm, null));
 
     [Fact]
     public void ToolPath_AppendsBinAndPlatformSuffix()
     {
         var path = CommandLine.ToolPath(ZuluJvm, "javac");
-        var expected = Path.Combine("/jvm/zulu", "bin", OperatingSystem.IsWindows() ? "javac.exe" : "javac");
+        var expected = Path.Combine(HomePath, "bin", OperatingSystem.IsWindows() ? "javac.exe" : "javac");
 
         Assert.Equal(expected, path);
     }
@@ -55,7 +59,7 @@ public class CommandLineTests
 
         Assert.Equal(
             [
-                "home: /jvm/zulu",
+                $"home: {HomePath}",
                 "version: 21.0.12.1 (feature 21)",
                 "vendor: Azul Zulu (Azul)",
                 "runtime: OpenJDK Runtime Environment 21.0.12+44",
