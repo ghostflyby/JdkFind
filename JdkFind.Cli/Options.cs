@@ -25,6 +25,7 @@ internal sealed class Options
     /// selection semantics, stream discipline and exit codes.</summary>
     private const string RootDescription = """
         jdkfind [version] [tool] [options]    Print the selected home, or bin/<tool> path
+        jdkfind [version] -- <command>        Run <command> with JAVA_HOME and bin/ of the selection (exec on Unix, spawn on Windows)
         jdkfind info [version] [options]      Print one installation's details
         jdkfind list [options]                List all matching installations
 
@@ -60,6 +61,9 @@ internal sealed class Options
     /// <summary>Positional bin tool name (non-numeric, e.g. "java", "javac") for the default command.</summary>
     internal string? Tool { get; private set; }
 
+    /// <summary>The command and arguments given after '--', or null when no '--' was present.</summary>
+    internal IReadOnlyList<string>? CommandArgs { get; private set; }
+
     internal bool OutputJson { get; private set; }
 
     internal string? Vendor { get; private set; }
@@ -76,15 +80,7 @@ internal sealed class Options
 
     /// <summary>Parses the arguments through System.CommandLine; the first parse
     /// error surfaces as an ArgumentException.</summary>
-    internal static Options Parse(string[] args)
-    {
-        var tree = CreateTree(execute: null);
-        var parseResult = tree.Root.Parse(args, new ParserConfiguration { EnablePosixBundling = false });
-        if (parseResult.Errors.Count > 0)
-            throw new ArgumentException(parseResult.Errors[0].Message);
-
-        return Map(parseResult, tree);
-    }
+    internal static Options Parse(string[] args) => ParseInto(CreateTree(execute: null), args, out _);
 
     /// <summary>
     ///     Assembles the command tree. When <paramref name="execute" /> is given, the
@@ -256,9 +252,55 @@ internal sealed class Options
         return options;
     }
 
+    /// <summary>
+    ///     The single parsing path for both the test seam and the wired invocation
+    ///     tree, so '--' handling cannot diverge between them: everything after '--'
+    ///     becomes <see cref="CommandArgs" /> verbatim (it never reaches the parser),
+    ///     and the first parse, grammar or unmatched-token error surfaces as an
+    ///     ArgumentException. The command is also assigned to
+    ///     <paramref name="commandArgs" /> for the invocation closure, because the
+    ///     wired action re-maps the parse result into a fresh Options instance.
+    /// </summary>
+    internal static Options ParseInto(CommandTree tree, string[] args, out string[]? commandArgs)
+    {
+        var separator = Array.IndexOf(args, "--");
+        var tail = separator < 0 ? null : args[(separator + 1)..];
+        var head = separator < 0 ? args : args[..separator];
+        commandArgs = tail;
+
+        var parseResult = tree.Root.Parse(head, new ParserConfiguration { EnablePosixBundling = false });
+        if (parseResult.Errors.Count > 0)
+            throw new ArgumentException(parseResult.Errors[0].Message);
+
+        // A help token clears subcommand-level parse errors, but unmatched tokens
+        // survive it; keep them a usage error (`list --bogus --help` must not print
+        // help with exit 0).
+        if (parseResult.UnmatchedTokens is { Count: > 0 })
+            throw new ArgumentException(parseResult.UnmatchedTokens[0].StartsWith('-')
+                ? $"Unknown option '{parseResult.UnmatchedTokens[0]}'."
+                : $"Unexpected argument '{parseResult.UnmatchedTokens[0]}'.");
+
+        var options = Map(parseResult, tree);
+
+        if (tail is not null)
+        {
+            if (options.Command != SubCommand.None)
+                throw new ArgumentException("'--' runs a command; it is not valid with 'info' or 'list'.");
+            if (tail.Length == 0)
+                throw new ArgumentException("No command given after '--'.");
+            options.CommandArgs = tail;
+        }
+
+        return options;
+    }
+
     /// <summary>Prints the framework-generated help or version output to stdout;
     /// only meaningful when ShowHelp or ShowVersion is true.</summary>
     internal int RenderFrameworkOutput() => parseResult.Invoke(new InvocationConfiguration());
+
+    /// <summary>Invokes the parsed command through the framework, dispatching the
+    /// wired run actions with the termination-signal cancellation token.</summary>
+    internal Task<int> InvokeAsync() => parseResult.InvokeAsync(new InvocationConfiguration());
 
     private static void ParsePositional(Options options, string arg)
     {
