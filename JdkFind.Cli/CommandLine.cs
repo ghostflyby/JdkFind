@@ -152,7 +152,6 @@ internal static class CommandLine
         return Path.Combine(jvm.Home.FullName, "bin", fileName);
     }
 
-    /// <summary>A JVM matches the version prefix when its core version starts with it segment-wise.</summary>
     /// <summary>
     ///     A JVM matches the version prefix when its feature version starts with it
     ///     segment-wise. A single-segment prefix compares against the language level,

@@ -12,7 +12,7 @@
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>jdkfind</ToolCommandName>
         <PackageId>JdkFind.Cli</PackageId>
-        <Version>0.1.0</Version>
+        <Version>0.1.1</Version>
         <Authors>ghostflyby</Authors>
         <Description>Locate installed JDKs across Windows, macOS and Linux.</Description>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
