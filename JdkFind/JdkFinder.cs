@@ -44,7 +44,7 @@ public static class JdkFinder
                     CancellationToken = cancellationToken,
                 },
                 async (index, token) =>
-                    results[index] = await CreateJvmAsync(order[index], token).ConfigureAwait(false))
+                    results[index] = await CreateJvmAsync(order[index], probeRuntime: true, token).ConfigureAwait(false))
                 .ConfigureAwait(false);
         }
         else
@@ -52,7 +52,7 @@ public static class JdkFinder
             for (var index = 0; index < order.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                results[index] = await CreateJvmAsync(order[index], cancellationToken).ConfigureAwait(false);
+                results[index] = await CreateJvmAsync(order[index], probeRuntime: false, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -186,7 +186,7 @@ public static class JdkFinder
     /// <summary>Async twin of <see cref="CreateJvm" /> for cancellation-aware callers;
     /// a cancelled token propagates instead of counting as a broken installation.</summary>
     private static async Task<Jvm?> CreateJvmAsync(
-        (string HomePath, List<string> Providers) entry, CancellationToken cancellationToken)
+        (string HomePath, List<string> Providers) entry, bool probeRuntime, CancellationToken cancellationToken)
     {
         // The provider contract guarantees validated homes, so the release file is
         // expected to exist; parse failures (missing or unreadable) count as no JVM.
@@ -204,7 +204,9 @@ public static class JdkFinder
 
         // The runtime probe executes the installation's own java executable; anything
         // it adds is enrichment — release-file values keep precedence.
-        var runtime = await JvmRuntimeProbe.ProbeAsync(entry.HomePath, cancellationToken).ConfigureAwait(false);
+        var runtime = probeRuntime
+            ? await JvmRuntimeProbe.ProbeAsync(entry.HomePath, cancellationToken).ConfigureAwait(false)
+            : null;
 
         return Build(entry.HomePath, entry.Providers, release, runtime);
     }

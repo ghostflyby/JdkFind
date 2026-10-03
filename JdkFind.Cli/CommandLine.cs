@@ -47,6 +47,19 @@ internal static class CommandLine
             return ExitUsage;
         }
 
+        // A help token clears subcommand-level parse errors, but unmatched tokens
+        // survive it; keep them a usage error (`list --bogus --help` must not print
+        // help with exit 0).
+        if (parseResult.UnmatchedTokens is { Count: > 0 })
+        {
+            var token = parseResult.UnmatchedTokens[0];
+            await Console.Error.WriteLineAsync(token.StartsWith('-')
+                ? $"Unknown option '{token}'."
+                : $"Unexpected argument '{token}'.");
+            await Console.Error.WriteLineAsync("Run 'jdkfind --help' for usage.");
+            return ExitUsage;
+        }
+
         Options options;
         try
         {

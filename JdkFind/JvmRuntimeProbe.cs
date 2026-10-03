@@ -102,7 +102,11 @@ internal static class JvmRuntimeProbe
             try
             {
                 var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
-                _ = process.StandardOutput.ReadToEndAsync(cancellationToken);
+
+                // The stdout stream carries nothing the probe uses; without the token
+                // it simply completes when the kill below closes the pipe, and the
+                // discarded task can never end cancelled.
+                _ = process.StandardOutput.ReadToEndAsync();
 
                 // The 15-second cap feeds a linked source so a hung child degrades to
                 // null like before; the caller's token distinguishes a user cancel.
@@ -114,7 +118,7 @@ internal static class JvmRuntimeProbe
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
-                    process.Kill(true);
+                    TryKill(process);
                     return null;
                 }
 
@@ -122,10 +126,24 @@ internal static class JvmRuntimeProbe
             }
             catch (OperationCanceledException)
             {
-                if (!process.HasExited)
-                    process.Kill(true);
+                TryKill(process);
                 throw;
             }
+        }
+    }
+
+    /// <summary>Kills the child best-effort: it may exit between the wait and the kill,
+    /// and a failed kill must never abort the whole scan.</summary>
+    private static void TryKill(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+                process.Kill(true);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or Win32Exception)
+        {
+            // Nothing left to kill.
         }
     }
 

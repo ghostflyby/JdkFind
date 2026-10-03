@@ -146,6 +146,28 @@ public class CommandLineIntegrationTests : IDisposable
     }
 
     [Fact]
+    public void UsageErrorWithHelp_StillReturnsExit2()
+    {
+        var (exitCode, stdout, stderr) = RunCli(["--bogus", "--help"], StubOptions());
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("--bogus", stderr);
+    }
+
+    [Fact]
+    public void SubcommandUsageErrorWithHelp_StillReturnsExit2()
+    {
+        // The framework's help action clears subcommand-level parse errors; the
+        // unmatched token must stay fatal instead of printing help with exit 0.
+        var (exitCode, stdout, stderr) = RunCli(["list", "--bogus", "--help"], StubOptions());
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("--bogus", stderr);
+    }
+
+    [Fact]
     public void Help_WritesUsageToStdout_ReturnsZero()
     {
         var (exitCode, stdout, stderr) = RunCli(["--help"], StubOptions());

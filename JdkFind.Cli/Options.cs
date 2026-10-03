@@ -11,15 +11,15 @@ internal enum SubCommand
     List,
 }
 
-    /// <summary>
-    ///     The parsed jdkfind command line. The options and the info/list subcommands
-    ///     are declared on System.CommandLine's root command; Parse drives the
-    ///     framework parser and maps its result onto this type. Classification of the
-    ///     default command's positionals (version prefix vs. bin tool) stays here,
-    ///     because the framework cannot express positionals whose meaning depends on
-    ///     the first character.
-    /// </summary>
-    internal sealed class Options
+/// <summary>
+///     The parsed jdkfind command line. The options and the info/list subcommands
+///     are declared on System.CommandLine's root command; Parse drives the
+///     framework parser and maps its result onto this type. Classification of the
+///     default command's positionals (version prefix vs. bin tool) stays here,
+///     because the framework cannot express positionals whose meaning depends on
+///     the first character.
+/// </summary>
+internal sealed class Options
 {
     /// <summary>Prose carried at the top of the generated help: usage lines,
     /// selection semantics, stream discipline and exit codes.</summary>
@@ -163,6 +163,13 @@ internal enum SubCommand
             TreatUnmatchedTokensAsErrors = true,
         };
 
+        var listVersion = new Argument<string?>("version")
+        {
+            Description = "Numeric version prefix (21, 21.0.5)",
+            Arity = ArgumentArity.ZeroOrOne,
+        };
+        list.Add(listVersion);
+
         var root = new RootCommand(RootDescription)
         {
             // Tokens matched by nothing on the default command are usage errors too.
@@ -190,6 +197,7 @@ internal enum SubCommand
             List = list,
             Operands = operands,
             Version = version,
+            ListVersion = listVersion,
             Json = json,
             Vendor = vendor,
             Distribution = distribution,
@@ -221,9 +229,12 @@ internal enum SubCommand
     internal static Options Map(ParseResult parseResult, CommandTree tree)
     {
         var infoVersion = parseResult.GetValue(tree.Version);
+        var listVersion = parseResult.GetValue(tree.ListVersion);
         var options = new Options(parseResult, tree.VersionOption)
         {
-            VersionPrefix = infoVersion is null ? null : ValidateVersionPrefix(infoVersion),
+            VersionPrefix = infoVersion is not null ? ValidateVersionPrefix(infoVersion)
+                : listVersion is not null ? ValidateVersionPrefix(listVersion)
+                : null,
             OutputJson = parseResult.GetValue(tree.Json),
             Vendor = parseResult.GetValue(tree.Vendor),
             Distribution = parseResult.GetValue(tree.Distribution),
@@ -304,7 +315,7 @@ internal enum SubCommand
     /// <summary>The release filter is a single integer language level — unlike the
     /// version prefix, which may carry up to three dot-separated segments.</summary>
     private static int ParseRelease(string text) =>
-        text.Length > 0 && text.All(char.IsAsciiDigit)
-            ? int.Parse(text, CultureInfo.InvariantCulture)
+        int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var release)
+            ? release
             : throw new ArgumentException($"Invalid release '{text}'.");
 }

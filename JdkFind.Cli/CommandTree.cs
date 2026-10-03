@@ -18,6 +18,8 @@ internal sealed class CommandTree
 
     internal required Argument<string?> Version { get; init; }
 
+    internal required Argument<string?> ListVersion { get; init; }
+
     internal required Option<bool> Json { get; init; }
 
     internal required Option<string> Vendor { get; init; }

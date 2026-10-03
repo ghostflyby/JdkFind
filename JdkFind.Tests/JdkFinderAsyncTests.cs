@@ -52,7 +52,40 @@ public class JdkFinderAsyncTests : IDisposable
     }
 
     [Fact]
-    public async Task ProbeAsync_TimeoutStillDegradesToNull()
+    public async Task LocateAsync_HonorsProbeRuntimeProperties()
+    {
+        // A working java stub makes probing observable: enabled, the runtime enriches
+        // from the stub's output; disabled, it stays null. Windows is skipped — the
+        // stub needs a POSIX script interpreter.
+        if (OperatingSystem.IsWindows())
+            return;
+
+        var home = Path.Combine(temp.FullPath, "scripted");
+        Directory.CreateDirectory(Path.Combine(home, "bin"));
+        File.WriteAllText(Path.Combine(home, "release"), "JAVA_VERSION=\"21.0.5\"\n");
+        var java = Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName);
+        File.WriteAllText(
+            java,
+            "#!/bin/sh\necho 'java.version = 21.0.5' >&2\necho 'java.runtime.name = ScriptedRuntime' >&2\n");
+        File.SetUnixFileMode(
+            java,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
+            | UnixFileMode.GroupRead | UnixFileMode.GroupExecute
+            | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+
+        var providers = new List<IJvmProvider> { new StubJvmProvider("stub", home) };
+
+        var probed = await JdkFinder.LocateAsync(
+            new JdkFindOptions { Providers = providers, ProbeRuntimeProperties = true }, TestContext.Current.CancellationToken);
+        var unprobed = await JdkFinder.LocateAsync(
+            new JdkFindOptions { Providers = providers, ProbeRuntimeProperties = false }, TestContext.Current.CancellationToken);
+
+        Assert.Equal("ScriptedRuntime", probed[0].RuntimeName);
+        Assert.Null(unprobed[0].RuntimeName);
+    }
+
+    [Fact]
+    public async Task ProbeAsync_SpawnFailureStillDegradesToNull()
     {
         // The fixture's bin/java is a text file: spawning it fails and the probe
         // degrades silently, with and without a live cancellation token.
