@@ -34,12 +34,12 @@ public class JdkFinderSymlinkTests : IDisposable
         var link = Path.Combine(temp.FullPath, "link-jdk");
         Directory.CreateSymbolicLink(link, real);
 
-        var options = new JdkFindOptions
+        var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("link", link), new StubJvmProvider("real", real)],
         };
 
-        var jvm = Assert.Single(JdkFinder.Locate(options).ToList());
+        var jvm = Assert.Single(finder.Locate().ToList());
         Assert.Equal(["link", "real"], jvm.Providers);
     }
 

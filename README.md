@@ -70,12 +70,15 @@ and the process exits with `130` after a short grace period.
 ```csharp
 using JdkFind;
 
-// Locate every JDK; the result merges every provider that reported the same home.
-foreach (var jvm in JdkFinder.Locate())
+// Every locate is a fresh scan; the result merges every source that reported
+// the same home.
+foreach (var jvm in JdkFinder.Default.Locate())
     Console.WriteLine($"{jvm.LanguageVersion} {jvm.Vendor} -> {jvm.Home.FullName}");
 
-// Async counterpart; honours the cancellation token for probes and release reads.
-IReadOnlyList<Jvm> jvms = await JdkFinder.LocateAsync(cancellationToken);
+// Customize through a with expression; the async overload honours the
+// cancellation token for probes and release reads.
+var finder = JdkFinder.Default with { Providers = [new NasSource()], ProbeRuntimeProperties = false };
+IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
 ```
 
 ## Discovery sources

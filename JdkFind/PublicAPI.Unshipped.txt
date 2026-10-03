@@ -20,14 +20,17 @@ JdkFind.IJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<st
 JdkFind.IJvmProvider.Name.get -> string!
 JdkFind.JavaHomeLayout
 JdkFind.JdkFinder
-JdkFind.JdkFindOptions
-JdkFind.JdkFindOptions.DeduplicateHomes.get -> bool
-JdkFind.JdkFindOptions.DeduplicateHomes.init -> void
-JdkFind.JdkFindOptions.JdkFindOptions() -> void
-JdkFind.JdkFindOptions.ProbeRuntimeProperties.get -> bool
-JdkFind.JdkFindOptions.ProbeRuntimeProperties.init -> void
-JdkFind.JdkFindOptions.Providers.get -> System.Collections.Generic.IList<JdkFind.IJvmProvider!>!
-JdkFind.JdkFindOptions.Providers.init -> void
+JdkFind.JdkFinder.<Clone>$() -> JdkFind.JdkFinder!
+JdkFind.JdkFinder.DeduplicateHomes.get -> bool
+JdkFind.JdkFinder.DeduplicateHomes.init -> void
+JdkFind.JdkFinder.Equals(JdkFind.JdkFinder? other) -> bool
+JdkFind.JdkFinder.JdkFinder() -> void
+JdkFind.JdkFinder.Locate() -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
+JdkFind.JdkFinder.LocateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!>!
+JdkFind.JdkFinder.ProbeRuntimeProperties.get -> bool
+JdkFind.JdkFinder.ProbeRuntimeProperties.init -> void
+JdkFind.JdkFinder.Providers.get -> System.Collections.Generic.IReadOnlyList<JdkFind.IJvmProvider!>!
+JdkFind.JdkFinder.Providers.init -> void
 JdkFind.Jvm
 JdkFind.Jvm.<Clone>$() -> JdkFind.Jvm!
 JdkFind.Jvm.Architecture.get -> string?
@@ -153,15 +156,18 @@ JdkFind.Providers.WindowsRegistryJvmProvider
 JdkFind.Providers.WindowsRegistryJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.Providers.WindowsRegistryJvmProvider.Name.get -> string!
 JdkFind.Providers.WindowsRegistryJvmProvider.WindowsRegistryJvmProvider() -> void
+override JdkFind.JdkFinder.Equals(object? obj) -> bool
+override JdkFind.JdkFinder.GetHashCode() -> int
+override JdkFind.JdkFinder.ToString() -> string!
 override JdkFind.Jvm.Equals(object? obj) -> bool
 override JdkFind.Jvm.GetHashCode() -> int
 override JdkFind.Jvm.ToString() -> string!
 override JdkFind.JvmVersion.GetHashCode() -> int
 override JdkFind.JvmVersion.ToString() -> string!
 static JdkFind.JavaHomeLayout.Probe(string! candidateDirectory) -> string?
-static JdkFind.JdkFinder.Locate(JdkFind.JdkFindOptions? options = null) -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
-static JdkFind.JdkFinder.LocateAsync(JdkFind.JdkFindOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!>!
-static JdkFind.JdkFindOptions.CreateDefaultProviders() -> System.Collections.Generic.List<JdkFind.IJvmProvider!>!
+static JdkFind.JdkFinder.Default.get -> JdkFind.JdkFinder!
+static JdkFind.JdkFinder.operator !=(JdkFind.JdkFinder? left, JdkFind.JdkFinder? right) -> bool
+static JdkFind.JdkFinder.operator ==(JdkFind.JdkFinder? left, JdkFind.JdkFinder? right) -> bool
 static JdkFind.Jvm.operator !=(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
 static JdkFind.Jvm.operator ==(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
 static JdkFind.JvmVersion.operator !=(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
