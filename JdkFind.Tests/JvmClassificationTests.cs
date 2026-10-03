@@ -44,8 +44,8 @@ public class JvmClassificationTests
 
     // The two axes read disjoint inputs: the vendor axis only ever sees the raw
     // vendor string, while the distribution axis prefers IMPLEMENTOR_VERSION,
-    // falls back to the raw vendor string, and consults the GRAALVM_VERSION
-    // release key only when neither identity string matched. Each row pins one
+    // then vendor strings naming a GraalVM family member, then the GRAALVM_VERSION
+    // release key, then the remaining vendor patterns. Each row pins one
     // combination so the axes cannot silently re-couple.
     [Theory]
     // IMPLEMENTOR_VERSION tells Oracle's builds apart: same vendor, two
@@ -66,10 +66,12 @@ public class JvmClassificationTests
     // The same community string in the vendor position maps to Oracle — the
     // GraalVM family's upstream organization — plus GraalVmCommunity.
     [InlineData(null, "GraalVM Community 22", false, JvmVendor.Oracle, JvmDistribution.GraalVmCommunity)]
-    // The GRAALVM_VERSION release key outranks the vendor string: real Oracle
-    // GraalVM files carry IMPLEMENTOR="Oracle Corporation" with no branded
-    // IMPLEMENTOR_VERSION, so the key is what tells those builds apart.
+    // The GRAALVM_VERSION release key outranks the plain Oracle vendor name —
+    // real Oracle GraalVM files carry IMPLEMENTOR="Oracle Corporation" with no
+    // branded IMPLEMENTOR_VERSION — but not a vendor string naming a GraalVM
+    // family member directly (community builds report their own name).
     [InlineData(null, "Oracle Corporation", true, JvmVendor.Oracle, JvmDistribution.OracleGraalVm)]
+    [InlineData(null, "GraalVM Community", true, JvmVendor.Oracle, JvmDistribution.GraalVmCommunity)]
     [InlineData(null, null, true, JvmVendor.Unknown, JvmDistribution.OracleGraalVm)]
     [InlineData(null, "Homebrew", true, JvmVendor.Unknown, JvmDistribution.OracleGraalVm)]
     // Nothing to read on either axis and no release hint.

@@ -148,9 +148,11 @@ internal static partial class JvmIdentity
     /// <summary>
     ///     Maps the installation onto its foojay-style distribution. The release
     ///     file's IMPLEMENTOR_VERSION is the sharpest hint and wins over the raw
-    ///     vendor string; the GRAALVM_VERSION release key outranks the vendor
-    ///     string because real Oracle GraalVM files carry no branded
-    ///     IMPLEMENTOR_VERSION and their IMPLEMENTOR is the plain Oracle name.
+    ///     vendor string. The GRAALVM_VERSION release key sits between the two:
+    ///     real Oracle GraalVM files carry IMPLEMENTOR="Oracle Corporation" with
+    ///     no branded IMPLEMENTOR_VERSION, so the key must outrank the plain
+    ///     Oracle vendor name — but it must not outrank vendor strings that name
+    ///     a GraalVM family member (community, Mandrel, Gluon) directly.
     /// </summary>
     internal static JvmDistribution DetectDistribution(
         string? implementorVersion, string? vendorRaw, bool graalVmRelease = false)
@@ -160,6 +162,13 @@ internal static partial class JvmIdentity
             var fromImplementorVersion = MatchDistribution(implementorVersion);
             if (fromImplementorVersion != JvmDistribution.Unknown)
                 return fromImplementorVersion;
+        }
+
+        if (!string.IsNullOrEmpty(vendorRaw))
+        {
+            var fromFamily = MatchGraalVmFamily(vendorRaw);
+            if (fromFamily != JvmDistribution.Unknown)
+                return fromFamily;
         }
 
         if (graalVmRelease)
@@ -176,11 +185,11 @@ internal static partial class JvmIdentity
     }
 
     /// <summary>
-    ///     Runs the distribution pattern set: the GraalVM family before Oracle so
-    ///     a plain "Oracle" vendor name cannot mask it, and Mandrel before Red Hat
-    ///     for the same reason. Returns Unknown when nothing matched.
+    ///     Runs just the GraalVM-family head of the pattern set — the specific
+    ///     names a GraalVM installation may report instead of hiding behind the
+    ///     plain Oracle vendor string. Returns Unknown when nothing matched.
     /// </summary>
-    private static JvmDistribution MatchDistribution(string raw)
+    private static JvmDistribution MatchGraalVmFamily(string raw)
     {
         if (GraalVmCommunityPattern.IsMatch(raw))
             return JvmDistribution.GraalVmCommunity;
@@ -190,6 +199,20 @@ internal static partial class JvmIdentity
             return JvmDistribution.Mandrel;
         if (GluonPattern.IsMatch(raw))
             return JvmDistribution.GluonGraalVm;
+
+        return JvmDistribution.Unknown;
+    }
+
+    /// <summary>
+    ///     Runs the distribution pattern set: the GraalVM family before Oracle so
+    ///     a plain "Oracle" vendor name cannot mask it, and Mandrel before Red Hat
+    ///     for the same reason. Returns Unknown when nothing matched.
+    /// </summary>
+    private static JvmDistribution MatchDistribution(string raw)
+    {
+        var family = MatchGraalVmFamily(raw);
+        if (family != JvmDistribution.Unknown)
+            return family;
 
         if (AmazonPattern.IsMatch(raw))
             return JvmDistribution.Corretto;
