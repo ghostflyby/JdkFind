@@ -105,6 +105,12 @@ internal static partial class CommandRunner
             Console.Error.WriteLine($"jdkfind: cannot execute '{commandArgs[0]}': {exception.Message}");
             return ExitCannotExecute;
         }
+        catch (System.ComponentModel.Win32Exception exception)
+        {
+            // e.g. a PATHEXT entry that CreateProcess cannot execute (BAD_EXE_FORMAT).
+            Console.Error.WriteLine($"jdkfind: cannot execute '{commandArgs[0]}': {exception.Message}");
+            return ExitCannotExecute;
+        }
     }
 
     /// <summary>Resolves a command to an executable file the way a Windows shell

@@ -62,10 +62,11 @@ removed.
 | `architecture` / `osName` | string \| null | Release file or probe |
 | `providers` | string[] | Detection sources that reported this home |
 
-Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled.
-`--json` switches every command to machine-readable output on stdout.
-Ctrl+C / SIGINT / SIGTERM cancel the scan: running runtime probes are killed
-and the process exits with `130`.
+Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled;
+run mode (`--`) adds `126`/`127` when the command cannot be executed or is
+not found. `--json` switches every command to machine-readable output on
+stdout. Ctrl+C / SIGINT / SIGTERM cancel the scan: running runtime probes
+are killed and the process exits with `130`.
 
 ## Library usage
 

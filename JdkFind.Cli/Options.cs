@@ -35,7 +35,8 @@ internal sealed class Options
         Streams: machine-readable output goes to stdout; the human-readable list and
         details go to stderr.
 
-        Exit codes: 0 = found, 1 = none found, 2 = usage error, 130 = cancelled
+        Exit codes: 0 = found, 1 = none found, 2 = usage error, 130 = cancelled;
+        run mode adds 126/127 when the command cannot be executed or is not found
         """;
 
     private readonly ParseResult parseResult;
