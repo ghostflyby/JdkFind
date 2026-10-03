@@ -1,5 +1,5 @@
+using System.CommandLine;
 using System.Globalization;
-using System.Linq;
 using System.Text.Json;
 
 namespace JdkFind.Cli;
@@ -9,6 +9,9 @@ internal static class CommandLine
     private const int ExitSuccess = 0;
     private const int ExitNotFound = 1;
     private const int ExitUsage = 2;
+
+    /// <summary>POSIX convention for a run ended by SIGINT (128 + 2).</summary>
+    private const int ExitCancelled = 130;
 
     /// <summary>Selection among matching installations: newest version first, then
     /// compiler-carrying installations preferred — stable per machine state.</summary>
@@ -22,29 +25,81 @@ internal static class CommandLine
 
     /// <summary>Injection seam for tests: pass explicit locate options to run against
     /// controlled fixtures instead of the real machine.</summary>
-    internal static int Run(string[] args, JdkFindOptions? findOptions)
+    internal static int Run(string[] args, JdkFindOptions? findOptions) =>
+        RunAsync(args, findOptions).GetAwaiter().GetResult();
+
+    /// <summary>
+    ///     Async entry point. Dispatch goes through System.CommandLine's invocation so
+    ///     the framework's termination-signal token (Ctrl+C, SIGINT, SIGTERM) reaches
+    ///     the actions — the locate pipeline (runtime probes, release-file reads)
+    ///     honors it.
+    /// </summary>
+    internal static async Task<int> RunAsync(string[] args, JdkFindOptions? findOptions = null)
     {
+        var tree = Options.CreateTree((options, cancellationToken) =>
+            ExecuteAsync(options, cancellationToken, findOptions));
+        var parseResult = tree.Root.Parse(args, new ParserConfiguration { EnablePosixBundling = false });
+
+        if (parseResult.Errors.Count > 0)
+        {
+            await Console.Error.WriteLineAsync(parseResult.Errors[0].Message);
+            await Console.Error.WriteLineAsync("Run 'jdkfind --help' for usage.");
+            return ExitUsage;
+        }
+
+        // A help token clears subcommand-level parse errors, but unmatched tokens
+        // survive it; keep them a usage error (`list --bogus --help` must not print
+        // help with exit 0).
+        if (parseResult.UnmatchedTokens is { Count: > 0 })
+        {
+            var token = parseResult.UnmatchedTokens[0];
+            await Console.Error.WriteLineAsync(token.StartsWith('-')
+                ? $"Unknown option '{token}'."
+                : $"Unexpected argument '{token}'.");
+            await Console.Error.WriteLineAsync("Run 'jdkfind --help' for usage.");
+            return ExitUsage;
+        }
+
         Options options;
         try
         {
-            options = Options.Parse(args);
+            options = Options.Map(parseResult, tree);
         }
         catch (ArgumentException exception)
         {
-            Console.Error.WriteLine(exception.Message);
-            Console.Error.WriteLine("Run 'jdkfind --help' for usage.");
+            await Console.Error.WriteLineAsync(exception.Message);
+            await Console.Error.WriteLineAsync("Run 'jdkfind --help' for usage.");
             return ExitUsage;
         }
 
         if (options.ShowHelp)
+            return options.RenderHelp();
+
+        if (options.ShowVersion)
+            return options.RenderVersion();
+
+        return await parseResult.InvokeAsync(new InvocationConfiguration()).ConfigureAwait(false);
+    }
+
+    /// <summary>The action shared by the default command and both subcommands:
+    /// runs the locate pipeline and prints the selected installation(s).</summary>
+    private static async Task<int> ExecuteAsync(
+        Options options, CancellationToken cancellationToken, JdkFindOptions? findOptions)
+    {
+        var locateOptions = findOptions ?? new JdkFindOptions { ProbeRuntimeProperties = !options.NoProbe };
+
+        IReadOnlyList<Jvm> located;
+        try
         {
-            PrintHelp();
-            return ExitSuccess;
+            located = await JdkFinder.LocateAsync(locateOptions, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled from a termination signal: both streams stay empty.
+            return ExitCancelled;
         }
 
-        var matches = JdkFinder.Locate(findOptions ?? new JdkFindOptions { ProbeRuntimeProperties = !options.NoProbe })
-            .Where(jvm => MatchesFilters(jvm, options))
-            .ToList();
+        var matches = located.Where(jvm => MatchesFilters(jvm, options)).ToList();
 
         if (matches.Count == 0)
             return ExitNotFound;
@@ -55,7 +110,7 @@ internal static class CommandLine
             if (options.Command == SubCommand.List)
             {
                 Console.WriteLine(JsonSerializer.Serialize(
-                    matches.Select(ToDto).ToArray(), JvmJsonContext.Default.JvmDtoArray));
+                    [.. matches.Select(ToDto)], JvmJsonContext.Default.JvmDtoArray));
             }
             else
             {
@@ -83,7 +138,7 @@ internal static class CommandLine
             return ExitSuccess;
         }
 
-        Console.Out.WriteLine(options.Tool is null
+        await Console.Out.WriteLineAsync(options.Tool is null
             ? chosen.Home.FullName
             : ToolPath(chosen, options.Tool));
         return ExitSuccess;
@@ -153,10 +208,10 @@ internal static class CommandLine
     ///     text naming one member matches installations spelled as any other.
     /// </summary>
     private static readonly string[][] ArchAliases =
-    {
-        new[] { "x86_64", "amd64", "x64" },
-        new[] { "aarch64", "arm64" },
-    };
+    [
+        ["x86_64", "amd64", "x64"],
+        ["aarch64", "arm64"]
+    ];
 
     /// <summary>
     ///     A JVM passes the architecture filter when the raw OS_ARCH / os.arch value
@@ -212,34 +267,4 @@ internal static class CommandLine
         writer.WriteLine($"type: {(jvm.HasCompiler ? "jdk" : "jre")}");
         writer.WriteLine($"providers: {string.Join(", ", jvm.Providers)}");
     }
-
-    private static void PrintHelp() => Console.WriteLine("""
-        Usage:
-          jdkfind [version] [tool] [options]    Print the selected home, or bin/<tool> path
-          jdkfind info [version] [options]      Print one installation's details
-          jdkfind list [options]                List all matching installations
-
-        The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
-        newest version first, installations with a compiler preferred on ties.
-
-        Options:
-          -j, --json                Write JSON to stdout (list: array; others: single object)
-              --vendor <text>       Filter by vendor substring; matches the normalized
-                                    vendor and the raw string (case-insensitive)
-              --distribution <t>    Filter by distribution substring per the foojay API
-                                    names (e.g. temurin, zulu, corretto)
-              --arch <text>         Filter by architecture substring (case-insensitive);
-                                    known aliases match too (x86_64/amd64/x64,
-                                    aarch64/arm64)
-              --release <n>         Filter by supported javac language level; covers
-                                    --release/-source/-target compilation
-              --jdk-only            Only installations that ship a compiler (skip runtimes)
-              --no-probe            Skip executing each JVM for runtime properties
-          -h, --help                Show this help
-
-        Streams: machine-readable output goes to stdout; the human-readable list and
-        details go to stderr.
-
-        Exit codes: 0 = found, 1 = none found, 2 = usage error
-        """);
 }

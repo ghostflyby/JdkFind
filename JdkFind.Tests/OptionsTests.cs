@@ -39,6 +39,26 @@ public class OptionsTests
     }
 
     [Fact]
+    public void Parse_ListTakesAnOptionalVersionPrefix()
+    {
+        var options = Options.Parse(["list", "21"]);
+
+        Assert.Equal(SubCommand.List, options.Command);
+        Assert.Equal("21", options.VersionPrefix);
+    }
+
+    [Fact]
+    public void Parse_LegacyToolThenSubcommandOrdering()
+    {
+        // The token-stream parser descends into the subcommand mid-stream, so the
+        // pre-framework ordering keeps behaving like `jdkfind list` with a tool set.
+        var options = Options.Parse(["java", "list"]);
+
+        Assert.Equal(SubCommand.List, options.Command);
+        Assert.Equal("java", options.Tool);
+    }
+
+    [Fact]
     public void Parse_FlagsApplyToAnyCommand()
     {
         var options = Options.Parse(["info", "--jdk-only", "--no-probe", "--vendor", "zulu", "--arch=aarch64", "--release=8", "--json"]);
@@ -78,9 +98,18 @@ public class OptionsTests
     [InlineData("21", "17")]              // two version prefixes
     [InlineData("21.0.5", "21")]          // duplicate version
     [InlineData("home", "javac", "java")] // extra positional
+    [InlineData("")]                      // empty operand
     [InlineData("21.0.5.1")]              // more than three segments
     [InlineData("21..5")]                 // empty segment
     [InlineData("21.x")]                  // non-numeric segment
     public void Parse_RejectsInvalidPositionals(params string[] args) =>
         Assert.Throws<ArgumentException>(() => Options.Parse(args));
+
+    [Theory]
+    [InlineData("21.0")]    // a release is a single language level, not a prefix
+    [InlineData("21.x")]
+    [InlineData("")]
+    [InlineData("99999999999")]    // an integer that overflows int is a usage error, not a crash
+    public void Parse_RejectsNonIntegerRelease(string value) =>
+        Assert.Throws<ArgumentException>(() => Options.Parse(["--release", value]));
 }

@@ -146,12 +146,46 @@ public class CommandLineIntegrationTests : IDisposable
     }
 
     [Fact]
+    public void UsageErrorWithHelp_StillReturnsExit2()
+    {
+        var (exitCode, stdout, stderr) = RunCli(["--bogus", "--help"], StubOptions());
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("--bogus", stderr);
+    }
+
+    [Fact]
+    public void SubcommandUsageErrorWithHelp_StillReturnsExit2()
+    {
+        // The framework's help action clears subcommand-level parse errors; the
+        // unmatched token must stay fatal instead of printing help with exit 0.
+        var (exitCode, stdout, stderr) = RunCli(["list", "--bogus", "--help"], StubOptions());
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("--bogus", stderr);
+    }
+
+    [Fact]
     public void Help_WritesUsageToStdout_ReturnsZero()
     {
         var (exitCode, stdout, stderr) = RunCli(["--help"], StubOptions());
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("Usage:", stdout);
+        // The section titles come from System.CommandLine and follow the OS
+        // locale; assert on the description prose, which is always English.
+        Assert.Contains("jdkfind list [options]", stdout);
+        Assert.Equal(string.Empty, stderr);
+    }
+
+    [Fact]
+    public void VersionOption_WritesVersionToStdout_ReturnsZero()
+    {
+        var (exitCode, stdout, stderr) = RunCli(["--version"], StubOptions());
+
+        Assert.Equal(0, exitCode);
+        Assert.NotEqual(string.Empty, stdout);
         Assert.Equal(string.Empty, stderr);
     }
 

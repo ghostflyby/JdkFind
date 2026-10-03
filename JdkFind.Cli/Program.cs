@@ -1,3 +1,3 @@
 using JdkFind.Cli;
 
-return CommandLine.Run(args);
+return await CommandLine.RunAsync(args);
