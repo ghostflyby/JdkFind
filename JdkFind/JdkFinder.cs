@@ -136,7 +136,8 @@ public static class JdkFinder
         var vendorRaw = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR")) ?? runtime?.Vendor;
         var implementorVersion = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR_VERSION"));
         var graalVmRelease = release.ContainsKey("GRAALVM_VERSION");
-        var (vendor, distribution) = JvmIdentity.Classify(vendorRaw, implementorVersion, graalVmRelease);
+        var vendor = JvmIdentity.DetectVendor(vendorRaw);
+        var distribution = JvmIdentity.DetectDistribution(implementorVersion, vendorRaw, graalVmRelease);
 
         return new Jvm
         {
