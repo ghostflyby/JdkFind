@@ -72,11 +72,8 @@ internal static class CommandLine
             return ExitUsage;
         }
 
-        if (options.ShowHelp)
-            return options.RenderHelp();
-
-        if (options.ShowVersion)
-            return options.RenderVersion();
+        if (options.ShowHelp || options.ShowVersion)
+            return options.RenderFrameworkOutput();
 
         return await parseResult.InvokeAsync(new InvocationConfiguration()).ConfigureAwait(false);
     }
