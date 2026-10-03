@@ -37,11 +37,19 @@ internal sealed class Options
         """;
 
     private readonly ParseResult parseResult;
+    private readonly VersionOption versionOption;
 
-    private Options(ParseResult parseResult) => this.parseResult = parseResult;
+    private Options(ParseResult parseResult, VersionOption versionOption)
+    {
+        this.parseResult = parseResult;
+        this.versionOption = versionOption;
+    }
 
     /// <summary>True when the framework's help action was requested (-h/--help).</summary>
     internal bool ShowHelp => parseResult.Action is HelpAction;
+
+    /// <summary>True when the framework's version action was requested (--version).</summary>
+    internal bool ShowVersion => parseResult.GetResult(versionOption) is not null;
 
     internal SubCommand Command { get; private set; }
 
@@ -120,17 +128,15 @@ internal sealed class Options
         root.Add(jdkOnly);
         root.Add(noProbe);
 
-        // The root command auto-injects a --version option; jdkfind's grammar keeps
-        // rejecting it (exit 2) as it did before the framework adoption.
-        foreach (var option in root.Options.Where(option => option is VersionOption).ToArray())
-            root.Options.Remove(option);
+        // The root command auto-injects a standard --version option; keep it and
+        // let Run dispatch it like the help action.
+        var versionOption = (VersionOption)root.Options.Single(option => option is VersionOption);
 
-        var parseResult = WithInvariantUiCulture(() =>
-            root.Parse(args, new ParserConfiguration { EnablePosixBundling = false }));
+        var parseResult = root.Parse(args, new ParserConfiguration { EnablePosixBundling = false });
         if (parseResult.Errors.Count > 0)
             throw new ArgumentException(parseResult.Errors[0].Message);
 
-        var options = new Options(parseResult)
+        var options = new Options(parseResult, versionOption)
         {
             OutputJson = parseResult.GetValue(json),
             Vendor = parseResult.GetValue(vendor),
@@ -155,28 +161,14 @@ internal sealed class Options
         // host under tests, JdkFind.Cli for the shipped tool); jdkfind's grammar
         // is always invoked as jdkfind, so patch the label before it reaches stdout.
         var buffer = new StringWriter();
-        var exit = WithInvariantUiCulture(() =>
-            parseResult.Invoke(new InvocationConfiguration { Output = buffer }));
+        var exit = parseResult.Invoke(new InvocationConfiguration { Output = buffer });
         Console.Out.Write(buffer.ToString().Replace("JdkFind.Cli", "jdkfind"));
         return exit;
     }
 
-    /// <summary>Runs the action with the invariant UI culture: System.CommandLine
-    /// localizes its help and error strings from the OS culture, while jdkfind's
-    /// output is English-only by design.</summary>
-    private static T WithInvariantUiCulture<T>(Func<T> action)
-    {
-        var previous = CultureInfo.CurrentUICulture;
-        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
-        try
-        {
-            return action();
-        }
-        finally
-        {
-            CultureInfo.CurrentUICulture = previous;
-        }
-    }
+    /// <summary>Prints the framework's version line to stdout; only meaningful
+    /// when ShowVersion is true.</summary>
+    internal int RenderVersion() => parseResult.Invoke(new InvocationConfiguration());
 
     private static void ParsePositional(Options options, string arg)
     {

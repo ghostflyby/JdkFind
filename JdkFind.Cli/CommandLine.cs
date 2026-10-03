@@ -39,6 +39,9 @@ internal static class CommandLine
         if (options.ShowHelp)
             return options.RenderHelp();
 
+        if (options.ShowVersion)
+            return options.RenderVersion();
+
         var matches = JdkFinder.Locate(findOptions ?? new JdkFindOptions { ProbeRuntimeProperties = !options.NoProbe })
             .Where(jvm => MatchesFilters(jvm, options))
             .ToList();

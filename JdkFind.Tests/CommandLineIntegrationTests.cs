@@ -151,7 +151,19 @@ public class CommandLineIntegrationTests : IDisposable
         var (exitCode, stdout, stderr) = RunCli(["--help"], StubOptions());
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("Usage:", stdout);
+        // The section titles come from System.CommandLine and follow the OS
+        // locale; assert on the description prose, which is always English.
+        Assert.Contains("jdkfind list [options]", stdout);
+        Assert.Equal(string.Empty, stderr);
+    }
+
+    [Fact]
+    public void VersionOption_WritesVersionToStdout_ReturnsZero()
+    {
+        var (exitCode, stdout, stderr) = RunCli(["--version"], StubOptions());
+
+        Assert.Equal(0, exitCode);
+        Assert.NotEqual(string.Empty, stdout);
         Assert.Equal(string.Empty, stderr);
     }
 
