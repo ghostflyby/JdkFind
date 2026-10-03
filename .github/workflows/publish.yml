@@ -106,7 +106,7 @@ jobs:
           $version = $env:GITHUB_REF_NAME -replace '^v', ''
           # The built-in SemVer type is the format validator: an unparseable tag
           # throws here, so no hand-rolled regex needs keeping in sync.
-          $candidateV = [Microsoft.PowerShell.SemanticVersion]::new($version)
+          $candidateV = [semver]::new($version)
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
           # Refuse versions nuget.org already has, before anything else runs: a
           # re-tag of a historical version gets a clear early exit instead of a
@@ -146,7 +146,7 @@ jobs:
               $latestV = $latest -replace '^v', ''
               # The value parsed above doubles as the comparison operand; prerelease
               # identifiers follow SemVer 2.0 precedence rules.
-              $previousV = [Microsoft.PowerShell.SemanticVersion]::new($latestV)
+              $previousV = [semver]::new($latestV)
               if ($candidateV -le $previousV) {
                   throw "version '$version' is not newer than the latest release '$latestV'"
               }
