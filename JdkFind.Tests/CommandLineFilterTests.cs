@@ -100,6 +100,37 @@ public class CommandLineFilterTests
     }
 
     [Fact]
-    public void MatchesArchFilter_MissingArchitecture_RejectsAnyText() =>
+    public void MatchesArchFilter_MissingArchitecture_RejectsAnyText()
+    {
         Assert.False(CommandLine.MatchesArchFilter(AzulJvm, "aarch64"));
+        Assert.False(CommandLine.MatchesArchFilter(AzulJvm, "riscv64"));
+    }
+
+    [Fact]
+    public void MatchesArchFilter_EmptyArchitecture_RejectsAnyText()
+    {
+        var empty = new Jvm
+        {
+            Home = new DirectoryInfo("/jvm/empty"),
+            Providers = ["stub"],
+            Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"),
+            Architecture = string.Empty,
+        };
+        Assert.False(CommandLine.MatchesArchFilter(empty, "aarch64"));
+        Assert.False(CommandLine.MatchesArchFilter(empty, "riscv64"));
+    }
+
+    [Fact]
+    public void MatchesArchFilter_UppercaseArchitecture_MatchesAliasCaseInsensitively()
+    {
+        var upper = new Jvm
+        {
+            Home = new DirectoryInfo("/jvm/upper"),
+            Providers = ["stub"],
+            Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"),
+            Architecture = "AARCH64",
+        };
+        Assert.True(CommandLine.MatchesArchFilter(upper, "arm64"));
+        Assert.False(CommandLine.MatchesArchFilter(upper, "amd64"));
+    }
 }
