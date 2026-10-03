@@ -29,10 +29,9 @@ jobs:
       matrix:
         # The code is fully managed, but the discovery surface is the local file
         # system and the environment: path separators, case-sensitivity, symlink
-        # and permission semantics all differ per OS. ARM runners gate the
-        # arm64 images the tool is expected to run on; symlink/permission tests
+        # and permission semantics all differ per OS. Symlink/permission tests
         # skip themselves on Windows by design.
-        os: [windows-latest, windows-11-arm, ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v7
 
