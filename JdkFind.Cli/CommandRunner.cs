@@ -69,19 +69,24 @@ internal static partial class CommandRunner
             return ExitCommandNotFound;
         }
 
-        var startInfo = new ProcessStartInfo { FileName = fileName, UseShellExecute = false };
+        var startInfo = new ProcessStartInfo { UseShellExecute = false };
         if (fileName.EndsWith(".bat", StringComparison.OrdinalIgnoreCase) ||
             fileName.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
         {
-            // The loader runs batch targets through cmd.exe, which re-parses the
-            // command line with its own (not MSVCRT) rules: each argument is quoted
-            // and embedded quotes doubled so metacharacters stay inside the quotes.
-            // (A literal % cannot be protected on a cmd command line — known limit.)
-            startInfo.Arguments = string.Join(" ", commandArgs.Skip(1)
-                .Select(argument => '"' + argument.Replace("\"", "\"\"") + '"'));
+            // Batch files are launched through the interpreter explicitly. Letting
+            // CreateProcess auto-wrap them re-parses our argument line with cmd's
+            // implicit quote rules, which splits args at metacharacters; with
+            // /d /s /c and the whole line wrapped in an outer quote pair (stripped
+            // by /S), every element keeps its own quoting and '& | < >' stay
+            // inside the quotes. A literal % remains cmd-expanded — known limit.
+            var comspec = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
+            startInfo.FileName = comspec;
+            startInfo.Arguments = "/d /s /c \"" + string.Join(" ",
+                commandArgs.Select(argument => '"' + argument.Replace("\"", "\"\"") + '"')) + "\"";
         }
         else
         {
+            startInfo.FileName = fileName;
             foreach (var argument in commandArgs.Skip(1))
                 startInfo.ArgumentList.Add(argument);
         }
