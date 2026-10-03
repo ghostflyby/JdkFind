@@ -11,14 +11,15 @@ internal enum SubCommand
     List,
 }
 
-/// <summary>
-///     The parsed jdkfind command line. Option and operand definitions are declared
-///     on System.CommandLine's root command; Parse drives the framework parser and
-///     maps its result onto this type. Positional classification (subcommand, version
-///     prefix, bin tool) stays here, because the framework cannot express positionals
-///     whose meaning depends on the first character.
-/// </summary>
-internal sealed class Options
+    /// <summary>
+    ///     The parsed jdkfind command line. The options and the info/list subcommands
+    ///     are declared on System.CommandLine's root command; Parse drives the
+    ///     framework parser and maps its result onto this type. Classification of the
+    ///     default command's positionals (version prefix vs. bin tool) stays here,
+    ///     because the framework cannot express positionals whose meaning depends on
+    ///     the first character.
+    /// </summary>
+    internal sealed class Options
 {
     /// <summary>Prose carried at the top of the generated help: usage lines,
     /// selection semantics, stream discipline and exit codes.</summary>
@@ -79,46 +80,77 @@ internal sealed class Options
     {
         var operands = new Argument<string[]>("operands")
         {
-            Description = "'info' or 'list' selects the subcommand; a digit-led value is a version " +
-                          "prefix (21, 21.0.5); anything else is a bin tool name (java, javac)",
+            Description = "a digit-led value is a version prefix (21, 21.0.5); " +
+                          "anything else is a bin tool name (java, javac)",
+        };
+
+        var version = new Argument<string?>("version")
+        {
+            Description = "Numeric version prefix (21, 21.0.5)",
+            Arity = ArgumentArity.ZeroOrOne,
         };
 
         var json = new Option<bool>("--json", "-j")
         {
             Description = "Write JSON to stdout (list: array; others: single object)",
+            Recursive = true,
         };
 
         var vendor = new Option<string>("--vendor")
         {
             Description = "Filter by vendor substring; matches the normalized vendor and the raw string (case-insensitive)",
+            Recursive = true,
         };
 
         var distribution = new Option<string>("--distribution")
         {
             Description = "Filter by distribution substring per the foojay API names (e.g. temurin, zulu, corretto)",
+            Recursive = true,
         };
 
         var architecture = new Option<string>("--arch")
         {
             Description = "Filter by architecture substring (case-insensitive); known aliases match too (x86_64/amd64/x64, aarch64/arm64)",
+            Recursive = true,
         };
 
         var release = new Option<string>("--release")
         {
             Description = "Filter by supported javac language level; covers --release/-source/-target compilation",
+            Recursive = true,
         };
 
         var jdkOnly = new Option<bool>("--jdk-only")
         {
             Description = "Only installations that ship a compiler (skip runtimes)",
+            Recursive = true,
         };
 
         var noProbe = new Option<bool>("--no-probe")
         {
             Description = "Skip executing each JVM for runtime properties",
+            Recursive = true,
         };
 
-        var root = new RootCommand(RootDescription);
+        var info = new Command("info")
+        {
+            Description = "Print one installation's details",
+            // A tool name after info is a usage error, not an ignored token.
+            TreatUnmatchedTokensAsErrors = true,
+        };
+        info.Add(version);
+
+        var list = new Command("list")
+        {
+            Description = "List all matching installations",
+            TreatUnmatchedTokensAsErrors = true,
+        };
+
+        var root = new RootCommand(RootDescription)
+        {
+            // Tokens matched by nothing on the default command are usage errors too.
+            TreatUnmatchedTokensAsErrors = true,
+        };
         root.Add(operands);
         root.Add(json);
         root.Add(vendor);
@@ -127,6 +159,14 @@ internal sealed class Options
         root.Add(release);
         root.Add(jdkOnly);
         root.Add(noProbe);
+        root.Add(info);
+        root.Add(list);
+
+        // The root doubles as the default command (bare `jdkfind` locates and
+        // prints); with subcommands present the framework would otherwise demand
+        // one of them. The action is never invoked — Run owns the dispatch — this
+        // only marks the root callable.
+        root.SetAction(_ => 0);
 
         // The root command auto-injects a standard --version option; keep it and
         // let Run dispatch it like the help action.
@@ -136,8 +176,10 @@ internal sealed class Options
         if (parseResult.Errors.Count > 0)
             throw new ArgumentException(parseResult.Errors[0].Message);
 
+        var infoVersion = parseResult.GetValue(version);
         var options = new Options(parseResult, versionOption)
         {
+            VersionPrefix = infoVersion is null ? null : ValidateVersionPrefix(infoVersion),
             OutputJson = parseResult.GetValue(json),
             Vendor = parseResult.GetValue(vendor),
             Distribution = parseResult.GetValue(distribution),
@@ -149,6 +191,12 @@ internal sealed class Options
 
         foreach (var operand in parseResult.GetValue(operands) ?? [])
             ParsePositional(options, operand);
+
+        // Mapped after the operand classification so legacy orderings like
+        // `jdkfind java list` keep the same result.
+        options.Command = parseResult.CommandResult.Command == info ? SubCommand.Info
+            : parseResult.CommandResult.Command == list ? SubCommand.List
+            : SubCommand.None;
 
         return options;
     }
@@ -181,21 +229,6 @@ internal sealed class Options
         if (arg.StartsWith('-'))
             throw new ArgumentException($"Unknown option '{arg}'.");
 
-        switch (arg)
-        {
-            case "info":
-                if (options.Command != SubCommand.None)
-                    throw new ArgumentException($"Unexpected argument '{arg}'.");
-                options.Command = SubCommand.Info;
-                return;
-
-            case "list":
-                if (options.Command != SubCommand.None)
-                    throw new ArgumentException($"Unexpected argument '{arg}'.");
-                options.Command = SubCommand.List;
-                return;
-        }
-
         // A leading digit makes the positional a version prefix; anything else is a
         // bin tool name for the default command.
         if (char.IsAsciiDigit(arg[0]))
@@ -207,7 +240,7 @@ internal sealed class Options
             return;
         }
 
-        if (options.Command != SubCommand.None || options.Tool is not null)
+        if (options.Tool is not null)
             throw new ArgumentException($"Unexpected argument '{arg}'.");
 
         options.Tool = arg.Contains('/') || arg.Contains('\\') || arg.Contains('=')
