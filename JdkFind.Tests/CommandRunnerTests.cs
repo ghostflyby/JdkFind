@@ -104,7 +104,9 @@ public class CommandRunnerTests
             return; // Batch targets are a Windows concept.
 
         var bat = Path.Combine(Path.GetTempPath(), $"jdkfind-{Guid.NewGuid():N}.bat");
-        File.WriteAllText(bat, "@echo %~1\r\n@echo %~2");
+        // echo cannot output an argument containing '&' (cmd re-parses the expanded
+        // line), so the comparison goes through an exit code instead.
+        File.WriteAllText(bat, "@if \"%~1 %~2\" == \"a&b with spaces\" (exit /b 0)\r\n@exit /b 44");
 
         try
         {
