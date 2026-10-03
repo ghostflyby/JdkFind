@@ -286,6 +286,8 @@ internal sealed class Options
         {
             if (options.Command != SubCommand.None)
                 throw new ArgumentException("'--' runs a command; it is not valid with 'info' or 'list'.");
+            if (options.Tool is not null)
+                throw new ArgumentException("'--' runs a command; the tool positional has no effect with it.");
             if (tail.Length == 0)
                 throw new ArgumentException("No command given after '--'.");
             options.CommandArgs = tail;
