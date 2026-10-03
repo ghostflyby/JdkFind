@@ -66,9 +66,10 @@ public class JvmClassificationTests
     // The same community string in the vendor position maps to Oracle — the
     // GraalVM family's upstream organization — plus GraalVmCommunity.
     [InlineData(null, "GraalVM Community 22", false, JvmVendor.Oracle, JvmDistribution.GraalVmCommunity)]
-    // A matching vendor string outranks the GRAALVM_VERSION release key; the
-    // key only decides when neither identity string matched.
-    [InlineData(null, "Oracle Corporation", true, JvmVendor.Oracle, JvmDistribution.OracleOpenJdk)]
+    // The GRAALVM_VERSION release key outranks the vendor string: real Oracle
+    // GraalVM files carry IMPLEMENTOR="Oracle Corporation" with no branded
+    // IMPLEMENTOR_VERSION, so the key is what tells those builds apart.
+    [InlineData(null, "Oracle Corporation", true, JvmVendor.Oracle, JvmDistribution.OracleGraalVm)]
     [InlineData(null, null, true, JvmVendor.Unknown, JvmDistribution.OracleGraalVm)]
     [InlineData(null, "Homebrew", true, JvmVendor.Unknown, JvmDistribution.OracleGraalVm)]
     // Nothing to read on either axis and no release hint.
@@ -117,10 +118,11 @@ public class JvmClassificationTests
             JvmDistribution.OracleGraalVm,
             JvmIdentity.DetectDistribution("Oracle GraalVM 21.0.5+1.1", "Oracle Corporation"));
 
-        // The GRAALVM_VERSION release key only decides when neither identity
-        // string matched — a matching vendor string still wins over it.
+        // The GRAALVM_VERSION release key outranks the vendor string — real
+        // Oracle GraalVM releases carry no branded IMPLEMENTOR_VERSION, so
+        // "Oracle Corporation" plus the key is an Oracle GraalVM build.
         Assert.Equal(
-            JvmDistribution.OracleOpenJdk,
+            JvmDistribution.OracleGraalVm,
             JvmIdentity.DetectDistribution(null, "Oracle Corporation", graalVmRelease: true));
         Assert.Equal(
             JvmDistribution.OracleGraalVm,

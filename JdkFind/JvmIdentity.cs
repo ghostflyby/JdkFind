@@ -148,8 +148,9 @@ internal static partial class JvmIdentity
     /// <summary>
     ///     Maps the installation onto its foojay-style distribution. The release
     ///     file's IMPLEMENTOR_VERSION is the sharpest hint and wins over the raw
-    ///     vendor string; the GRAALVM_VERSION release key only decides when
-    ///     neither identity string matched.
+    ///     vendor string; the GRAALVM_VERSION release key outranks the vendor
+    ///     string because real Oracle GraalVM files carry no branded
+    ///     IMPLEMENTOR_VERSION and their IMPLEMENTOR is the plain Oracle name.
     /// </summary>
     internal static JvmDistribution DetectDistribution(
         string? implementorVersion, string? vendorRaw, bool graalVmRelease = false)
@@ -161,6 +162,9 @@ internal static partial class JvmIdentity
                 return fromImplementorVersion;
         }
 
+        if (graalVmRelease)
+            return JvmDistribution.OracleGraalVm;
+
         if (!string.IsNullOrEmpty(vendorRaw))
         {
             var fromVendor = MatchDistribution(vendorRaw);
@@ -168,7 +172,7 @@ internal static partial class JvmIdentity
                 return fromVendor;
         }
 
-        return graalVmRelease ? JvmDistribution.OracleGraalVm : JvmDistribution.Unknown;
+        return JvmDistribution.Unknown;
     }
 
     /// <summary>
