@@ -256,22 +256,9 @@ internal sealed class Options
         return options;
     }
 
-    /// <summary>Prints the framework-generated help to stdout; only meaningful
-    /// when ShowHelp is true.</summary>
-    internal int RenderHelp()
-    {
-        // The framework labels the usage line after the entry assembly (the test
-        // host under tests, JdkFind.Cli for the shipped tool); jdkfind's grammar
-        // is always invoked as jdkfind, so patch the label before it reaches stdout.
-        var buffer = new StringWriter();
-        var exit = parseResult.Invoke(new InvocationConfiguration { Output = buffer });
-        Console.Out.Write(buffer.ToString().Replace("JdkFind.Cli", "jdkfind"));
-        return exit;
-    }
-
-    /// <summary>Prints the framework's version line to stdout; only meaningful
-    /// when ShowVersion is true.</summary>
-    internal int RenderVersion() => parseResult.Invoke(new InvocationConfiguration());
+    /// <summary>Prints the framework-generated help or version output to stdout;
+    /// only meaningful when ShowHelp or ShowVersion is true.</summary>
+    internal int RenderFrameworkOutput() => parseResult.Invoke(new InvocationConfiguration());
 
     private static void ParsePositional(Options options, string arg)
     {
