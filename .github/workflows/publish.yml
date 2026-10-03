@@ -24,6 +24,11 @@ defaults:
   run:
     shell: pwsh
 
+# Least privilege by default; the publish job widens its own permissions
+# explicitly (id-token, attestations, contents, pull-requests).
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build and test
@@ -138,19 +143,14 @@ jobs:
               $null
           }
           if ($latest) {
-              function Test-Newer([string]$candidate, [string]$previous) {
-                  $c = $candidate -split '-'; $p = $previous -split '-'
-                  $cNum = [version]$c[0]; $pNum = [version]$p[0]
-                  if ($cNum -gt $pNum) { return $true }
-                  if ($cNum -lt $pNum) { return $false }
-                  $cPre = if ($c.Count -gt 1) { $c[1] } else { '' }
-                  $pPre = if ($p.Count -gt 1) { $p[1] } else { '' }
-                  if ($pPre -eq '' -and $cPre -ne '') { return $false }   # 1.0.0-beta < 1.0.0
-                  if ($cPre -eq '' -and $pPre -ne '') { return $true }
-                  return $cPre -gt $pPre
-              }
               $latestV = $latest -replace '^v', ''
-              if (-not (Test-Newer $version $latestV)) {
+              # SemanticVersion is pwsh's built-in SemVer 2.0 type: prerelease
+              # identifiers compare by the spec's rules (numeric identifiers
+              # numerically, a release outranks its own prereleases) instead of the
+              # whole-label string comparison a hand-rolled helper would do.
+              $candidateV = [Microsoft.PowerShell.SemanticVersion]::new($version)
+              $previousV = [Microsoft.PowerShell.SemanticVersion]::new($latestV)
+              if ($candidateV -le $previousV) {
                   throw "version '$version' is not newer than the latest release '$latestV'"
               }
               Write-Host "ok: $version > $latestV"
