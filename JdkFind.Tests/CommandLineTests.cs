@@ -59,6 +59,21 @@ public class CommandLineTests
     public void MatchesVersion_LegacyNaming_MatchesByFeatureLevel(string prefix, bool expected) =>
         Assert.Equal(expected, CommandLine.MatchesVersion(LegacyZulu8Jvm, prefix));
 
+    private static readonly Jvm UnknownVersionJvm = new()
+    {
+        Home = new DirectoryInfo(HomePath),
+        Providers = ["macos"],
+        Version = JvmVersion.Unknown("unknown"),
+        LanguageVersion = null,
+    };
+
+    [Fact]
+    public void MatchesVersion_UnknownFeatureLevel_MatchesNothing()
+    {
+        Assert.False(CommandLine.MatchesVersion(UnknownVersionJvm, "8"));
+        Assert.False(CommandLine.MatchesVersion(UnknownVersionJvm, "0"));
+    }
+
     [Fact]
     public void SupportsSource_FollowsMajorVersion()
     {

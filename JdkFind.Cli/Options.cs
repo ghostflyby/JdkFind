@@ -295,6 +295,8 @@ internal sealed class Options
         var segments = arg.Split('.');
         if (segments.Length is < 1 or > 3 || segments.Any(s => s.Length == 0 || !s.All(char.IsAsciiDigit)))
             throw new ArgumentException($"Invalid version prefix '{arg}'.");
+        if (segments.Any(s => !int.TryParse(s, NumberStyles.None, CultureInfo.InvariantCulture, out _)))
+            throw new ArgumentException($"Invalid version prefix '{arg}'.");
 
         return arg;
     }

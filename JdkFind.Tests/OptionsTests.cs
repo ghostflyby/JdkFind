@@ -99,6 +99,7 @@ public class OptionsTests
     [InlineData("21.0.5", "21")]          // duplicate version
     [InlineData("home", "javac", "java")] // extra positional
     [InlineData("")]                      // empty operand
+    [InlineData("99999999999")]           // a segment overflowing int is a usage error, not a crash
     [InlineData("21.0.5.1")]              // more than three segments
     [InlineData("21..5")]                 // empty segment
     [InlineData("21.x")]                  // non-numeric segment
