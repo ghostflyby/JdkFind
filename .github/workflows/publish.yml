@@ -104,10 +104,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
           $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          # The built-in SemVer type is the format validator: an unparseable tag
+          # throws here, so no hand-rolled regex needs keeping in sync.
+          $candidateV = [Microsoft.PowerShell.SemanticVersion]::new($version)
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
-          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
-              throw "tag '$env:GITHUB_REF_NAME' is not a valid vX.Y.Z[(-suffix)] version"
-          }
           # Refuse versions nuget.org already has, before anything else runs: a
           # re-tag of a historical version gets a clear early exit instead of a
           # build that cannot be pushed.
@@ -144,11 +144,8 @@ jobs:
           }
           if ($latest) {
               $latestV = $latest -replace '^v', ''
-              # SemanticVersion is pwsh's built-in SemVer 2.0 type: prerelease
-              # identifiers compare by the spec's rules (numeric identifiers
-              # numerically, a release outranks its own prereleases) instead of the
-              # whole-label string comparison a hand-rolled helper would do.
-              $candidateV = [Microsoft.PowerShell.SemanticVersion]::new($version)
+              # The value parsed above doubles as the comparison operand; prerelease
+              # identifiers follow SemVer 2.0 precedence rules.
               $previousV = [Microsoft.PowerShell.SemanticVersion]::new($latestV)
               if ($candidateV -le $previousV) {
                   throw "version '$version' is not newer than the latest release '$latestV'"
