@@ -24,7 +24,13 @@ $ jdkfind info 21                                # one installation's details (s
 $ jdkfind list                                   # human-readable table (stderr)
 $ jdkfind list --json                            # all installations as JSON (stdout)
 $ jdkfind list --distribution corretto           # filter by foojay distribution name
+$ jdkfind list --arch x64                        # filter by architecture substring
 ```
+
+`--arch` is a case-insensitive substring match against the raw
+`OS_ARCH`/`os.arch` value. Release files disagree on the spelling, so a
+text naming one well-known alias matches every spelling in its group:
+`x86_64`/`amd64`/`x64` and `aarch64`/`arm64`.
 
 By default `jdkfind` executes each installation's own java executable
 once to enrich the metadata with runtime properties (runtime and VM

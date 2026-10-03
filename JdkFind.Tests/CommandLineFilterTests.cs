@@ -14,6 +14,28 @@ public class CommandLineFilterTests
         VendorRaw = "Azul Systems, Inc.",
     };
 
+    private static readonly Jvm Arm64Jvm = new()
+    {
+        Home = new DirectoryInfo("/jvm/temurin"),
+        Providers = ["stub"],
+        Version = new JvmVersion(new Version(21, 0, 5, 9), false, "21.0.5+9"),
+        Vendor = JvmVendor.Adoptium,
+        Distribution = JvmDistribution.Temurin,
+        VendorRaw = "Eclipse Adoptium",
+        Architecture = "aarch64",
+    };
+
+    private static readonly Jvm X64Jvm = new()
+    {
+        Home = new DirectoryInfo("/jvm/corretto"),
+        Providers = ["stub"],
+        Version = new JvmVersion(new Version(17, 0, 9, 1), false, "17.0.9.1"),
+        Vendor = JvmVendor.Amazon,
+        Distribution = JvmDistribution.Corretto,
+        VendorRaw = "Amazon Corretto",
+        Architecture = "x86_64",
+    };
+
     [Theory]
     [InlineData("azul")]          // normalized vendor hit
     [InlineData("Azul Systems")]  // raw string hit
@@ -40,4 +62,44 @@ public class CommandLineFilterTests
         Assert.False(CommandLine.MatchesDistributionFilter(AzulJvm, "corretto"));
         Assert.True(CommandLine.MatchesDistributionFilter(AzulJvm, null));
     }
+
+    [Theory]
+    [InlineData("aarch64")]  // exact spelling
+    [InlineData("arm64")]    // group alias
+    [InlineData("ARM64")]    // case-insensitive alias
+    [InlineData("aarch")]    // non-member text falls through to the plain substring match
+    public void MatchesArchFilter_Arm64Spellings_MatchAarch64Installation(string text) =>
+        Assert.True(CommandLine.MatchesArchFilter(Arm64Jvm, text));
+
+    [Theory]
+    [InlineData("x86_64")]  // exact spelling
+    [InlineData("amd64")]   // group alias
+    [InlineData("x64")]     // group alias
+    [InlineData("x86")]     // non-member text falls through to the plain substring match
+    public void MatchesArchFilter_X64Spellings_MatchX86_64Installation(string text) =>
+        Assert.True(CommandLine.MatchesArchFilter(X64Jvm, text));
+
+    [Theory]
+    [InlineData("amd64")]
+    [InlineData("x64")]
+    [InlineData("x86_64")]
+    public void MatchesArchFilter_X64Texts_RejectAarch64Installation(string text) =>
+        Assert.False(CommandLine.MatchesArchFilter(Arm64Jvm, text));
+
+    [Theory]
+    [InlineData("arm64")]
+    [InlineData("aarch64")]
+    public void MatchesArchFilter_Arm64Texts_RejectX86_64Installation(string text) =>
+        Assert.False(CommandLine.MatchesArchFilter(X64Jvm, text));
+
+    [Fact]
+    public void MatchesArchFilter_NullOrEmptyText_PassesEverything()
+    {
+        Assert.True(CommandLine.MatchesArchFilter(Arm64Jvm, null));
+        Assert.True(CommandLine.MatchesArchFilter(Arm64Jvm, string.Empty));
+    }
+
+    [Fact]
+    public void MatchesArchFilter_MissingArchitecture_RejectsAnyText() =>
+        Assert.False(CommandLine.MatchesArchFilter(AzulJvm, "aarch64"));
 }

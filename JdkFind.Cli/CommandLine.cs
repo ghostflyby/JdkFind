@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 
 namespace JdkFind.Cli;
@@ -123,8 +124,7 @@ internal static class CommandLine
         (!options.JdkOnly || jvm.HasCompiler) &&
         MatchesVendorFilter(jvm, options.Vendor) &&
         MatchesDistributionFilter(jvm, options.Distribution) &&
-        (options.Architecture is null ||
-         jvm.Architecture?.Contains(options.Architecture, StringComparison.OrdinalIgnoreCase) == true);
+        MatchesArchFilter(jvm, options.Architecture);
 
     /// <summary>
     ///     A JVM passes the vendor filter when the text hits the normalized vendor name
@@ -146,6 +146,36 @@ internal static class CommandLine
             return true;
 
         return jvm.Distribution.ToString().Contains(text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    ///     Architecture aliases whose spellings release files disagree on; a filter
+    ///     text naming one member matches installations spelled as any other.
+    /// </summary>
+    private static readonly string[][] ArchAliases =
+    {
+        new[] { "x86_64", "amd64", "x64" },
+        new[] { "aarch64", "arm64" },
+    };
+
+    /// <summary>
+    ///     A JVM passes the architecture filter when the raw OS_ARCH / os.arch value
+    ///     contains the text (case-insensitive). A text naming one well-known alias
+    ///     (x86_64/amd64/x64, aarch64/arm64) matches every spelling in that group;
+    ///     any other text is an ordinary substring match.
+    /// </summary>
+    internal static bool MatchesArchFilter(Jvm jvm, string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return true;
+
+        var architecture = jvm.Architecture;
+        if (string.IsNullOrEmpty(architecture))
+            return false;
+
+        return ArchAliases.FirstOrDefault(group => group.Contains(text, StringComparer.OrdinalIgnoreCase)) is { } group
+            ? group.Any(alias => architecture.Contains(alias, StringComparison.OrdinalIgnoreCase))
+            : architecture.Contains(text, StringComparison.OrdinalIgnoreCase);
     }
 
     private static JvmDto ToDto(Jvm jvm) => new(
@@ -198,7 +228,9 @@ internal static class CommandLine
                                     vendor and the raw string (case-insensitive)
               --distribution <t>    Filter by distribution substring per the foojay API
                                     names (e.g. temurin, zulu, corretto)
-              --arch <text>         Filter by architecture substring (case-insensitive)
+              --arch <text>         Filter by architecture substring (case-insensitive);
+                                    known aliases match too (x86_64/amd64/x64,
+                                    aarch64/arm64)
               --release <n>         Filter by supported javac language level; covers
                                     --release/-source/-target compilation
               --jdk-only            Only installations that ship a compiler (skip runtimes)
