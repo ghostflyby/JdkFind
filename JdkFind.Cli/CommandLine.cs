@@ -36,34 +36,16 @@ internal static class CommandLine
     /// </summary>
     internal static async Task<int> RunAsync(string[] args, JdkFinder? finder = null)
     {
+        // The run command travels through the closure: the wired action re-maps the
+        // parse result into a fresh Options instance, which cannot carry it.
+        string[]? commandArgs = null;
         var tree = Options.CreateTree((options, cancellationToken) =>
-            ExecuteAsync(options, cancellationToken, finder));
-        var parseResult = tree.Root.Parse(args, new ParserConfiguration { EnablePosixBundling = false });
-
-        if (parseResult.Errors.Count > 0)
-        {
-            await Console.Error.WriteLineAsync(parseResult.Errors[0].Message);
-            await Console.Error.WriteLineAsync("Run 'jdkfind --help' for usage.");
-            return ExitUsage;
-        }
-
-        // A help token clears subcommand-level parse errors, but unmatched tokens
-        // survive it; keep them a usage error (`list --bogus --help` must not print
-        // help with exit 0).
-        if (parseResult.UnmatchedTokens is { Count: > 0 })
-        {
-            var token = parseResult.UnmatchedTokens[0];
-            await Console.Error.WriteLineAsync(token.StartsWith('-')
-                ? $"Unknown option '{token}'."
-                : $"Unexpected argument '{token}'.");
-            await Console.Error.WriteLineAsync("Run 'jdkfind --help' for usage.");
-            return ExitUsage;
-        }
+            ExecuteAsync(options, commandArgs, cancellationToken, finder));
 
         Options options;
         try
         {
-            options = Options.Map(parseResult, tree);
+            options = Options.ParseInto(tree, args, out commandArgs);
         }
         catch (ArgumentException exception)
         {
@@ -75,13 +57,13 @@ internal static class CommandLine
         if (options.ShowHelp || options.ShowVersion)
             return options.RenderFrameworkOutput();
 
-        return await parseResult.InvokeAsync(new InvocationConfiguration()).ConfigureAwait(false);
+        return await options.InvokeAsync().ConfigureAwait(false);
     }
 
     /// <summary>The action shared by the default command and both subcommands:
-    /// runs the locate pipeline and prints the selected installation(s).</summary>
+    /// runs the locate pipeline and prints or executes the selection.</summary>
     private static async Task<int> ExecuteAsync(
-        Options options, CancellationToken cancellationToken, JdkFinder? finder)
+        Options options, string[]? commandArgs, CancellationToken cancellationToken, JdkFinder? finder)
     {
         finder ??= options.NoProbe
             ? JdkFinder.Default with { ProbeRuntimeProperties = false }
@@ -103,6 +85,16 @@ internal static class CommandLine
         if (matches.Count == 0)
             return ExitNotFound;
 
+        // Every default-command mode selects exactly one installation: newest
+        // version first, then compiler-carrying preferred, then first-discovered.
+        // Same machine state always produces the same selection.
+        var chosen = matches.OrderByDescending(jvm => jvm, SelectionOrder).First();
+
+        // Run mode: '-- <command>' executes with the installation's environment
+        // instead of printing anything.
+        if (commandArgs is { Length: > 0 } command)
+            return CommandRunner.RunCommand(chosen, command);
+
         // --json wins over the human formats on every command.
         if (options.OutputJson)
         {
@@ -113,8 +105,7 @@ internal static class CommandLine
             }
             else
             {
-                var selected = matches.OrderByDescending(jvm => jvm, SelectionOrder).First();
-                Console.WriteLine(JsonSerializer.Serialize(ToDto(selected), JvmJsonContext.Default.JvmDto));
+                Console.WriteLine(JsonSerializer.Serialize(ToDto(chosen), JvmJsonContext.Default.JvmDto));
             }
 
             return ExitSuccess;
@@ -126,18 +117,13 @@ internal static class CommandLine
             return ExitSuccess;
         }
 
-        // Every other command selects exactly one installation: newest version first,
-        // then compiler-carrying preferred, then first-discovered. Same machine state
-        // always produces the same selection.
-        var chosen = matches.OrderByDescending(jvm => jvm, SelectionOrder).First();
-
         if (options.Command == SubCommand.Info)
         {
             WriteInfo(chosen, Console.Error);
             return ExitSuccess;
         }
 
-        await Console.Out.WriteLineAsync(options.Tool is null
+        Console.Out.WriteLine(options.Tool is null
             ? chosen.Home.FullName
             : ToolPath(chosen, options.Tool));
         return ExitSuccess;

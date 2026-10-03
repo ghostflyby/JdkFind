@@ -5,6 +5,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <!-- The execvp LibraryImport generates an unsafe marshalling stub. -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RootNamespace>JdkFind.Cli</RootNamespace>
         <!-- Shortest executable name, no dll name collisions. -->
         <AssemblyName>jdkfind</AssemblyName>
