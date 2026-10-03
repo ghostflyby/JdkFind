@@ -1,6 +1,5 @@
 using System.CommandLine;
 using System.Globalization;
-using System.Linq;
 using System.Text.Json;
 
 namespace JdkFind.Cli;
@@ -43,8 +42,8 @@ internal static class CommandLine
 
         if (parseResult.Errors.Count > 0)
         {
-            Console.Error.WriteLine(parseResult.Errors[0].Message);
-            Console.Error.WriteLine("Run 'jdkfind --help' for usage.");
+            await Console.Error.WriteLineAsync(parseResult.Errors[0].Message);
+            await Console.Error.WriteLineAsync("Run 'jdkfind --help' for usage.");
             return ExitUsage;
         }
 
@@ -55,8 +54,8 @@ internal static class CommandLine
         }
         catch (ArgumentException exception)
         {
-            Console.Error.WriteLine(exception.Message);
-            Console.Error.WriteLine("Run 'jdkfind --help' for usage.");
+            await Console.Error.WriteLineAsync(exception.Message);
+            await Console.Error.WriteLineAsync("Run 'jdkfind --help' for usage.");
             return ExitUsage;
         }
 
@@ -98,7 +97,7 @@ internal static class CommandLine
             if (options.Command == SubCommand.List)
             {
                 Console.WriteLine(JsonSerializer.Serialize(
-                    matches.Select(ToDto).ToArray(), JvmJsonContext.Default.JvmDtoArray));
+                    [.. matches.Select(ToDto)], JvmJsonContext.Default.JvmDtoArray));
             }
             else
             {
@@ -126,7 +125,7 @@ internal static class CommandLine
             return ExitSuccess;
         }
 
-        Console.Out.WriteLine(options.Tool is null
+        await Console.Out.WriteLineAsync(options.Tool is null
             ? chosen.Home.FullName
             : ToolPath(chosen, options.Tool));
         return ExitSuccess;
@@ -196,10 +195,10 @@ internal static class CommandLine
     ///     text naming one member matches installations spelled as any other.
     /// </summary>
     private static readonly string[][] ArchAliases =
-    {
-        new[] { "x86_64", "amd64", "x64" },
-        new[] { "aarch64", "arm64" },
-    };
+    [
+        ["x86_64", "amd64", "x64"],
+        ["aarch64", "arm64"]
+    ];
 
     /// <summary>
     ///     A JVM passes the architecture filter when the raw OS_ARCH / os.arch value

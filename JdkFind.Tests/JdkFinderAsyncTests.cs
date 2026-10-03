@@ -1,5 +1,3 @@
-using JdkFind;
-
 namespace JdkFind.Tests;
 
 /// <summary>
@@ -42,8 +40,7 @@ public class JdkFinderAsyncTests : IDisposable
     {
         var options = StubOptions("/nonexistent/home");
 
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => JdkFinder.LocateAsync(options, Cancelled));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => JdkFinder.LocateAsync(options, Cancelled));
     }
 
     [Fact]
@@ -51,8 +48,7 @@ public class JdkFinderAsyncTests : IDisposable
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
 
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => JvmRuntimeProbe.ProbeAsync(jdk, Cancelled));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => JvmRuntimeProbe.ProbeAsync(jdk, Cancelled));
     }
 
     [Fact]
@@ -70,8 +66,8 @@ public class JdkFinderAsyncTests : IDisposable
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => Task.Run(
-            () => ReleaseFile.Parse(Path.Combine(jdk, "release"), Cancelled)));
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            Task.Run(() => ReleaseFile.Parse(Path.Combine(jdk, "release"), Cancelled)));
     }
 
     public void Dispose() => temp.Dispose();

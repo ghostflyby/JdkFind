@@ -90,7 +90,8 @@ internal enum SubCommand
     ///     Assembles the command tree. When <paramref name="execute" /> is given, the
     ///     default command and both subcommands dispatch to it (Run's invocation path),
     ///     receiving System.CommandLine's termination-signal cancellation token;
-    ///     parse-only trees stay action-less.
+    ///     parse-only trees only carry a placeholder root action, marking the default
+    ///     command callable.
     /// </summary>
     internal static CommandTree CreateTree(Func<Options, CancellationToken, Task<int>>? execute)
     {
