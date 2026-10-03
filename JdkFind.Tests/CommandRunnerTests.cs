@@ -111,12 +111,10 @@ public class CommandRunnerTests
         try
         {
             // 'a&b' without spaces is unquoted by default .NET quoting; the batch
-            // quoting added for bat targets must keep it as one argument.
-            var (exitCode, output) = RunTool("--", bat, "a&b", "with spaces");
+            // quoting added for bat targets must keep it as one argument. Both
+            // arguments must arrive exactly, or the comparison branch exits 44.
+            var (exitCode, _) = RunTool("--", bat, "a&b", "with spaces");
             Assert.Equal(0, exitCode);
-
-            var lines = output.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-            Assert.Equal(["a&b", "with spaces"], lines);
         }
         finally
         {
