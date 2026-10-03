@@ -153,9 +153,17 @@ internal static class CommandLine
     }
 
     /// <summary>A JVM matches the version prefix when its core version starts with it segment-wise.</summary>
+    /// <summary>
+    ///     A JVM matches the version prefix when its feature version starts with it
+    ///     segment-wise. A single-segment prefix compares against the language level,
+    ///     so <c>8</c> finds legacy <c>1.8.0_x</c> installations whose core major is 1.
+    /// </summary>
     internal static bool MatchesVersion(Jvm jvm, string versionPrefix)
     {
         var segments = versionPrefix.Split('.');
+        if (segments.Length == 1)
+            return int.Parse(segments[0], CultureInfo.InvariantCulture) == jvm.LanguageVersion;
+
         var core = jvm.Version.Core;
         for (var index = 0; index < segments.Length; index++)
             if (Segment(core, index) != int.Parse(segments[index], CultureInfo.InvariantCulture))

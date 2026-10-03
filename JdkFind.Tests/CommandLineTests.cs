@@ -32,8 +32,32 @@ public class CommandLineTests
     [InlineData("22", false)]
     [InlineData("21.0.13", false)]
     [InlineData("1.8", false)]
+    [InlineData("8", false)]
     public void MatchesVersion_MatchesSegmentPrefixes(string prefix, bool expected) =>
         Assert.Equal(expected, CommandLine.MatchesVersion(ZuluJvm, prefix));
+
+    // Legacy 1.8.0_x naming: the core major is 1 while the language level is 8.
+    private static readonly Jvm LegacyZulu8Jvm = new()
+    {
+        Home = new DirectoryInfo(HomePath),
+        Providers = ["macos"],
+        Version = new JvmVersion(new Version(1, 8, 0), false, "1.8.0_402"),
+        LanguageVersion = 8,
+        HasCompiler = true,
+        Vendor = JvmVendor.Azul,
+        Distribution = JvmDistribution.Zulu,
+        VendorRaw = "Azul Systems, Inc.",
+        Architecture = "aarch64",
+    };
+
+    [Theory]
+    [InlineData("8", true)]     // the feature level finds legacy 1.8.0_x installs
+    [InlineData("1.8", true)]
+    [InlineData("1.8.0", true)]
+    [InlineData("1", false)]    // the legacy major alone is not a language level
+    [InlineData("9", false)]
+    public void MatchesVersion_LegacyNaming_MatchesByFeatureLevel(string prefix, bool expected) =>
+        Assert.Equal(expected, CommandLine.MatchesVersion(LegacyZulu8Jvm, prefix));
 
     [Fact]
     public void SupportsSource_FollowsMajorVersion()
