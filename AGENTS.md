@@ -28,8 +28,8 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
 ## Hard requirements
 
 - **AOT compatibility.** Both assemblies carry `IsAotCompatible`. No
-  reflection-based discovery: providers are assembled as an explicit list in
-  `JdkFindOptions.CreateDefaultProviders()`. JSON goes through the source
+  reflection-based discovery: providers are assembled as an explicit list
+  behind `JdkFinder.Default`. JSON goes through the source
   generator (`JvmJsonContext`); serialize only the primitive `JvmDto`, never
   `Jvm` directly — `DirectoryInfo` makes the generated serializer recurse
   without bound.
@@ -89,10 +89,10 @@ actually has.
   drives it through MTP directly.
 - `TreatWarningsAsErrors` is on, so xunit analyzers fail the build.
 - Tests run in parallel across classes: only `JdkFinderTests` may mutate
-  process environment variables, and other test classes must not construct a
-  default `JdkFindOptions` (its `JavaHomeJvmProvider` reads `JAVA_HOME`).
-  Inject providers or roots instead — every scanning provider has a
-  constructor accepting an explicit root.
+  process environment variables, and other test classes must not use
+  `JdkFinder.Default` (its built-in sources read `JAVA_HOME`/`PATH` at
+  construction). Build finders with explicit `Providers` instead — every
+  scanning provider has a constructor accepting an explicit root.
 - Symlink and permission tests skip Windows (link creation needs privileges)
   and skip when running as root (chmod has no effect).
 

@@ -1,23 +1,44 @@
+using JdkFind.Providers;
+
 namespace JdkFind;
 
-/// <summary>Facade for locating JVM installations across all configured providers.</summary>
-public static class JdkFinder
+/// <summary>
+///     A configured JVM finder. Instances are immutable and stateless between
+///     calls — every <see cref="Locate" /> is a fresh scan of the machine and
+///     nothing is cached. Customize through a with expression.
+/// </summary>
+public sealed record JdkFinder
 {
     private static readonly StringComparer PathComparer =
         OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
             ? StringComparer.OrdinalIgnoreCase
             : StringComparer.Ordinal;
 
+    /// <summary>Sources consulted in order; candidates reported by several sources
+    /// merge into one <see cref="Jvm" /> listing every source. Defaults to no
+    /// sources at all — start from <see cref="Default" /> or set this explicitly.</summary>
+    public IReadOnlyList<IJvmProvider> Providers { get; init; } = [];
+
+    /// <summary>Collapse candidates that resolve to the same physical directory. Default is true.</summary>
+    public bool DeduplicateHomes { get; init; } = true;
+
     /// <summary>
-    ///     Locates JVMs from all configured providers, in provider order. Every provider
-    ///     reports before results are produced, so each <see cref="Jvm" /> can list all
-    ///     the sources that found it.
+    ///     Execute each candidate's own java executable to enrich the metadata with
+    ///     runtime properties (runtime/VM name and version, vendor fallback). Adds a
+    ///     few hundred milliseconds per installation; failures degrade silently to
+    ///     the release-file metadata. Default is true.
     /// </summary>
-    public static IEnumerable<Jvm> Locate(JdkFindOptions? options = null)
-    {
-        options ??= new JdkFindOptions();
-        return Enumerate(options);
-    }
+    public bool ProbeRuntimeProperties { get; init; } = true;
+
+    /// <summary>The shared ready-to-use finder bound to the platform's built-in sources.</summary>
+    public static JdkFinder Default { get; } = new() { Providers = CreateDefaultProviders() };
+
+    /// <summary>
+    ///     Locates JVMs from all sources, in source order. Every source reports
+    ///     before results are produced, so each <see cref="Jvm" /> can list all the
+    ///     sources that found it.
+    /// </summary>
+    public IEnumerable<Jvm> Locate() => Enumerate(this);
 
     /// <summary>
     ///     Async counterpart of <see cref="Locate" /> for callers that own a
@@ -25,14 +46,12 @@ public static class JdkFinder
     ///     abort of the runtime probes (the child java processes are killed) and of
     ///     the release-file reads. Collect-then-merge like the sync pipeline.
     /// </summary>
-    public static async Task<IReadOnlyList<Jvm>> LocateAsync(
-        JdkFindOptions? options = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Jvm>> LocateAsync(CancellationToken cancellationToken = default)
     {
-        options ??= new JdkFindOptions();
-        var order = CollectCandidates(options, cancellationToken);
+        var order = CollectCandidates(this, cancellationToken);
 
         var results = new Jvm?[order.Count];
-        if (options.ProbeRuntimeProperties)
+        if (ProbeRuntimeProperties)
         {
             // One process per installation is the slow part: probe concurrently,
             // bounded like PLINQ's default, keeping the first-discovery order.
@@ -59,17 +78,34 @@ public static class JdkFinder
         return results.OfType<Jvm>().ToArray();
     }
 
-    private static IEnumerable<Jvm> Enumerate(JdkFindOptions options)
+    /// <summary>The built-in provider set for the current platform, in priority order.</summary>
+    private static List<IJvmProvider> CreateDefaultProviders() =>
+    [
+        new JavaHomeJvmProvider(),
+        new PathJvmProvider(),
+        new MacOsJvmProvider(),
+        new LinuxJvmProvider(),
+        new HomebrewJvmProvider(),
+        new WindowsProgramFilesJvmProvider(),
+        new WindowsRegistryJvmProvider(),
+        new IntelliJJvmProvider(),
+        new SdkmanJvmProvider(),
+        new GradleJvmProvider(),
+        new JabbaJvmProvider(),
+        new ScoopJvmProvider(),
+    ];
+
+    private static IEnumerable<Jvm> Enumerate(JdkFinder finder)
     {
         // Jvm.Providers lists every source that reported the same directory, so results
         // can only be produced after all providers have reported — the enumeration is
         // a full collect-then-merge pass.
-        var order = CollectCandidates(options, CancellationToken.None);
+        var order = CollectCandidates(finder, CancellationToken.None);
 
         // Runtime probing is the slow part (one process per installation): probe
         // candidates concurrently while keeping the first-discovery order. Without
         // probing, stay on the plain sequential pipeline.
-        if (options.ProbeRuntimeProperties)
+        if (finder.ProbeRuntimeProperties)
         {
             return order
                 .AsParallel()
@@ -84,12 +120,12 @@ public static class JdkFinder
     }
 
     private static List<(string HomePath, List<string> Providers)> CollectCandidates(
-        JdkFindOptions options, CancellationToken cancellationToken)
+        JdkFinder finder, CancellationToken cancellationToken)
     {
         var order = new List<(string HomePath, List<string> Providers)>();
-        var indexByKey = options.DeduplicateHomes ? new Dictionary<string, int>(PathComparer) : null;
+        var indexByKey = finder.DeduplicateHomes ? new Dictionary<string, int>(PathComparer) : null;
 
-        foreach (var provider in options.Providers)
+        foreach (var provider in finder.Providers)
         {
             cancellationToken.ThrowIfCancellationRequested();
             foreach (var candidate in provider.GetJavaHomes())

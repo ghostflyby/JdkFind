@@ -18,9 +18,9 @@ public class JdkFinderTests : IDisposable
     public void Locate_EnrichesMetadataFromReleaseFile()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
-        var options = new JdkFindOptions { Providers = [new StubJvmProvider("stub", jdk)] };
+        var finder = new JdkFinder { Providers = [new StubJvmProvider("stub", jdk)] };
 
-        var jvms = JdkFinder.Locate(options).ToList();
+        var jvms = finder.Locate().ToList();
 
         var jvm = Assert.Single(jvms);
         Assert.Equal(["stub"], jvm.Providers);
@@ -37,12 +37,12 @@ public class JdkFinderTests : IDisposable
     public void Locate_DeduplicatesAndMergesAllSources()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
-        var options = new JdkFindOptions
+        var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("first", jdk), new StubJvmProvider("second", jdk)],
         };
 
-        var jvms = JdkFinder.Locate(options).ToList();
+        var jvms = finder.Locate().ToList();
 
         var jvm = Assert.Single(jvms);
         Assert.Equal(["first", "second"], jvm.Providers);
@@ -52,9 +52,9 @@ public class JdkFinderTests : IDisposable
     public void Locate_RepeatedCandidatesFromOneSource_RecordTheNameOnce()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
-        var options = new JdkFindOptions { Providers = [new StubJvmProvider("dup", jdk, jdk)] };
+        var finder = new JdkFinder { Providers = [new StubJvmProvider("dup", jdk, jdk)] };
 
-        var jvms = JdkFinder.Locate(options).ToList();
+        var jvms = finder.Locate().ToList();
 
         var jvm = Assert.Single(jvms);
         Assert.Equal(["dup"], jvm.Providers);
@@ -64,13 +64,13 @@ public class JdkFinderTests : IDisposable
     public void Locate_CanDisableDeduplication()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
-        var options = new JdkFindOptions
+        var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("first", jdk), new StubJvmProvider("second", jdk)],
             DeduplicateHomes = false,
         };
 
-        var jvms = JdkFinder.Locate(options).ToList();
+        var jvms = finder.Locate().ToList();
 
         // Each candidate stays its own entry with a single source — the merge logic
         // must not leak into the dedup-off branch.
@@ -84,7 +84,7 @@ public class JdkFinderTests : IDisposable
         var a = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "a");
         var b = TestJdk.Create(temp.FullPath, "17.0.2", "jdks", "b");
         var c = TestJdk.Create(temp.FullPath, "11", "jdks", "c");
-        var options = new JdkFindOptions
+        var finder = new JdkFinder
         {
             // Interleaved and repeated candidates: p1=[a,b,a], p2=[b,c], p3=[a].
             Providers =
@@ -95,7 +95,7 @@ public class JdkFinderTests : IDisposable
             ],
         };
 
-        var jvms = JdkFinder.Locate(options).ToList();
+        var jvms = finder.Locate().ToList();
 
         Assert.Equal([a, b, c], jvms.Select(jvm => jvm.Home.FullName).ToArray());
         Assert.Equal(["p1", "p3"], jvms[0].Providers);
@@ -107,12 +107,12 @@ public class JdkFinderTests : IDisposable
     public void Locate_SameNameAcrossProviderInstances_RecordsTheNameOnce()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
-        var options = new JdkFindOptions
+        var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("x", jdk), new StubJvmProvider("x", jdk), new StubJvmProvider("y", jdk)],
         };
 
-        var jvms = JdkFinder.Locate(options).ToList();
+        var jvms = finder.Locate().ToList();
 
         var jvm = Assert.Single(jvms);
         Assert.Equal(["x", "y"], jvm.Providers);
@@ -129,12 +129,12 @@ public class JdkFinderTests : IDisposable
         if (upper == jdk)
             return;
 
-        var options = new JdkFindOptions
+        var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("first", jdk), new StubJvmProvider("second", upper)],
         };
 
-        Assert.Single(JdkFinder.Locate(options).ToList());
+        Assert.Single(finder.Locate().ToList());
     }
 
     [Fact]
@@ -143,12 +143,12 @@ public class JdkFinderTests : IDisposable
         // An exotic JAVA_VERSION must not lose the JVM — it just sorts as unknown.
         var exotic = TestJdk.Create(temp.FullPath, "unknown", "jdks", "exotic");
         var jdk21 = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
-        var options = new JdkFindOptions
+        var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("stub", exotic, jdk21)],
         };
 
-        var jvms = JdkFinder.Locate(options).ToList();
+        var jvms = finder.Locate().ToList();
 
         Assert.Equal(2, jvms.Count);
         Assert.Equal("unknown", jvms.Single(jvm => jvm.Home.FullName == exotic).Version.Original);
@@ -158,13 +158,13 @@ public class JdkFinderTests : IDisposable
     public void Locate_ComputesVendorAndDistribution()
     {
         var jdk = TestJdk.CreateWithImplementor(temp.FullPath, "21.0.5", "Eclipse Adoptium", "jdks", "adoptium");
-        var options = new JdkFindOptions
+        var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("stub", jdk)],
             ProbeRuntimeProperties = false, // The fake java is not executable, so probing fails silently — this test only verifies the release side.
         };
 
-        var jvm = Assert.Single(JdkFinder.Locate(options).ToList());
+        var jvm = Assert.Single(finder.Locate().ToList());
 
         Assert.Equal("Eclipse Adoptium", jvm.VendorRaw);
         Assert.Equal(JvmVendor.Adoptium, jvm.Vendor);
@@ -179,13 +179,13 @@ public class JdkFinderTests : IDisposable
 
         var slow1 = TestJdk.CreateSlowProbe(temp.FullPath, "21.0.5", "jdks", "slow1");
         var slow2 = TestJdk.CreateSlowProbe(temp.FullPath, "17.0.2", "jdks", "slow2");
-        var options = new JdkFindOptions
+        var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("stub", slow1, slow2)],
         };
 
         var watch = Stopwatch.StartNew();
-        var jvms = JdkFinder.Locate(options).ToList();
+        var jvms = finder.Locate().ToList();
         watch.Stop();
 
         Assert.Equal(2, jvms.Count);
@@ -200,13 +200,13 @@ public class JdkFinderTests : IDisposable
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
         File.WriteAllText(Path.Combine(jdk, "bin", JavaHomeLayout.CompilerExecutableName), string.Empty);
         var runtime = TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jre");
-        var options = new JdkFindOptions
+        var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("stub", jdk, runtime)],
             ProbeRuntimeProperties = false,
         };
 
-        var jvms = JdkFinder.Locate(options).ToList();
+        var jvms = finder.Locate().ToList();
 
         Assert.Equal(2, jvms.Count);
         Assert.True(jvms[0].HasCompiler);
@@ -219,9 +219,9 @@ public class JdkFinderTests : IDisposable
         var broken = Path.Combine(temp.FullPath, "broken");
         Directory.CreateDirectory(Path.Combine(broken, "bin"));
         File.WriteAllText(Path.Combine(broken, "bin", JavaHomeLayout.JavaExecutableName), string.Empty);
-        var options = new JdkFindOptions { Providers = [new StubJvmProvider("stub", broken)] };
+        var finder = new JdkFinder { Providers = [new StubJvmProvider("stub", broken)] };
 
-        Assert.Empty(JdkFinder.Locate(options).ToList());
+        Assert.Empty(finder.Locate().ToList());
     }
 
     [Fact]
@@ -232,10 +232,10 @@ public class JdkFinderTests : IDisposable
 
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "locked-jdk");
         File.SetUnixFileMode(Path.Combine(jdk, "release"), UnixFileMode.None);
-        var options = new JdkFindOptions { Providers = [new StubJvmProvider("stub", jdk)] };
+        var finder = new JdkFinder { Providers = [new StubJvmProvider("stub", jdk)] };
 
         // An access denial must not crash the scan; the candidate is simply skipped.
-        Assert.Empty(JdkFinder.Locate(options).ToList());
+        Assert.Empty(finder.Locate().ToList());
     }
 
     [Fact]

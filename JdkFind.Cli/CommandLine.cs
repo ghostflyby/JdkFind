@@ -21,12 +21,12 @@ internal static class CommandLine
         return version != 0 ? version : a.HasCompiler.CompareTo(b.HasCompiler);
     });
 
-    internal static int Run(string[] args) => Run(args, findOptions: null);
+    internal static int Run(string[] args) => Run(args, finder: null);
 
-    /// <summary>Injection seam for tests: pass explicit locate options to run against
+    /// <summary>Injection seam for tests: pass an explicit finder to run against
     /// controlled fixtures instead of the real machine.</summary>
-    internal static int Run(string[] args, JdkFindOptions? findOptions) =>
-        RunAsync(args, findOptions).GetAwaiter().GetResult();
+    internal static int Run(string[] args, JdkFinder? finder) =>
+        RunAsync(args, finder).GetAwaiter().GetResult();
 
     /// <summary>
     ///     Async entry point. Dispatch goes through System.CommandLine's invocation so
@@ -34,10 +34,10 @@ internal static class CommandLine
     ///     the actions — the locate pipeline (runtime probes, release-file reads)
     ///     honors it.
     /// </summary>
-    internal static async Task<int> RunAsync(string[] args, JdkFindOptions? findOptions = null)
+    internal static async Task<int> RunAsync(string[] args, JdkFinder? finder = null)
     {
         var tree = Options.CreateTree((options, cancellationToken) =>
-            ExecuteAsync(options, cancellationToken, findOptions));
+            ExecuteAsync(options, cancellationToken, finder));
         var parseResult = tree.Root.Parse(args, new ParserConfiguration { EnablePosixBundling = false });
 
         if (parseResult.Errors.Count > 0)
@@ -81,14 +81,16 @@ internal static class CommandLine
     /// <summary>The action shared by the default command and both subcommands:
     /// runs the locate pipeline and prints the selected installation(s).</summary>
     private static async Task<int> ExecuteAsync(
-        Options options, CancellationToken cancellationToken, JdkFindOptions? findOptions)
+        Options options, CancellationToken cancellationToken, JdkFinder? finder)
     {
-        var locateOptions = findOptions ?? new JdkFindOptions { ProbeRuntimeProperties = !options.NoProbe };
+        finder ??= options.NoProbe
+            ? JdkFinder.Default with { ProbeRuntimeProperties = false }
+            : JdkFinder.Default;
 
         IReadOnlyList<Jvm> located;
         try
         {
-            located = await JdkFinder.LocateAsync(locateOptions, cancellationToken).ConfigureAwait(false);
+            located = await finder.LocateAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

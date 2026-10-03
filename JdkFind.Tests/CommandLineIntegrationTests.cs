@@ -18,10 +18,10 @@ public class CommandLineIntegrationTests : IDisposable
         public IEnumerable<string> GetJavaHomes() => homes;
     }
 
-    private JdkFindOptions StubOptions(params string[] homes) =>
+    private JdkFinder StubFinder(params string[] homes) =>
         new() { Providers = [new StubJvmProvider("stub", homes)], ProbeRuntimeProperties = false };
 
-    private static (int ExitCode, string StdOut, string StdErr) RunCli(string[] args, JdkFindOptions findOptions)
+    private static (int ExitCode, string StdOut, string StdErr) RunCli(string[] args, JdkFinder finder)
     {
         var originalOut = Console.Out;
         var originalError = Console.Error;
@@ -31,7 +31,7 @@ public class CommandLineIntegrationTests : IDisposable
         Console.SetError(stderr);
         try
         {
-            var exitCode = CommandLine.Run(args, findOptions);
+            var exitCode = CommandLine.Run(args, finder);
             return (exitCode, stdout.ToString(), stderr.ToString());
         }
         finally
@@ -46,7 +46,7 @@ public class CommandLineIntegrationTests : IDisposable
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
 
-        var (exitCode, stdout, stderr) = RunCli([], StubOptions(jdk));
+        var (exitCode, stdout, stderr) = RunCli([], StubFinder(jdk));
 
         Assert.Equal(0, exitCode);
         Assert.Equal(jdk + Environment.NewLine, stdout);
@@ -59,7 +59,7 @@ public class CommandLineIntegrationTests : IDisposable
         var jdk21 = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
         var jdk17 = TestJdk.Create(temp.FullPath, "17.0.2", "jdks", "jdk17");
 
-        var (_, stdout, _) = RunCli(["21"], StubOptions(jdk21, jdk17));
+        var (_, stdout, _) = RunCli(["21"], StubFinder(jdk21, jdk17));
 
         Assert.Equal(jdk21 + Environment.NewLine, stdout);
     }
@@ -69,7 +69,7 @@ public class CommandLineIntegrationTests : IDisposable
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
 
-        var (_, stdout, _) = RunCli(["21", "java"], StubOptions(jdk));
+        var (_, stdout, _) = RunCli(["21", "java"], StubFinder(jdk));
 
         Assert.Equal(Path.Combine(jdk, "bin", JavaHomeLayout.JavaExecutableName) + Environment.NewLine, stdout);
     }
@@ -79,7 +79,7 @@ public class CommandLineIntegrationTests : IDisposable
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
 
-        var (exitCode, stdout, stderr) = RunCli(["info"], StubOptions(jdk));
+        var (exitCode, stdout, stderr) = RunCli(["info"], StubFinder(jdk));
 
         Assert.Equal(0, exitCode);
         Assert.Equal(string.Empty, stdout);
@@ -93,7 +93,7 @@ public class CommandLineIntegrationTests : IDisposable
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
 
-        var (exitCode, stdout, stderr) = RunCli(["list"], StubOptions(jdk));
+        var (exitCode, stdout, stderr) = RunCli(["list"], StubFinder(jdk));
 
         Assert.Equal(0, exitCode);
         Assert.Equal(string.Empty, stdout);
@@ -106,7 +106,7 @@ public class CommandLineIntegrationTests : IDisposable
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
 
-        var (exitCode, stdout, stderr) = RunCli(["--json"], StubOptions(jdk));
+        var (exitCode, stdout, stderr) = RunCli(["--json"], StubFinder(jdk));
 
         Assert.Equal(0, exitCode);
         Assert.StartsWith("{", stdout);
@@ -119,7 +119,7 @@ public class CommandLineIntegrationTests : IDisposable
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
 
-        var (_, stdout, _) = RunCli(["list", "--json"], StubOptions(jdk));
+        var (_, stdout, _) = RunCli(["list", "--json"], StubFinder(jdk));
 
         Assert.StartsWith("[", stdout);
         Assert.EndsWith("]" + Environment.NewLine, stdout);
@@ -128,7 +128,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void NoMatches_ReturnsExitNotFoundWithEmptyStreams()
     {
-        var (exitCode, stdout, stderr) = RunCli([], StubOptions());
+        var (exitCode, stdout, stderr) = RunCli([], StubFinder());
 
         Assert.Equal(1, exitCode);
         Assert.Equal(string.Empty, stdout);
@@ -138,7 +138,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void UsageError_ReturnsExit2WithMessageOnStderr()
     {
-        var (exitCode, stdout, stderr) = RunCli(["--bogus"], StubOptions());
+        var (exitCode, stdout, stderr) = RunCli(["--bogus"], StubFinder());
 
         Assert.Equal(2, exitCode);
         Assert.Equal(string.Empty, stdout);
@@ -148,7 +148,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void UsageErrorWithHelp_StillReturnsExit2()
     {
-        var (exitCode, stdout, stderr) = RunCli(["--bogus", "--help"], StubOptions());
+        var (exitCode, stdout, stderr) = RunCli(["--bogus", "--help"], StubFinder());
 
         Assert.Equal(2, exitCode);
         Assert.Equal(string.Empty, stdout);
@@ -160,7 +160,7 @@ public class CommandLineIntegrationTests : IDisposable
     {
         // The framework's help action clears subcommand-level parse errors; the
         // unmatched token must stay fatal instead of printing help with exit 0.
-        var (exitCode, stdout, stderr) = RunCli(["list", "--bogus", "--help"], StubOptions());
+        var (exitCode, stdout, stderr) = RunCli(["list", "--bogus", "--help"], StubFinder());
 
         Assert.Equal(2, exitCode);
         Assert.Equal(string.Empty, stdout);
@@ -170,7 +170,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void Help_WritesUsageToStdout_ReturnsZero()
     {
-        var (exitCode, stdout, stderr) = RunCli(["--help"], StubOptions());
+        var (exitCode, stdout, stderr) = RunCli(["--help"], StubFinder());
 
         Assert.Equal(0, exitCode);
         // The section titles come from System.CommandLine and follow the OS
@@ -182,7 +182,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void VersionOption_WritesVersionToStdout_ReturnsZero()
     {
-        var (exitCode, stdout, stderr) = RunCli(["--version"], StubOptions());
+        var (exitCode, stdout, stderr) = RunCli(["--version"], StubFinder());
 
         Assert.Equal(0, exitCode);
         Assert.NotEqual(string.Empty, stdout);
@@ -195,16 +195,16 @@ public class CommandLineIntegrationTests : IDisposable
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
         File.WriteAllText(Path.Combine(jdk, "bin", JavaHomeLayout.CompilerExecutableName), string.Empty);
         var runtime = TestJdk.Create(temp.FullPath, "17.0.2", "jdks", "jre");
-        var options = StubOptions(jdk, runtime);
+        var finder = StubFinder(jdk, runtime);
 
-        var jdkOnly = RunCli(["--jdk-only"], options);
+        var jdkOnly = RunCli(["--jdk-only"], finder);
 
         Assert.Equal(0, jdkOnly.ExitCode);
         Assert.Equal(jdk + Environment.NewLine, jdkOnly.StdOut);
 
         // list is the only multi-installation output: the table goes to stderr
         // (1 header row + 2 data rows).
-        var listed = RunCli(["list"], options);
+        var listed = RunCli(["list"], finder);
         Assert.Equal(string.Empty, listed.StdOut);
         Assert.Contains("VERSION", listed.StdErr);
         Assert.Contains(jdk, listed.StdErr);
@@ -215,10 +215,10 @@ public class CommandLineIntegrationTests : IDisposable
     public void VendorFilter_HitsDisplayAndRawSurfaces()
     {
         var jdk = TestJdk.CreateWithImplementor(temp.FullPath, "21.0.5", "Azul Systems, Inc.", "jdks", "azul");
-        var options = StubOptions(jdk);
+        var finder = StubFinder(jdk);
 
-        Assert.Equal(0, RunCli(["--vendor", "azul"], options).ExitCode);
-        Assert.Equal(1, RunCli(["--vendor", "nomatch"], options).ExitCode);
+        Assert.Equal(0, RunCli(["--vendor", "azul"], finder).ExitCode);
+        Assert.Equal(1, RunCli(["--vendor", "nomatch"], finder).ExitCode);
     }
 
     public void Dispose() => temp.Dispose();

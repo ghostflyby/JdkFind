@@ -16,7 +16,7 @@ public class JdkFinderAsyncTests : IDisposable
         public IEnumerable<string> GetJavaHomes() => homes;
     }
 
-    private JdkFindOptions StubOptions(params string[] homes) =>
+    private JdkFinder StubFinder(params string[] homes) =>
         new() { Providers = [new StubJvmProvider("stub", homes)], ProbeRuntimeProperties = false };
 
     private static CancellationToken Cancelled => new(canceled: true);
@@ -25,10 +25,10 @@ public class JdkFinderAsyncTests : IDisposable
     public async Task LocateAsync_MatchesTheSyncPipeline()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
-        var options = StubOptions(jdk);
+        var finder = StubFinder(jdk);
 
-        var located = await JdkFinder.LocateAsync(options, TestContext.Current.CancellationToken);
-        var sync = JdkFinder.Locate(options).ToList();
+        var located = await finder.LocateAsync(TestContext.Current.CancellationToken);
+        var sync = finder.Locate().ToList();
 
         Assert.Single(located);
         Assert.Equal(sync[0].Home.FullName, located[0].Home.FullName);
@@ -38,9 +38,9 @@ public class JdkFinderAsyncTests : IDisposable
     [Fact]
     public async Task LocateAsync_PreCancelledToken_ThrowsBeforeAnyWork()
     {
-        var options = StubOptions("/nonexistent/home");
+        var finder = StubFinder("/nonexistent/home");
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => JdkFinder.LocateAsync(options, Cancelled));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => finder.LocateAsync(Cancelled));
     }
 
     [Fact]
@@ -75,10 +75,10 @@ public class JdkFinderAsyncTests : IDisposable
 
         var providers = new List<IJvmProvider> { new StubJvmProvider("stub", home) };
 
-        var probed = await JdkFinder.LocateAsync(
-            new JdkFindOptions { Providers = providers, ProbeRuntimeProperties = true }, TestContext.Current.CancellationToken);
-        var unprobed = await JdkFinder.LocateAsync(
-            new JdkFindOptions { Providers = providers, ProbeRuntimeProperties = false }, TestContext.Current.CancellationToken);
+        var probed = await (new JdkFinder { Providers = providers, ProbeRuntimeProperties = true })
+            .LocateAsync(TestContext.Current.CancellationToken);
+        var unprobed = await (new JdkFinder { Providers = providers, ProbeRuntimeProperties = false })
+            .LocateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal("ScriptedRuntime", probed[0].RuntimeName);
         Assert.Null(unprobed[0].RuntimeName);
