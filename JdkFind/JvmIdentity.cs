@@ -7,12 +7,13 @@ namespace JdkFind;
 ///     installation as two independent axes. Both read the installation's own
 ///     identity strings — the release file's IMPLEMENTOR / IMPLEMENTOR_VERSION
 ///     plus the GRAALVM_VERSION hint, falling back to the java.vendor system
-///     property captured by the runtime probe. The vendor applies Gradle's
-///     known-vendor indicator set to the raw IMPLEMENTOR / java.vendor value,
-///     while the distribution runs its own pattern set with IMPLEMENTOR_VERSION
-///     taking precedence over the raw vendor string. Matching is a
-///     case-insensitive substring search with the more specific families first
-///     (the GraalVM community before Oracle, Mandrel before Red Hat).
+///     property captured by the runtime probe. The vendor applies a Gradle-
+///     inspired indicator set (not a full mirror of it) to the raw IMPLEMENTOR /
+///     java.vendor value, while the distribution runs its own pattern set with
+///     IMPLEMENTOR_VERSION taking precedence over the raw vendor string.
+///     Matching is a case-insensitive substring search with the more specific
+///     families first (the GraalVM community before Oracle, Mandrel before
+///     Red Hat).
 /// </summary>
 internal static partial class JvmIdentity
 {
@@ -88,7 +89,7 @@ internal static partial class JvmIdentity
     [GeneratedRegex("hp|hewlett", RegexOptions.IgnoreCase)]
     private static partial Regex HewlettPackardPattern { get; }
 
-    [GeneratedRegex("graalvm", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("graalvm|graal vm", RegexOptions.IgnoreCase)]
     private static partial Regex GraalVmPattern { get; }
 
     /// <summary>

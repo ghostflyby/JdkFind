@@ -7,6 +7,7 @@ public class JvmClassificationTests
     [InlineData("Amazon.com Inc.", null, false, JvmVendor.Amazon, JvmDistribution.Corretto)]
     [InlineData("Eclipse Adoptium", null, false, JvmVendor.Adoptium, JvmDistribution.Temurin)]
     [InlineData("Temurin-21.0.5+11", null, false, JvmVendor.Adoptium, JvmDistribution.Temurin)]
+    [InlineData("AdoptOpenJDK", null, false, JvmVendor.AdoptOpenJdk, JvmDistribution.AdoptOpenJdk)]
     [InlineData("Azul Systems, Inc.", null, false, JvmVendor.Azul, JvmDistribution.Zulu)]
     [InlineData("BellSoft Liberica", null, false, JvmVendor.BellSoft, JvmDistribution.Liberica)]
     [InlineData("SapMachine", null, false, JvmVendor.Sap, JvmDistribution.SapMachine)]
@@ -24,6 +25,14 @@ public class JvmClassificationTests
     [InlineData("OJDKBuild", null, false, JvmVendor.Unknown, JvmDistribution.OjdkBuild)]
     [InlineData("OpenLogic OpenJDK", null, false, JvmVendor.OpenLogic, JvmDistribution.OpenLogic)]
     [InlineData("Gluon GraalVM", null, false, JvmVendor.Oracle, JvmDistribution.GluonGraalVm)]
+    // Vendors with no distinct distribution: the vendor axis names them, the
+    // distribution axis has no pattern for them.
+    [InlineData("Apple Inc.", null, false, JvmVendor.Apple, JvmDistribution.Unknown)]
+    [InlineData("Hewlett-Packard Company", null, false, JvmVendor.HewlettPackard, JvmDistribution.Unknown)]
+    // The vendor indicator accepts the spaced "Graal VM" spelling too, and the
+    // distribution family patterns already did.
+    [InlineData("Graal VM Community", null, false, JvmVendor.Oracle, JvmDistribution.GraalVmCommunity)]
+    [InlineData("Graal VM", null, false, JvmVendor.Oracle, JvmDistribution.Unknown)]
     // A bare "Gluon" carries no "graalvm" indicator, so the vendor axis leaves
     // it Unknown while the distribution axis still names GluonGraalVm — Gluon
     // is not a vendor of its own (JvmVendor has no Gluon member).
