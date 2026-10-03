@@ -70,8 +70,21 @@ internal static partial class CommandRunner
         }
 
         var startInfo = new ProcessStartInfo { FileName = fileName, UseShellExecute = false };
-        foreach (var argument in commandArgs.Skip(1))
-            startInfo.ArgumentList.Add(argument);
+        if (fileName.EndsWith(".bat", StringComparison.OrdinalIgnoreCase) ||
+            fileName.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
+        {
+            // The loader runs batch targets through cmd.exe, which re-parses the
+            // command line with its own (not MSVCRT) rules: each argument is quoted
+            // and embedded quotes doubled so metacharacters stay inside the quotes.
+            // (A literal % cannot be protected on a cmd command line — known limit.)
+            startInfo.Arguments = string.Join(" ", commandArgs.Skip(1)
+                .Select(argument => '"' + argument.Replace("\"", "\"\"") + '"'));
+        }
+        else
+        {
+            foreach (var argument in commandArgs.Skip(1))
+                startInfo.ArgumentList.Add(argument);
+        }
 
         using var process = Process.Start(startInfo)!;
         process.WaitForExit();

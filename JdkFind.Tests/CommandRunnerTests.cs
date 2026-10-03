@@ -96,4 +96,29 @@ public class CommandRunnerTests
 
         Assert.Equal(127, exitCode);
     }
+
+    [Fact]
+    public void Run_BatchArguments_SurviveCmdMetacharacters()
+    {
+        if (!OperatingSystem.IsWindows())
+            return; // Batch targets are a Windows concept.
+
+        var bat = Path.Combine(Path.GetTempPath(), $"jdkfind-{Guid.NewGuid():N}.bat");
+        File.WriteAllText(bat, "@echo %~1\r\n@echo %~2");
+
+        try
+        {
+            // 'a&b' without spaces is unquoted by default .NET quoting; the batch
+            // quoting added for bat targets must keep it as one argument.
+            var (exitCode, output) = RunTool("--", bat, "a&b", "with spaces");
+            Assert.Equal(0, exitCode);
+
+            var lines = output.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            Assert.Equal(["a&b", "with spaces"], lines);
+        }
+        finally
+        {
+            File.Delete(bat);
+        }
+    }
 }
