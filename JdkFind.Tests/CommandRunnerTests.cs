@@ -26,9 +26,37 @@ public class CommandRunnerTests
             startInfo.ArgumentList.Add(argument);
         using var process = Process.Start(startInfo)!;
         var stdout = process.StandardOutput.ReadToEnd();
+        // Drained so a chatty child can never fill the stderr pipe and deadlock.
+        var stderr = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
 
         return (process.ExitCode, stdout);
+    }
+
+    [Fact]
+    public void Run_NonExecutableCommand_Returns126()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The Unix path reports the executable bit; PATHEXT has no such concept.
+
+        var file = Path.Combine(Path.GetTempPath(), $"jdkfind-{Guid.NewGuid():N}.sh");
+        File.WriteAllText(file, "#!/bin/sh\nexit 0\n");
+        File.SetUnixFileMode(file, UnixFileMode.UserRead | UnixFileMode.UserWrite); // not executable
+
+        var (exitCode, _) = RunTool("--", file);
+
+        Assert.Equal(126, exitCode);
+    }
+
+    [Fact]
+    public void Run_PassesMetacharactersVerbatim()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The metachar assertion uses a POSIX shell.
+
+        var (_, output) = RunTool("--", "sh", "-c", "printf '<%s>' \"$1\"", "metachar", "a b|c;d$&");
+
+        Assert.Equal("<a b|c;d$&>", output);
     }
 
     [Fact]

@@ -39,6 +39,45 @@ public class OptionsTests
     }
 
     [Fact]
+    public void Parse_RunSeparator_CapturesTailVerbatim()
+    {
+        var options = Options.Parse(["21", "--jdk-only", "--", "java", "-version", "--json"]);
+
+        Assert.Equal(SubCommand.None, options.Command);
+        Assert.Equal("21", options.VersionPrefix);
+        Assert.True(options.JdkOnly);
+        Assert.Equal(["java", "-version", "--json"], options.CommandArgs);
+    }
+
+    [Fact]
+    public void Parse_RunTail_PassesMetacharactersVerbatim()
+    {
+        var options = Options.Parse(["21", "--", "sh", "-c", "printf '%s;|&' \"$@\""]);
+
+        Assert.Equal(["sh", "-c", "printf '%s;|&' \"$@\""], options.CommandArgs);
+    }
+
+    [Fact]
+    public void Parse_RunSeparatorWithoutCommand_IsRejected()
+    {
+        Assert.Throws<ArgumentException>(() => Options.Parse(["--"]));
+        Assert.Throws<ArgumentException>(() => Options.Parse(["21", "--"]));
+    }
+
+    [Fact]
+    public void Parse_RunSeparatorWithSubcommand_IsRejected()
+    {
+        Assert.Throws<ArgumentException>(() => Options.Parse(["list", "--", "x"]));
+        Assert.Throws<ArgumentException>(() => Options.Parse(["info", "--", "x"]));
+    }
+
+    [Fact]
+    public void Parse_RunSeparatorWithToolPositional_IsRejected()
+    {
+        Assert.Throws<ArgumentException>(() => Options.Parse(["java", "--", "javac"]));
+    }
+
+    [Fact]
     public void Parse_ListTakesAnOptionalVersionPrefix()
     {
         var options = Options.Parse(["list", "21"]);
