@@ -20,9 +20,10 @@ public class WindowsProviderTests : IDisposable
             return;
 
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
-        var provider = new WindowsProgramFilesJvmProvider([temp.FullPath]);
+        // GetJavaHomes is a default interface member, reachable only through the SPI.
+        IJvmProvider source = new WindowsProgramFilesJvmProvider([temp.FullPath]);
 
-        var home = Assert.Single(provider.GetJavaHomes().ToList());
+        var home = Assert.Single(source.GetJavaHomes().ToList());
 
         Assert.Equal(jdk, home);
     }
