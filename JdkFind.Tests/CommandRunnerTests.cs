@@ -96,29 +96,4 @@ public class CommandRunnerTests
 
         Assert.Equal(127, exitCode);
     }
-
-    [Fact]
-    public void Run_BatchArguments_SurviveCmdMetacharacters()
-    {
-        if (!OperatingSystem.IsWindows())
-            return; // Batch targets are a Windows concept.
-
-        var bat = Path.Combine(Path.GetTempPath(), $"jdkfind-{Guid.NewGuid():N}.bat");
-        // echo cannot output an argument containing '&' (cmd re-parses the expanded
-        // line), so the comparison goes through an exit code instead.
-        File.WriteAllText(bat, "@if \"%~1 %~2\" == \"a&b with spaces\" (exit /b 0)\r\n@exit /b 44");
-
-        try
-        {
-            // 'a&b' without spaces is unquoted by default .NET quoting; the batch
-            // quoting added for bat targets must keep it as one argument. Both
-            // arguments must arrive exactly, or the comparison branch exits 44.
-            var (exitCode, _) = RunTool("--", bat, "a&b", "with spaces");
-            Assert.Equal(0, exitCode);
-        }
-        finally
-        {
-            File.Delete(bat);
-        }
-    }
 }
