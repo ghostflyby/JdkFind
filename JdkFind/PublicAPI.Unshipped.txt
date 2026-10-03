@@ -159,9 +159,6 @@ override JdkFind.Jvm.ToString() -> string!
 override JdkFind.JvmVersion.GetHashCode() -> int
 override JdkFind.JvmVersion.ToString() -> string!
 static JdkFind.JavaHomeLayout.Probe(string! candidateDirectory) -> string?
-static JdkFind.JdkFinder.Find(int languageVersion, JdkFind.JdkFindOptions? options = null) -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
-static JdkFind.JdkFinder.GetDefault(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?
-static JdkFind.JdkFinder.GetNewest(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?
 static JdkFind.JdkFinder.Locate(JdkFind.JdkFindOptions? options = null) -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
 static JdkFind.JdkFinder.LocateAsync(JdkFind.JdkFindOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!>!
 static JdkFind.JdkFindOptions.CreateDefaultProviders() -> System.Collections.Generic.List<JdkFind.IJvmProvider!>!

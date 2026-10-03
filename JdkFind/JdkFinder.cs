@@ -59,47 +59,6 @@ public static class JdkFinder
         return results.OfType<Jvm>().ToArray();
     }
 
-    /// <summary>Enumerates only the JVMs whose feature version matches.</summary>
-    public static IEnumerable<Jvm> Find(int languageVersion, JdkFindOptions? options = null) =>
-        Locate(options).Where(jvm => jvm.LanguageVersion == languageVersion);
-
-    /// <summary>Returns the newest JVM found, or null when none is found.</summary>
-    public static Jvm? GetNewest(JdkFindOptions? options = null)
-    {
-        Jvm? newest = null;
-        foreach (var jvm in Locate(options))
-            if (newest is null || jvm.Version > newest.Version)
-                newest = jvm;
-
-        return newest;
-    }
-
-    /// <summary>
-    ///     Returns the JVM pointed to by <c>JAVA_HOME</c> when it is among the results,
-    ///     otherwise the newest JVM found. Returns null when none is found.
-    /// </summary>
-    public static Jvm? GetDefault(JdkFindOptions? options = null)
-    {
-        // Single pass: when JAVA_HOME misses, take the newest from the same results instead of a second full enumeration.
-        var jvms = Locate(options).ToList();
-
-        var javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
-        if (!string.IsNullOrWhiteSpace(javaHome))
-        {
-            var javaHomeKey = GetDeduplicationKey(javaHome);
-            foreach (var jvm in jvms)
-                if (PathComparer.Equals(GetDeduplicationKey(jvm.Home.FullName), javaHomeKey))
-                    return jvm;
-        }
-
-        Jvm? newest = null;
-        foreach (var jvm in jvms)
-            if (newest is null || jvm.Version > newest.Version)
-                newest = jvm;
-
-        return newest;
-    }
-
     private static IEnumerable<Jvm> Enumerate(JdkFindOptions options)
     {
         // Jvm.Providers lists every source that reported the same directory, so results

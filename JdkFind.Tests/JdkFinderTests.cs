@@ -138,92 +138,20 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
-    public void Find_FiltersByFeatureVersion()
+    public void Locate_UnparseableVersion_SortsAsUnknownWithoutLosingTheJvm()
     {
-        var jdk8 = TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jdk8");
-        TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
-        var options = new JdkFindOptions
-        {
-            Providers = [new StubJvmProvider("stub", jdk8, Path.Combine(temp.FullPath, "jdks", "jdk21"))],
-        };
-
-        var jvms = JdkFinder.Find(8, options).ToList();
-
-        var jvm = Assert.Single(jvms);
-        Assert.Equal(jdk8, jvm.Home.FullName);
-    }
-
-    [Fact]
-    public void GetNewest_PrefersHigherFeatureVersionThenPatch()
-    {
-        var jdk8 = TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jdk8");
-        var jdk21 = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
-        var jdk21Older = TestJdk.Create(temp.FullPath, "21.0.1", "jdks", "jdk21-old");
-        var options = new JdkFindOptions
-        {
-            Providers = [new StubJvmProvider("stub", jdk8, jdk21, jdk21Older)],
-        };
-
-        var newest = JdkFinder.GetNewest(options);
-
-        Assert.NotNull(newest);
-        Assert.Equal(jdk21, newest.Home.FullName);
-    }
-
-    // The two GetDefault tests below mutate the process-wide JAVA_HOME. xunit.v3 runs
-    // tests serially within a class and in parallel across classes, so the safety
-    // boundary is "only this class touches the environment": other test classes must
-    // not build a default JdkFindOptions (its parameterless JavaHomeJvmProvider reads
-    // JAVA_HOME); inject providers or roots instead.
-
-    [Fact]
-    public void GetDefault_PrefersJavaHomeWhenResolvable()
-    {
-        var jdk8 = TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jdk8");
-        TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
-        var options = new JdkFindOptions
-        {
-            Providers = [new StubJvmProvider("stub",
-                jdk8, Path.Combine(temp.FullPath, "jdks", "jdk21"))],
-        };
-
-        var original = Environment.GetEnvironmentVariable("JAVA_HOME");
-        Environment.SetEnvironmentVariable("JAVA_HOME", jdk8);
-        try
-        {
-            var defaultJvm = JdkFinder.GetDefault(options);
-            Assert.NotNull(defaultJvm);
-            Assert.Equal(jdk8, defaultJvm.Home.FullName);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("JAVA_HOME", original);
-        }
-    }
-
-    [Fact]
-    public void GetDefault_FallsBackToNewestWithoutJavaHome()
-    {
-        TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jdk8");
+        // An exotic JAVA_VERSION must not lose the JVM — it just sorts as unknown.
+        var exotic = TestJdk.Create(temp.FullPath, "unknown", "jdks", "exotic");
         var jdk21 = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
         var options = new JdkFindOptions
         {
-            Providers = [new StubJvmProvider("stub",
-                Path.Combine(temp.FullPath, "jdks", "jdk8"), jdk21)],
+            Providers = [new StubJvmProvider("stub", exotic, jdk21)],
         };
 
-        var original = Environment.GetEnvironmentVariable("JAVA_HOME");
-        Environment.SetEnvironmentVariable("JAVA_HOME", null);
-        try
-        {
-            var defaultJvm = JdkFinder.GetDefault(options);
-            Assert.NotNull(defaultJvm);
-            Assert.Equal(jdk21, defaultJvm.Home.FullName);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("JAVA_HOME", original);
-        }
+        var jvms = JdkFinder.Locate(options).ToList();
+
+        Assert.Equal(2, jvms.Count);
+        Assert.Equal("unknown", jvms.Single(jvm => jvm.Home.FullName == exotic).Version.Original);
     }
 
     [Fact]
@@ -241,23 +169,6 @@ public class JdkFinderTests : IDisposable
         Assert.Equal("Eclipse Adoptium", jvm.VendorRaw);
         Assert.Equal(JvmVendor.Adoptium, jvm.Vendor);
         Assert.Equal(JvmDistribution.Temurin, jvm.Distribution);
-    }
-
-    [Fact]
-    public void GetNewest_UnparseableVersion_SortsBeforeParsedVersions()
-    {
-        // An exotic JAVA_VERSION must not lose the JVM — it just sorts as unknown.
-        var exotic = TestJdk.Create(temp.FullPath, "unknown", "jdks", "exotic");
-        var jdk21 = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
-        var options = new JdkFindOptions
-        {
-            Providers = [new StubJvmProvider("stub", exotic, jdk21)],
-        };
-
-        var newest = JdkFinder.GetNewest(options);
-
-        Assert.NotNull(newest);
-        Assert.Equal(jdk21, newest.Home.FullName);
     }
 
     [Fact]
