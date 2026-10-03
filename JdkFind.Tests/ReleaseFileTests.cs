@@ -33,7 +33,7 @@ public class ReleaseFileTests : IDisposable
             "malformed-line",
         ]);
 
-        var release = ReleaseFile.Parse(releasePath);
+        var release = ReleaseFile.Parse(releasePath, TestContext.Current.CancellationToken);
 
         Assert.Equal("21.0.5", release["JAVA_VERSION"]);
         Assert.Equal("Say \"hi\"", release["IMPLEMENTOR"]);

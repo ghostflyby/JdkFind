@@ -19,6 +19,46 @@ public static class JdkFinder
         return Enumerate(options);
     }
 
+    /// <summary>
+    ///     Async counterpart of <see cref="Locate" /> for callers that own a
+    ///     cancellation token. The discovery stays local I/O; the token buys a prompt
+    ///     abort of the runtime probes (the child java processes are killed) and of
+    ///     the release-file reads. Collect-then-merge like the sync pipeline.
+    /// </summary>
+    public static async Task<IReadOnlyList<Jvm>> LocateAsync(
+        JdkFindOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        options ??= new JdkFindOptions();
+        var order = CollectCandidates(options, cancellationToken);
+
+        var results = new Jvm?[order.Count];
+        if (options.ProbeRuntimeProperties)
+        {
+            // One process per installation is the slow part: probe concurrently,
+            // bounded like PLINQ's default, keeping the first-discovery order.
+            await Parallel.ForEachAsync(
+                Enumerable.Range(0, order.Count),
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    CancellationToken = cancellationToken,
+                },
+                async (index, token) =>
+                    results[index] = await CreateJvmAsync(order[index], token).ConfigureAwait(false))
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            for (var index = 0; index < order.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                results[index] = await CreateJvmAsync(order[index], cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return results.OfType<Jvm>().ToArray();
+    }
+
     /// <summary>Enumerates only the JVMs whose feature version matches.</summary>
     public static IEnumerable<Jvm> Find(int languageVersion, JdkFindOptions? options = null) =>
         Locate(options).Where(jvm => jvm.LanguageVersion == languageVersion);
@@ -65,32 +105,7 @@ public static class JdkFinder
         // Jvm.Providers lists every source that reported the same directory, so results
         // can only be produced after all providers have reported — the enumeration is
         // a full collect-then-merge pass.
-        var order = new List<(string HomePath, List<string> Providers)>();
-        var indexByKey = options.DeduplicateHomes ? new Dictionary<string, int>(PathComparer) : null;
-
-        foreach (var provider in options.Providers)
-        foreach (var candidate in provider.GetJavaHomes())
-        {
-            if (indexByKey is null)
-            {
-                order.Add((candidate, [provider.Name]));
-                continue;
-            }
-
-            var key = GetDeduplicationKey(candidate);
-            if (indexByKey.TryGetValue(key, out var index))
-            {
-                // A repeated candidate from the same source records the name once
-                // (e.g. two PATH entries leading to the same directory).
-                if (!order[index].Providers.Contains(provider.Name))
-                    order[index].Providers.Add(provider.Name);
-            }
-            else
-            {
-                indexByKey[key] = order.Count;
-                order.Add((candidate, [provider.Name]));
-            }
-        }
+        var order = CollectCandidates(options, CancellationToken.None);
 
         // Runtime probing is the slow part (one process per installation): probe
         // candidates concurrently while keeping the first-discovery order. Without
@@ -107,6 +122,42 @@ public static class JdkFinder
         return order
             .Select(entry => CreateJvm(entry.HomePath, entry.Providers, probeRuntime: false))
             .OfType<Jvm>();
+    }
+
+    private static List<(string HomePath, List<string> Providers)> CollectCandidates(
+        JdkFindOptions options, CancellationToken cancellationToken)
+    {
+        var order = new List<(string HomePath, List<string> Providers)>();
+        var indexByKey = options.DeduplicateHomes ? new Dictionary<string, int>(PathComparer) : null;
+
+        foreach (var provider in options.Providers)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (var candidate in provider.GetJavaHomes())
+            {
+                if (indexByKey is null)
+                {
+                    order.Add((candidate, [provider.Name]));
+                    continue;
+                }
+
+                var key = GetDeduplicationKey(candidate);
+                if (indexByKey.TryGetValue(key, out var index))
+                {
+                    // A repeated candidate from the same source records the name once
+                    // (e.g. two PATH entries leading to the same directory).
+                    if (!order[index].Providers.Contains(provider.Name))
+                        order[index].Providers.Add(provider.Name);
+                }
+                else
+                {
+                    indexByKey[key] = order.Count;
+                    order.Add((candidate, [provider.Name]));
+                }
+            }
+        }
+
+        return order;
     }
 
     private static Jvm? CreateJvm(string homePath, IReadOnlyList<string> providers, bool probeRuntime)
@@ -129,6 +180,41 @@ public static class JdkFinder
         // it adds is enrichment — release-file values keep precedence.
         var runtime = probeRuntime ? JvmRuntimeProbe.Probe(homePath) : null;
 
+        return Build(homePath, providers, release, runtime);
+    }
+
+    /// <summary>Async twin of <see cref="CreateJvm" /> for cancellation-aware callers;
+    /// a cancelled token propagates instead of counting as a broken installation.</summary>
+    private static async Task<Jvm?> CreateJvmAsync(
+        (string HomePath, List<string> Providers) entry, CancellationToken cancellationToken)
+    {
+        // The provider contract guarantees validated homes, so the release file is
+        // expected to exist; parse failures (missing or unreadable) count as no JVM.
+        IReadOnlyDictionary<string, string> release;
+        try
+        {
+            release = ReleaseFile.Parse(Path.Combine(entry.HomePath, "release"), cancellationToken);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            // An unreadable release file (access denial, ...) counts as no JVM; one bad directory must not kill the scan.
+            return null;
+        }
+
+        // The runtime probe executes the installation's own java executable; anything
+        // it adds is enrichment — release-file values keep precedence.
+        var runtime = await JvmRuntimeProbe.ProbeAsync(entry.HomePath, cancellationToken).ConfigureAwait(false);
+
+        return Build(entry.HomePath, entry.Providers, release, runtime);
+    }
+
+    private static Jvm Build(
+        string homePath,
+        IReadOnlyList<string> providers,
+        IReadOnlyDictionary<string, string> release,
+        JvmRuntimeProbe.Info? runtime)
+    {
         // The raw JAVA_VERSION string is preserved on JvmVersion.Original; unparseable
         // values degrade to the Unknown placeholder (sorts before every known version).
         var version = JvmVersion.Parse(release.GetValueOrDefault("JAVA_VERSION"));

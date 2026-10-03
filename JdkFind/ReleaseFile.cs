@@ -9,8 +9,10 @@ namespace JdkFind;
 /// </summary>
 internal static class ReleaseFile
 {
-    internal static IReadOnlyDictionary<string, string> Parse(string releaseFilePath)
+    internal static IReadOnlyDictionary<string, string> Parse(string releaseFilePath, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var entries = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var line in File.ReadLines(releaseFilePath))
         {

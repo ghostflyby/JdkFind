@@ -63,6 +63,72 @@ internal static class JvmRuntimeProbe
         }
     }
 
+    /// <summary>
+    ///     Cancellation-aware counterpart of <see cref="Probe" />. A user cancellation
+    ///     kills the child process and propagates; the internal timeout still degrades
+    ///     to null, exactly like the synchronous probe.
+    /// </summary>
+    internal static async Task<Info?> ProbeAsync(string homePath, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var java = Path.Combine(homePath, "bin", JavaHomeLayout.JavaExecutableName);
+        if (!File.Exists(java))
+            return null;
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = java,
+            Arguments = "-XshowSettings:properties -version",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        Process process;
+        try
+        {
+            process = Process.Start(startInfo)!;
+        }
+        catch (Exception exception) when (
+            exception is Win32Exception or IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            return null;
+        }
+
+        using (process)
+        {
+            try
+            {
+                var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+                _ = process.StandardOutput.ReadToEndAsync(cancellationToken);
+
+                // The 15-second cap feeds a linked source so a hung child degrades to
+                // null like before; the caller's token distinguishes a user cancel.
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeout.CancelAfter(Timeout);
+                try
+                {
+                    await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    process.Kill(true);
+                    return null;
+                }
+
+                return Parse(await stderr.ConfigureAwait(false));
+            }
+            catch (OperationCanceledException)
+            {
+                if (!process.HasExited)
+                    process.Kill(true);
+                throw;
+            }
+        }
+    }
+
     private static Info? Parse(string stderr)
     {
         var properties = new Dictionary<string, string>(StringComparer.Ordinal);

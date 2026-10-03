@@ -78,6 +78,22 @@ internal enum SubCommand
     /// error surfaces as an ArgumentException, matching the previous parser's seam.</summary>
     internal static Options Parse(string[] args)
     {
+        var tree = CreateTree(execute: null);
+        var parseResult = tree.Root.Parse(args, new ParserConfiguration { EnablePosixBundling = false });
+        if (parseResult.Errors.Count > 0)
+            throw new ArgumentException(parseResult.Errors[0].Message);
+
+        return Map(parseResult, tree);
+    }
+
+    /// <summary>
+    ///     Assembles the command tree. When <paramref name="execute" /> is given, the
+    ///     default command and both subcommands dispatch to it (Run's invocation path),
+    ///     receiving System.CommandLine's termination-signal cancellation token;
+    ///     parse-only trees stay action-less.
+    /// </summary>
+    internal static CommandTree CreateTree(Func<Options, CancellationToken, Task<int>>? execute)
+    {
         var operands = new Argument<string[]>("operands")
         {
             Description = "a digit-led value is a version prefix (21, 21.0.5); " +
@@ -162,40 +178,67 @@ internal enum SubCommand
         root.Add(info);
         root.Add(list);
 
-        // The root doubles as the default command (bare `jdkfind` locates and
-        // prints); with subcommands present the framework would otherwise demand
-        // one of them. The action is never invoked — Run owns the dispatch — this
-        // only marks the root callable.
-        root.SetAction(_ => 0);
-
         // The root command auto-injects a standard --version option; keep it and
         // let Run dispatch it like the help action.
         var versionOption = (VersionOption)root.Options.Single(option => option is VersionOption);
 
-        var parseResult = root.Parse(args, new ParserConfiguration { EnablePosixBundling = false });
-        if (parseResult.Errors.Count > 0)
-            throw new ArgumentException(parseResult.Errors[0].Message);
-
-        var infoVersion = parseResult.GetValue(version);
-        var options = new Options(parseResult, versionOption)
+        var tree = new CommandTree
         {
-            VersionPrefix = infoVersion is null ? null : ValidateVersionPrefix(infoVersion),
-            OutputJson = parseResult.GetValue(json),
-            Vendor = parseResult.GetValue(vendor),
-            Distribution = parseResult.GetValue(distribution),
-            Architecture = parseResult.GetValue(architecture),
-            Release = parseResult.GetValue(release) is { } text ? ParseRelease(text) : null,
-            JdkOnly = parseResult.GetValue(jdkOnly),
-            NoProbe = parseResult.GetValue(noProbe),
+            Root = root,
+            Info = info,
+            List = list,
+            Operands = operands,
+            Version = version,
+            Json = json,
+            Vendor = vendor,
+            Distribution = distribution,
+            Architecture = architecture,
+            Release = release,
+            JdkOnly = jdkOnly,
+            NoProbe = noProbe,
+            VersionOption = versionOption,
         };
 
-        foreach (var operand in parseResult.GetValue(operands) ?? [])
+        if (execute is null)
+        {
+            // Parse-only tree: with subcommands present the framework would demand
+            // one of them; the placeholder just marks the root (the default command)
+            // callable for bare `jdkfind`.
+            root.SetAction(_ => 0);
+        }
+        else
+        {
+            root.SetAction((parseResult, cancellationToken) => execute(Map(parseResult, tree), cancellationToken));
+            info.SetAction((parseResult, cancellationToken) => execute(Map(parseResult, tree), cancellationToken));
+            list.SetAction((parseResult, cancellationToken) => execute(Map(parseResult, tree), cancellationToken));
+        }
+
+        return tree;
+    }
+
+    /// <summary>Maps a successful parse result onto an Options instance.</summary>
+    internal static Options Map(ParseResult parseResult, CommandTree tree)
+    {
+        var infoVersion = parseResult.GetValue(tree.Version);
+        var options = new Options(parseResult, tree.VersionOption)
+        {
+            VersionPrefix = infoVersion is null ? null : ValidateVersionPrefix(infoVersion),
+            OutputJson = parseResult.GetValue(tree.Json),
+            Vendor = parseResult.GetValue(tree.Vendor),
+            Distribution = parseResult.GetValue(tree.Distribution),
+            Architecture = parseResult.GetValue(tree.Architecture),
+            Release = parseResult.GetValue(tree.Release) is { } text ? ParseRelease(text) : null,
+            JdkOnly = parseResult.GetValue(tree.JdkOnly),
+            NoProbe = parseResult.GetValue(tree.NoProbe),
+        };
+
+        foreach (var operand in parseResult.GetValue(tree.Operands) ?? [])
             ParsePositional(options, operand);
 
         // Mapped after the operand classification so legacy orderings like
         // `jdkfind java list` keep the same result.
-        options.Command = parseResult.CommandResult.Command == info ? SubCommand.Info
-            : parseResult.CommandResult.Command == list ? SubCommand.List
+        options.Command = parseResult.CommandResult.Command == tree.Info ? SubCommand.Info
+            : parseResult.CommandResult.Command == tree.List ? SubCommand.List
             : SubCommand.None;
 
         return options;

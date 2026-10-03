@@ -163,6 +163,7 @@ static JdkFind.JdkFinder.Find(int languageVersion, JdkFind.JdkFindOptions? optio
 static JdkFind.JdkFinder.GetDefault(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?
 static JdkFind.JdkFinder.GetNewest(JdkFind.JdkFindOptions? options = null) -> JdkFind.Jvm?
 static JdkFind.JdkFinder.Locate(JdkFind.JdkFindOptions? options = null) -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
+static JdkFind.JdkFinder.LocateAsync(JdkFind.JdkFindOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!>!
 static JdkFind.JdkFindOptions.CreateDefaultProviders() -> System.Collections.Generic.List<JdkFind.IJvmProvider!>!
 static JdkFind.Jvm.operator !=(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
 static JdkFind.Jvm.operator ==(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool

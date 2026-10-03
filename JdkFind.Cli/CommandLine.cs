@@ -1,3 +1,4 @@
+using System.CommandLine;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
@@ -9,6 +10,9 @@ internal static class CommandLine
     private const int ExitSuccess = 0;
     private const int ExitNotFound = 1;
     private const int ExitUsage = 2;
+
+    /// <summary>POSIX convention for a run ended by SIGINT (128 + 2).</summary>
+    private const int ExitCancelled = 130;
 
     /// <summary>Selection among matching installations: newest version first, then
     /// compiler-carrying installations preferred — stable per machine state.</summary>
@@ -22,12 +26,32 @@ internal static class CommandLine
 
     /// <summary>Injection seam for tests: pass explicit locate options to run against
     /// controlled fixtures instead of the real machine.</summary>
-    internal static int Run(string[] args, JdkFindOptions? findOptions)
+    internal static int Run(string[] args, JdkFindOptions? findOptions) =>
+        RunAsync(args, findOptions).GetAwaiter().GetResult();
+
+    /// <summary>
+    ///     Async entry point. Dispatch goes through System.CommandLine's invocation so
+    ///     the framework's termination-signal token (Ctrl+C, SIGINT, SIGTERM) reaches
+    ///     the actions — the locate pipeline (runtime probes, release-file reads)
+    ///     honors it.
+    /// </summary>
+    internal static async Task<int> RunAsync(string[] args, JdkFindOptions? findOptions = null)
     {
+        var tree = Options.CreateTree((options, cancellationToken) =>
+            ExecuteAsync(options, cancellationToken, findOptions));
+        var parseResult = tree.Root.Parse(args, new ParserConfiguration { EnablePosixBundling = false });
+
+        if (parseResult.Errors.Count > 0)
+        {
+            Console.Error.WriteLine(parseResult.Errors[0].Message);
+            Console.Error.WriteLine("Run 'jdkfind --help' for usage.");
+            return ExitUsage;
+        }
+
         Options options;
         try
         {
-            options = Options.Parse(args);
+            options = Options.Map(parseResult, tree);
         }
         catch (ArgumentException exception)
         {
@@ -42,9 +66,28 @@ internal static class CommandLine
         if (options.ShowVersion)
             return options.RenderVersion();
 
-        var matches = JdkFinder.Locate(findOptions ?? new JdkFindOptions { ProbeRuntimeProperties = !options.NoProbe })
-            .Where(jvm => MatchesFilters(jvm, options))
-            .ToList();
+        return await parseResult.InvokeAsync(new InvocationConfiguration()).ConfigureAwait(false);
+    }
+
+    /// <summary>The action shared by the default command and both subcommands:
+    /// runs the locate pipeline and prints the selected installation(s).</summary>
+    private static async Task<int> ExecuteAsync(
+        Options options, CancellationToken cancellationToken, JdkFindOptions? findOptions)
+    {
+        var locateOptions = findOptions ?? new JdkFindOptions { ProbeRuntimeProperties = !options.NoProbe };
+
+        IReadOnlyList<Jvm> located;
+        try
+        {
+            located = await JdkFinder.LocateAsync(locateOptions, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelled from a termination signal: both streams stay empty.
+            return ExitCancelled;
+        }
+
+        var matches = located.Where(jvm => MatchesFilters(jvm, options)).ToList();
 
         if (matches.Count == 0)
             return ExitNotFound;
