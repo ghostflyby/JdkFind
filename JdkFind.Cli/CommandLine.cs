@@ -37,10 +37,7 @@ internal static class CommandLine
         }
 
         if (options.ShowHelp)
-        {
-            PrintHelp();
-            return ExitSuccess;
-        }
+            return options.RenderHelp();
 
         var matches = JdkFinder.Locate(findOptions ?? new JdkFindOptions { ProbeRuntimeProperties = !options.NoProbe })
             .Where(jvm => MatchesFilters(jvm, options))
@@ -212,34 +209,4 @@ internal static class CommandLine
         writer.WriteLine($"type: {(jvm.HasCompiler ? "jdk" : "jre")}");
         writer.WriteLine($"providers: {string.Join(", ", jvm.Providers)}");
     }
-
-    private static void PrintHelp() => Console.WriteLine("""
-        Usage:
-          jdkfind [version] [tool] [options]    Print the selected home, or bin/<tool> path
-          jdkfind info [version] [options]      Print one installation's details
-          jdkfind list [options]                List all matching installations
-
-        The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
-        newest version first, installations with a compiler preferred on ties.
-
-        Options:
-          -j, --json                Write JSON to stdout (list: array; others: single object)
-              --vendor <text>       Filter by vendor substring; matches the normalized
-                                    vendor and the raw string (case-insensitive)
-              --distribution <t>    Filter by distribution substring per the foojay API
-                                    names (e.g. temurin, zulu, corretto)
-              --arch <text>         Filter by architecture substring (case-insensitive);
-                                    known aliases match too (x86_64/amd64/x64,
-                                    aarch64/arm64)
-              --release <n>         Filter by supported javac language level; covers
-                                    --release/-source/-target compilation
-              --jdk-only            Only installations that ship a compiler (skip runtimes)
-              --no-probe            Skip executing each JVM for runtime properties
-          -h, --help                Show this help
-
-        Streams: machine-readable output goes to stdout; the human-readable list and
-        details go to stderr.
-
-        Exit codes: 0 = found, 1 = none found, 2 = usage error
-        """);
 }

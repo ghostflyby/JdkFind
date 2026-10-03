@@ -60,8 +60,8 @@ removed.
 | `architecture` / `osName` | string \| null | Release file or probe |
 | `providers` | string[] | Detection sources that reported this home |
 
-Exit codes: `0` found, `1` none found, `2` usage error. When both are given,
-`--path` wins over `--json`.
+Exit codes: `0` found, `1` none found, `2` usage error. `--json` switches every
+command to machine-readable output on stdout.
 
 ## Library usage
 

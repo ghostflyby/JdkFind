@@ -78,9 +78,17 @@ public class OptionsTests
     [InlineData("21", "17")]              // two version prefixes
     [InlineData("21.0.5", "21")]          // duplicate version
     [InlineData("home", "javac", "java")] // extra positional
+    [InlineData("")]                      // empty operand
     [InlineData("21.0.5.1")]              // more than three segments
     [InlineData("21..5")]                 // empty segment
     [InlineData("21.x")]                  // non-numeric segment
     public void Parse_RejectsInvalidPositionals(params string[] args) =>
         Assert.Throws<ArgumentException>(() => Options.Parse(args));
+
+    [Theory]
+    [InlineData("21.0")]    // a release is a single language level, not a prefix
+    [InlineData("21.x")]
+    [InlineData("")]
+    public void Parse_RejectsNonIntegerRelease(string value) =>
+        Assert.Throws<ArgumentException>(() => Options.Parse(["--release", value]));
 }

@@ -1,3 +1,7 @@
+using System.CommandLine;
+using System.CommandLine.Help;
+using System.Globalization;
+
 namespace JdkFind.Cli;
 
 internal enum SubCommand
@@ -7,8 +11,38 @@ internal enum SubCommand
     List,
 }
 
+/// <summary>
+///     The parsed jdkfind command line. Option and operand definitions are declared
+///     on System.CommandLine's root command; Parse drives the framework parser and
+///     maps its result onto this type. Positional classification (subcommand, version
+///     prefix, bin tool) stays here, because the framework cannot express positionals
+///     whose meaning depends on the first character.
+/// </summary>
 internal sealed class Options
 {
+    /// <summary>Prose carried at the top of the generated help: usage lines,
+    /// selection semantics, stream discipline and exit codes.</summary>
+    private const string RootDescription = """
+        jdkfind [version] [tool] [options]    Print the selected home, or bin/<tool> path
+        jdkfind info [version] [options]      Print one installation's details
+        jdkfind list [options]                List all matching installations
+
+        The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
+        newest version first, installations with a compiler preferred on ties.
+
+        Streams: machine-readable output goes to stdout; the human-readable list and
+        details go to stderr.
+
+        Exit codes: 0 = found, 1 = none found, 2 = usage error
+        """;
+
+    private readonly ParseResult parseResult;
+
+    private Options(ParseResult parseResult) => this.parseResult = parseResult;
+
+    /// <summary>True when the framework's help action was requested (-h/--help).</summary>
+    internal bool ShowHelp => parseResult.Action is HelpAction;
+
     internal SubCommand Command { get; private set; }
 
     /// <summary>Positional version prefix (numeric, dot-separated, e.g. "21", "21.0", "21.0.5").</summary>
@@ -16,8 +50,6 @@ internal sealed class Options
 
     /// <summary>Positional bin tool name (non-numeric, e.g. "java", "javac") for the default command.</summary>
     internal string? Tool { get; private set; }
-
-    internal bool ShowHelp { get; private set; }
 
     internal bool OutputJson { get; private set; }
 
@@ -33,65 +65,130 @@ internal sealed class Options
 
     internal bool NoProbe { get; private set; }
 
+    /// <summary>Parses the arguments through System.CommandLine; the first parse
+    /// error surfaces as an ArgumentException, matching the previous parser's seam.</summary>
     internal static Options Parse(string[] args)
     {
-        var options = new Options();
-        for (var i = 0; i < args.Length; i++)
+        var operands = new Argument<string[]>("operands")
         {
-            var arg = args[i];
-            if (!arg.StartsWith('-'))
-            {
-                ParsePositional(options, arg);
-                continue;
-            }
+            Description = "'info' or 'list' selects the subcommand; a digit-led value is a version " +
+                          "prefix (21, 21.0.5); anything else is a bin tool name (java, javac)",
+        };
 
-            var (name, inlineValue) = SplitOption(arg);
-            switch (name)
-            {
-                case "-h" or "--help":
-                    options.ShowHelp = true;
-                    break;
+        var json = new Option<bool>("--json", "-j")
+        {
+            Description = "Write JSON to stdout (list: array; others: single object)",
+        };
 
-                case "-j" or "--json":
-                    options.OutputJson = true;
-                    break;
+        var vendor = new Option<string>("--vendor")
+        {
+            Description = "Filter by vendor substring; matches the normalized vendor and the raw string (case-insensitive)",
+        };
 
-                case "--vendor":
-                    options.Vendor = TakeValue(ref i, inlineValue, args, name);
-                    break;
+        var distribution = new Option<string>("--distribution")
+        {
+            Description = "Filter by distribution substring per the foojay API names (e.g. temurin, zulu, corretto)",
+        };
 
-                case "--distribution":
-                    options.Distribution = TakeValue(ref i, inlineValue, args, name);
-                    break;
+        var architecture = new Option<string>("--arch")
+        {
+            Description = "Filter by architecture substring (case-insensitive); known aliases match too (x86_64/amd64/x64, aarch64/arm64)",
+        };
 
-                case "--arch":
-                    options.Architecture = TakeValue(ref i, inlineValue, args, name);
-                    break;
+        var release = new Option<string>("--release")
+        {
+            Description = "Filter by supported javac language level; covers --release/-source/-target compilation",
+        };
 
-                case "--release":
-                    options.Release = int.Parse(
-                        ValidateVersionPrefix(TakeValue(ref i, inlineValue, args, name)),
-                        System.Globalization.CultureInfo.InvariantCulture);
-                    break;
+        var jdkOnly = new Option<bool>("--jdk-only")
+        {
+            Description = "Only installations that ship a compiler (skip runtimes)",
+        };
 
-                case "--jdk-only":
-                    options.JdkOnly = true;
-                    break;
+        var noProbe = new Option<bool>("--no-probe")
+        {
+            Description = "Skip executing each JVM for runtime properties",
+        };
 
-                case "--no-probe":
-                    options.NoProbe = true;
-                    break;
+        var root = new RootCommand(RootDescription);
+        root.Add(operands);
+        root.Add(json);
+        root.Add(vendor);
+        root.Add(distribution);
+        root.Add(architecture);
+        root.Add(release);
+        root.Add(jdkOnly);
+        root.Add(noProbe);
 
-                default:
-                    throw new ArgumentException($"Unknown option '{arg}'.");
-            }
-        }
+        // The root command auto-injects a --version option; jdkfind's grammar keeps
+        // rejecting it (exit 2) as it did before the framework adoption.
+        foreach (var option in root.Options.Where(option => option is VersionOption).ToArray())
+            root.Options.Remove(option);
+
+        var parseResult = WithInvariantUiCulture(() =>
+            root.Parse(args, new ParserConfiguration { EnablePosixBundling = false }));
+        if (parseResult.Errors.Count > 0)
+            throw new ArgumentException(parseResult.Errors[0].Message);
+
+        var options = new Options(parseResult)
+        {
+            OutputJson = parseResult.GetValue(json),
+            Vendor = parseResult.GetValue(vendor),
+            Distribution = parseResult.GetValue(distribution),
+            Architecture = parseResult.GetValue(architecture),
+            Release = parseResult.GetValue(release) is { } text ? ParseRelease(text) : null,
+            JdkOnly = parseResult.GetValue(jdkOnly),
+            NoProbe = parseResult.GetValue(noProbe),
+        };
+
+        foreach (var operand in parseResult.GetValue(operands) ?? [])
+            ParsePositional(options, operand);
 
         return options;
     }
 
+    /// <summary>Prints the framework-generated help to stdout; only meaningful
+    /// when ShowHelp is true.</summary>
+    internal int RenderHelp()
+    {
+        // The framework labels the usage line after the entry assembly (the test
+        // host under tests, JdkFind.Cli for the shipped tool); jdkfind's grammar
+        // is always invoked as jdkfind, so patch the label before it reaches stdout.
+        var buffer = new StringWriter();
+        var exit = WithInvariantUiCulture(() =>
+            parseResult.Invoke(new InvocationConfiguration { Output = buffer }));
+        Console.Out.Write(buffer.ToString().Replace("JdkFind.Cli", "jdkfind"));
+        return exit;
+    }
+
+    /// <summary>Runs the action with the invariant UI culture: System.CommandLine
+    /// localizes its help and error strings from the OS culture, while jdkfind's
+    /// output is English-only by design.</summary>
+    private static T WithInvariantUiCulture<T>(Func<T> action)
+    {
+        var previous = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+        try
+        {
+            return action();
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
     private static void ParsePositional(Options options, string arg)
     {
+        if (arg.Length == 0)
+            throw new ArgumentException("Unexpected argument ''.");
+
+        // The framework routes option-looking tokens it cannot match into the
+        // operand collection; jdkfind's grammar keeps rejecting them as unknown
+        // options (exit 2) rather than reading them as tool names.
+        if (arg.StartsWith('-'))
+            throw new ArgumentException($"Unknown option '{arg}'.");
+
         switch (arg)
         {
             case "info":
@@ -135,17 +232,10 @@ internal sealed class Options
         return arg;
     }
 
-    private static (string Name, string? InlineValue) SplitOption(string arg)
-    {
-        var separator = arg.IndexOf('=');
-        return separator < 0 ? (arg, null) : (arg[..separator], arg[(separator + 1)..]);
-    }
-
-    private static string TakeValue(ref int i, string? inlineValue, string[] args, string name)
-    {
-        if (inlineValue is not null)
-            return inlineValue;
-
-        return i + 1 >= args.Length ? throw new ArgumentException($"Missing value for '{name}'.") : args[++i];
-    }
+    /// <summary>The release filter is a single integer language level — unlike the
+    /// version prefix, which may carry up to three dot-separated segments.</summary>
+    private static int ParseRelease(string text) =>
+        text.Length > 0 && text.All(char.IsAsciiDigit)
+            ? int.Parse(text, CultureInfo.InvariantCulture)
+            : throw new ArgumentException($"Invalid release '{text}'.");
 }
