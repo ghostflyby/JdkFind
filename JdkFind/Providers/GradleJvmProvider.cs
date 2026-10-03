@@ -6,10 +6,13 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class GradleJvmProvider(string? gradleUserHome) : ICommonPrefixJvmProvider
 {
+    /// <inheritdoc />
     public string Name => "gradle";
 
+    /// <summary>Scans the default Gradle user home (or <c>GRADLE_USER_HOME</c>).</summary>
     public GradleJvmProvider() : this(ResolveDefaultHome()) { }
 
+    /// <inheritdoc />
     public string? CommonPrefix =>
         gradleUserHome != null ? Path.Combine(gradleUserHome, "jdks") : null;
 

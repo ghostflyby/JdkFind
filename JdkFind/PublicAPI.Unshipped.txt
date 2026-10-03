@@ -156,6 +156,7 @@ JdkFind.Providers.WindowsRegistryJvmProvider
 JdkFind.Providers.WindowsRegistryJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
 JdkFind.Providers.WindowsRegistryJvmProvider.Name.get -> string!
 JdkFind.Providers.WindowsRegistryJvmProvider.WindowsRegistryJvmProvider() -> void
+JdkFind.Providers.WindowsRegistryJvmProvider.WindowsRegistryJvmProvider(string! rootPath, int subKeyDepth) -> void
 override JdkFind.JdkFinder.Equals(object? obj) -> bool
 override JdkFind.JdkFinder.GetHashCode() -> int
 override JdkFind.JdkFinder.ToString() -> string!

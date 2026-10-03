@@ -58,9 +58,10 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
   materializes all providers before yielding, it does not stream incrementally.
 - Injection constructors take clean non-null roots; env-var lookups and null
   handling stay inside the parameterless constructors' default resolution.
-- `GetDefault`: `JAVA_HOME` wins when resolvable, otherwise the newest JVM
-  by feature version with the full version as tiebreaker (`1.8.0_402` style
-  versions are handled).
+- The facade exposes no selection helpers: callers filter and pick over the
+  returned installations themselves. The CLI selects newest version first with
+  compiler-carrying installations preferred (`1.8.0_402` style versions are
+  handled).
 - Discovery is synchronous by design: every source is local file-system or
   registry I/O measured in milliseconds, and the BCL has no async
   directory-enumeration API to make it real. A future genuinely-async provider

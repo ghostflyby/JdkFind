@@ -3,10 +3,10 @@
 Locate installed JDKs on Windows, macOS and Linux — a .NET library and the
 `jdkfind` dotnet tool.
 
-- **Library** (`JdkFind`): net10.0, zero third-party dependencies,
-  trim/AOT-compatible (`IsAotCompatible`).
-- **Tool** (`JdkFind.Cli`): the `jdkfind` command, packaged as a portable
-  dotnet tool.
+- **Library** (`JdkFind`, assembly `JdkFind.Core.dll`): net10.0, zero
+  third-party dependencies, trim/AOT-compatible (`IsAotCompatible`).
+- **Tool** (`JdkFind.Cli`, assembly `jdkfind.dll`): the `jdkfind` command,
+  packaged as a portable dotnet tool.
 
 ## Install
 
@@ -63,7 +63,7 @@ removed.
 Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled.
 `--json` switches every command to machine-readable output on stdout.
 Ctrl+C / SIGINT / SIGTERM cancel the scan: running runtime probes are killed
-and the process exits with `130` after a short grace period.
+and the process exits with `130`.
 
 ## Library usage
 
@@ -91,7 +91,7 @@ IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
 | `/usr/lib/jvm` | Linux |
 | `%ProgramFiles%` vendor directories, Windows registry (JavaSoft, Adoptium, Microsoft, Azul, Corretto) | Windows |
 | `~/.jdks` (IntelliJ) | Windows, Linux |
-| SDKMAN! (`SDKMAN_DIR`), Gradle (`GRADLE_USER_HOME`), Jabba (`JABBA_HOME`), Scoop (`SCOOP`) | per tool |
+| SDKMAN! (`SDKMAN_DIR`), Gradle (`GRADLE_USER_HOME`), Jabba (`JABBA_HOME`), Scoop (`SCOOP`/`SCOOP_GLOBAL`) | per tool |
 
 Environment variables always take precedence over the default locations.
 Missing or unreadable locations are skipped silently; results are

@@ -7,8 +7,10 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class JabbaJvmProvider(string? home) : ICommonPrefixesJvmProvider
 {
+    /// <inheritdoc />
     public string Name => "jabba";
 
+    /// <summary>Scans the default Jabba home (or <c>JABBA_HOME</c>).</summary>
     public JabbaJvmProvider() : this(ResolveDefaultHome())
     {
     }

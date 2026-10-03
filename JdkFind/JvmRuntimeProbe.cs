@@ -55,7 +55,7 @@ internal static class JvmRuntimeProbe
             _ = process.StandardOutput.ReadToEndAsync();
             if (!process.WaitForExit(Timeout))
             {
-                process.Kill(true);
+                TryKill(process);
                 return null;
             }
 

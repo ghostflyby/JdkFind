@@ -6,6 +6,7 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes) : ICommonPrefixesJvmProvider
 {
+    /// <inheritdoc />
     public string Name => "windows-programs";
 
     private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
@@ -20,6 +21,7 @@ public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes)
         "BellSoft"
     ];
 
+    /// <summary>Scans the vendor directories under <c>%ProgramFiles%</c>.</summary>
     public WindowsProgramFilesJvmProvider() : this(ResolveDefaultPrefixes())
     {
     }
