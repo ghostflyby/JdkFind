@@ -27,16 +27,4 @@
         <ProjectReference Include="..\JdkFind.Cli\JdkFind.Cli.csproj" />
     </ItemGroup>
 
-    <!-- The .NET SDK's dotnet test forwards its "nologo" option to this MTP
-         test application, but Microsoft.Testing.Platform 2.4.0 does not define
-         it; without a provider the app fails argument parsing with exit code 5
-         and dotnet test reports zero executed tests. Registering the hook adds
-         a compatibility "nologo" option, see DotnetTestCompatibility.cs. -->
-    <ItemGroup>
-        <TestingPlatformBuilderHook Include="7C6F2E4A-9B1D-4C3A-8E5F-2A4B6C8D0E1F">
-            <DisplayName>.NET SDK dotnet-test compatibility</DisplayName>
-            <TypeFullName>JdkFind.Tests.DotnetTestCompatibilityBuilderHook</TypeFullName>
-        </TestingPlatformBuilderHook>
-    </ItemGroup>
-
 </Project>
