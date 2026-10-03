@@ -86,9 +86,20 @@ internal static partial class CommandRunner
                 startInfo.ArgumentList.Add(argument);
         }
 
-        using var process = Process.Start(startInfo)!;
-        process.WaitForExit();
-        return process.ExitCode;
+        // Since .NET 8.0.4 the runtime validates batch-target arguments itself and
+        // throws for combinations its own rules consider unsafe; surface that as a
+        // clean error instead of a stack trace.
+        try
+        {
+            using var process = Process.Start(startInfo)!;
+            process.WaitForExit();
+            return process.ExitCode;
+        }
+        catch (InvalidOperationException exception)
+        {
+            Console.Error.WriteLine($"jdkfind: cannot execute '{commandArgs[0]}': {exception.Message}");
+            return ExitCannotExecute;
+        }
     }
 
     /// <summary>Resolves a command to an executable file the way a Windows shell
