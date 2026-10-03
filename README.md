@@ -74,8 +74,8 @@ using JdkFind;
 foreach (var jvm in JdkFinder.Locate())
     Console.WriteLine($"{jvm.LanguageVersion} {jvm.Vendor} -> {jvm.Home.FullName}");
 
-// JAVA_HOME if it points at a found JDK, otherwise the newest one.
-Jvm? defaultJvm = JdkFinder.GetDefault();
+// Async counterpart; honours the cancellation token for probes and release reads.
+IReadOnlyList<Jvm> jvms = await JdkFinder.LocateAsync(cancellationToken);
 ```
 
 ## Discovery sources
