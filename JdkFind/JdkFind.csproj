@@ -5,6 +5,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsAotCompatible>true</IsAotCompatible>
+        <!-- Shortest executable name, no dll name collisions. -->
+        <AssemblyName>JdkFind.Core</AssemblyName>
         <!-- Every warning is a build error (same convention as dotnet-pty), so an
              unclaimed public symbol (RS0016) or an unclaimed removal (RS0017)
              fails the build instead of slipping past as a warning. -->

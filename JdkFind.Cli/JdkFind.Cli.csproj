@@ -6,6 +6,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <RootNamespace>JdkFind.Cli</RootNamespace>
+        <!-- Shortest executable name, no dll name collisions. -->
+        <AssemblyName>jdkfind</AssemblyName>
         <IsAotCompatible>true</IsAotCompatible>
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>jdkfind</ToolCommandName>
