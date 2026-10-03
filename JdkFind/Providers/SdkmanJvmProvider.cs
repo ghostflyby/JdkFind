@@ -6,10 +6,13 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class SdkmanJvmProvider(string? commonPrefix) : ICommonPrefixJvmProvider
 {
+    /// <inheritdoc />
     public string Name => "sdkman";
 
+    /// <summary>Scans the SDKMAN! candidates directory.</summary>
     public SdkmanJvmProvider() : this(ResolveDefaultPrefix()) { }
 
+    /// <inheritdoc />
     public string? CommonPrefix => commonPrefix;
 
     private static string? ResolveDefaultPrefix()

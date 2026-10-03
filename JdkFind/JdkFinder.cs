@@ -43,8 +43,9 @@ public sealed record JdkFinder
     /// <summary>
     ///     Async counterpart of <see cref="Locate" /> for callers that own a
     ///     cancellation token. The discovery stays local I/O; the token buys a prompt
-    ///     abort of the runtime probes (the child java processes are killed) and of
-    ///     the release-file reads. Collect-then-merge like the sync pipeline.
+    ///     abort of the runtime probes (the child java processes are killed), and
+    ///     release-file reads check the token before starting. Collect-then-merge
+    ///     like the sync pipeline.
     /// </summary>
     public async Task<IReadOnlyList<Jvm>> LocateAsync(CancellationToken cancellationToken = default)
     {

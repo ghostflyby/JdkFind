@@ -8,10 +8,12 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class MacOsJvmProvider(IEnumerable<string> prefixes) : ICommonPrefixesJvmProvider
 {
+    /// <inheritdoc />
     public string Name => "macos";
 
     private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
+    /// <summary>Scans the system-wide and per-user macOS JVM directories.</summary>
     public MacOsJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
     IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => prefixList;

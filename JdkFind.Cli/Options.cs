@@ -34,7 +34,7 @@ internal sealed class Options
         Streams: machine-readable output goes to stdout; the human-readable list and
         details go to stderr.
 
-        Exit codes: 0 = found, 1 = none found, 2 = usage error
+        Exit codes: 0 = found, 1 = none found, 2 = usage error, 130 = cancelled
         """;
 
     private readonly ParseResult parseResult;
@@ -75,7 +75,7 @@ internal sealed class Options
     internal bool NoProbe { get; private set; }
 
     /// <summary>Parses the arguments through System.CommandLine; the first parse
-    /// error surfaces as an ArgumentException, matching the previous parser's seam.</summary>
+    /// error surfaces as an ArgumentException.</summary>
     internal static Options Parse(string[] args)
     {
         var tree = CreateTree(execute: null);

@@ -62,6 +62,7 @@ public sealed record Jvm
     /// <summary>Raw <c>OS_ARCH</c> value, falling back to the probed <c>os.arch</c>.</summary>
     public string? Architecture { get; init; }
 
+    /// <summary>Summarizes the installation: language version, full version, distribution and home.</summary>
     public override string ToString() =>
         $"{LanguageVersion?.ToString() ?? "?"} ({Version}) {Distribution} — {Home.FullName}";
 }

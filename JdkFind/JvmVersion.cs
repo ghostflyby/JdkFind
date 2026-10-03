@@ -62,6 +62,7 @@ public readonly record struct JvmVersion : IComparable<JvmVersion>,
     /// <summary>A placeholder for unparseable values; it sorts before every known version.</summary>
     public static JvmVersion Unknown(string original = "") => new(new Version(0, 0), false, original);
 
+    /// <summary>Compares by core version; at equal cores the release outranks its pre-release builds.</summary>
     public int CompareTo(JvmVersion other)
     {
         var core = Core.CompareTo(other.Core);
@@ -70,14 +71,19 @@ public readonly record struct JvmVersion : IComparable<JvmVersion>,
         return core != 0 ? core : other.IsPreRelease.CompareTo(IsPreRelease);
     }
 
+    /// <summary>Indicates whether the left version orders strictly before the right.</summary>
     public static bool operator <(JvmVersion left, JvmVersion right) => left.CompareTo(right) < 0;
 
+    /// <summary>Indicates whether the left version orders strictly after the right.</summary>
     public static bool operator >(JvmVersion left, JvmVersion right) => left.CompareTo(right) > 0;
 
+    /// <summary>Indicates whether the left version orders before or equal to the right.</summary>
     public static bool operator <=(JvmVersion left, JvmVersion right) => left.CompareTo(right) <= 0;
 
+    /// <summary>Indicates whether the left version orders after or equal to the right.</summary>
     public static bool operator >=(JvmVersion left, JvmVersion right) => left.CompareTo(right) >= 0;
 
+    /// <summary>Returns the original version string.</summary>
     public override string ToString() => Original;
 
     private static string CutAt(string value, char separator)

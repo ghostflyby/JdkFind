@@ -8,10 +8,12 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : ICommonPrefixesJvmProvider
 {
+    /// <inheritdoc />
     public string Name => "homebrew";
 
     private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
+    /// <summary>Scans the conventional Homebrew prefixes and <c>HOMEBREW_PREFIX</c>.</summary>
     public HomebrewJvmProvider() : this(ResolveDefaultPrefixes())
     {
     }

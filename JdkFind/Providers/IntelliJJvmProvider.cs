@@ -7,10 +7,13 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class IntelliJJvmProvider(string? commonPrefix) : ICommonPrefixJvmProvider
 {
+    /// <inheritdoc />
     public string Name => "intellij";
 
+    /// <summary>Scans the default <c>~/.jdks</c> location.</summary>
     public IntelliJJvmProvider() : this(ResolveDefaultPrefix()) { }
 
+    /// <inheritdoc />
     public string? CommonPrefix => commonPrefix;
 
     private static string? ResolveDefaultPrefix()

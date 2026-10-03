@@ -14,7 +14,7 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class WindowsRegistryJvmProvider : IJvmProvider
 {
-    private static readonly (string Path, int Depth)[] RegistryRoots =
+    private static readonly (string Path, int Depth)[] DefaultRoots =
     [
         (@"SOFTWARE\JavaSoft", 2),
         (@"SOFTWARE\Eclipse Adoptium\JDK", 3),
@@ -23,19 +23,33 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
         (@"SOFTWARE\Amazon Corretto", 3),
     ];
 
+    private readonly (string Path, int Depth)[] roots;
+
+    /// <summary>Scans the vendor roots known to publish <c>JavaHome</c> values.</summary>
+    public WindowsRegistryJvmProvider() : this(DefaultRoots) { }
+
+    /// <summary>Scans a single explicit registry root (relative to HKLM's 64-bit view)
+    /// down to <paramref name="subKeyDepth" /> subkey levels.</summary>
+    public WindowsRegistryJvmProvider(string rootPath, int subKeyDepth)
+        : this([(rootPath, subKeyDepth)]) { }
+
+    private WindowsRegistryJvmProvider((string Path, int Depth)[] roots) => this.roots = roots;
+
+    /// <inheritdoc />
     public string Name => "windows-registry";
 
+    /// <inheritdoc />
     public IEnumerable<string> GetJavaHomes() =>
         OperatingSystem.IsWindows() ? CollectHomes() : [];
 
     [SupportedOSPlatform("windows")]
-    private static List<string> CollectHomes()
+    private List<string> CollectHomes()
     {
         var homes = new List<string>();
         try
         {
             using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            foreach (var (rootPath, depth) in RegistryRoots)
+            foreach (var (rootPath, depth) in roots)
             {
                 using var root = baseKey.OpenSubKey(rootPath);
                 if (root is not null)
@@ -54,9 +68,10 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
     [SupportedOSPlatform("windows")]
     private static void Collect(RegistryKey key, int remainingDepth, ICollection<string> homes)
     {
-        if (key.GetValue("JavaHome") is string { Length: > 0 } javaHome)
+        if (key.GetValue("JavaHome") is string { Length: > 0 } javaHome
+            && JavaHomeLayout.Probe(javaHome) is { } home)
         {
-            homes.Add(javaHome);
+            homes.Add(home);
             return;
         }
 

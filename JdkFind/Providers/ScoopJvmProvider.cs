@@ -8,10 +8,12 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class ScoopJvmProvider(IEnumerable<string> prefixes) : ICommonPrefixesJvmProvider
 {
+    /// <inheritdoc />
     public string Name => "scoop";
 
     private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
+    /// <summary>Scans the <c>SCOOP</c>/<c>SCOOP_GLOBAL</c> locations, or the default per-user install.</summary>
     public ScoopJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
     IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() =>
