@@ -91,7 +91,7 @@ IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
 | `JAVA_HOME`, `PATH` entries | all |
 | `/System/Library/Java/JavaVirtualMachines` (system), `/Library/Java/JavaVirtualMachines` (machine) and `~/Library/Java/JavaVirtualMachines` (per-user; also IntelliJ's download target) | macOS |
 | Homebrew OpenJDK kegs (`HOMEBREW_PREFIX`, `/opt/homebrew`, …) | macOS, Linux |
-| `/usr/lib/jvm`, `/usr/java`, `/usr/lib64/jvm`, `/usr/lib32/jvm`, `/opt/jdk`, `/opt/jdks`, `/opt/ibm`, `/app/jdk`, Gentoo `openjdk-*`/`openj9-*` (`/usr/lib`, `/usr/lib64`, `/opt`), `$SNAP` mirrors | Linux |
+| `/usr/lib/jvm`, `/usr/java`, `/usr/lib64/jvm`, `/usr/lib32/jvm`, `/opt/jdk`, `/opt/jdks`, `/opt/ibm`, `/app/jdk`, Gentoo installs (`/usr/lib`, `/usr/lib64`, `/opt`), `$SNAP` mirrors | Linux |
 | `/usr/local` ports layout (`openjdk*`) | FreeBSD |
 | `%ProgramFiles%`/`%ProgramFiles(x86)%` vendor directories (Java, Eclipse Adoptium, AdoptOpenJDK, Microsoft, Zulu, Amazon Corretto, BellSoft), Windows registry (JavaSoft, Adoptium, Microsoft, Azul, Corretto, AdoptOpenJDK, IBM Semeru, BellSoft — 64+32-bit views) | Windows |
 | `~/.jdks` (IntelliJ) | Windows, Linux |

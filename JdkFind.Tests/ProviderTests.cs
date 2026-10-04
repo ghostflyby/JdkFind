@@ -97,6 +97,8 @@ public class ProviderTests : IDisposable
 
         var a = TestJdk.Create(temp.FullPath, "21.0.5", "usr", "lib64", "jvm", "temurin-21");
         var b = TestJdk.Create(temp.FullPath, "17.0.2", "usr", "java", "jdk-17");
+        // A non-home child of a scanned prefix must be filtered by the layout probe.
+        Directory.CreateDirectory(Path.Combine(temp.FullPath, "usr", "lib64", "jvm", "not-a-home"));
         var provider = new LinuxJvmProvider(
         [
             Path.Combine(temp.FullPath, "usr", "lib64", "jvm"),

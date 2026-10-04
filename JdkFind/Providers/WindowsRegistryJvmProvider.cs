@@ -77,10 +77,18 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
     [SupportedOSPlatform("windows")]
     private static void Collect(RegistryKey key, int remainingDepth, ICollection<string> homes)
     {
+        // BellSoft's MSI writes InstallationPath; the other vendors write JavaHome.
         if (key.GetValue("JavaHome") is string { Length: > 0 } javaHome
             && JavaHomeLayout.Probe(javaHome) is { } home)
         {
             homes.Add(home);
+            return;
+        }
+
+        if (key.GetValue("InstallationPath") is string { Length: > 0 } installationPath
+            && JavaHomeLayout.Probe(installationPath) is { } installHome)
+        {
+            homes.Add(installHome);
             return;
         }
 

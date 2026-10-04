@@ -9,20 +9,17 @@ namespace JdkFind.Providers;
 ///     <c>/usr/local</c> is scanned, and inside a snap (<c>$SNAP</c>) the JVM
 ///     directories are also scanned under the snap mount.
 /// </summary>
-public sealed class LinuxJvmProvider : ICommonPrefixJvmProvider
+public sealed class LinuxJvmProvider : ICommonPrefixJvmProvider, ICommonPrefixesJvmProvider
 {
     private readonly string? commonPrefix;
-    private readonly string[]? scanPrefixes;
+    private readonly string[] scanPrefixes;
 
-    /// <summary>Scans the full platform list on Linux and <c>/usr/lib/jvm</c> plus
-    /// <c>/usr/local</c> on FreeBSD; nothing elsewhere.</summary>
+    /// <summary>Scans the full platform list on Linux and <c>/usr/local</c> on
+    /// FreeBSD; nothing elsewhere.</summary>
     public LinuxJvmProvider()
     {
-        if (OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD())
-        {
-            commonPrefix = "/usr/lib/jvm";
-            scanPrefixes = DefaultScanPrefixes().ToArray();
-        }
+        commonPrefix = OperatingSystem.IsFreeBSD() ? "/usr/local" : "/usr/lib/jvm";
+        scanPrefixes = DefaultScanPrefixes().ToArray();
     }
 
     /// <summary>Scans exactly one prefix directory — the injection seam for callers
@@ -30,7 +27,7 @@ public sealed class LinuxJvmProvider : ICommonPrefixJvmProvider
     public LinuxJvmProvider(string? commonPrefix)
     {
         this.commonPrefix = commonPrefix;
-        scanPrefixes = commonPrefix is null ? null : [commonPrefix];
+        scanPrefixes = commonPrefix is null ? [] : [commonPrefix];
     }
 
     /// <summary>Test seam: scans exactly the given prefix directories.</summary>
@@ -47,16 +44,7 @@ public sealed class LinuxJvmProvider : ICommonPrefixJvmProvider
     /// platform is not covered.</summary>
     public string? CommonPrefix => commonPrefix;
 
-    /// <inheritdoc />
-    public IEnumerable<string> GetJavaHomes()
-    {
-        if (scanPrefixes is null)
-            yield break;
-
-        foreach (var prefix in scanPrefixes)
-            foreach (var home in JvmScanning.EnumerateGuarded(prefix))
-                yield return home;
-    }
+    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => scanPrefixes;
 
     private static IEnumerable<string> DefaultScanPrefixes()
     {

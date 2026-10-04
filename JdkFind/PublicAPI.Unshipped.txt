@@ -4,4 +4,3 @@ JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider() -> void
 JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider(string? asdfDataHome) -> void
 JdkFind.Providers.AsdfJvmProvider.CommonPrefix.get -> string?
 JdkFind.Providers.AsdfJvmProvider.Name.get -> string!
-JdkFind.Providers.LinuxJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
