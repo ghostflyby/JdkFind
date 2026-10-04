@@ -24,7 +24,7 @@ internal static class JvmRuntimeProbe
     /// <summary>Probes the candidate; null when the java executable is missing, broken, or too slow.</summary>
     internal static Info? Probe(string homePath)
     {
-        var java = Path.Combine(homePath, "bin", JavaHomeLayout.JavaExecutableName);
+        var java = JavaHomeLayout.JavaExecutablePath(homePath);
         if (!File.Exists(java))
             return null;
 
@@ -72,7 +72,7 @@ internal static class JvmRuntimeProbe
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var java = Path.Combine(homePath, "bin", JavaHomeLayout.JavaExecutableName);
+        var java = JavaHomeLayout.JavaExecutablePath(homePath);
         if (!File.Exists(java))
             return null;
 

@@ -56,6 +56,59 @@ public class ProviderTests : IDisposable
     }
 
     [Fact]
+    public void Asdf_ScansInjectedDataHome()
+    {
+        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "installs", "java", "21.0.5");
+        var provider = new AsdfJvmProvider(temp.FullPath);
+
+        Assert.Equal("asdf", provider.Name);
+        Assert.Equal([jdk], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Asdf_MissingInstallsDirectory_YieldsNothing()
+    {
+        var provider = new AsdfJvmProvider(Path.Combine(temp.FullPath, "missing"));
+
+        Assert.Empty(provider.GetHomes());
+    }
+
+    [Fact]
+    public void Probe_AcceptsJdk8InnerJreLayout()
+    {
+        var home = Path.Combine(temp.FullPath, "jdk8");
+        Directory.CreateDirectory(Path.Combine(home, "jre", "bin"));
+        File.WriteAllText(Path.Combine(home, "jre", "bin", JavaHomeLayout.JavaExecutableName), string.Empty);
+        File.WriteAllText(Path.Combine(home, "release"), "JAVA_VERSION=\"1.8.0_402\"");
+
+        // The home is the top directory; the java executable resolves through the
+        // inner JRE layout.
+        Assert.Equal(home, JavaHomeLayout.Probe(home));
+        Assert.Equal(
+            Path.Combine(home, "jre", "bin", JavaHomeLayout.JavaExecutableName),
+            JavaHomeLayout.JavaExecutablePath(home));
+    }
+
+    [Fact]
+    public void Linux_ScansPrefixList()
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        var a = TestJdk.Create(temp.FullPath, "21.0.5", "usr", "lib64", "jvm", "temurin-21");
+        var b = TestJdk.Create(temp.FullPath, "17.0.2", "usr", "java", "jdk-17");
+        // A non-home child of a scanned prefix must be filtered by the layout probe.
+        Directory.CreateDirectory(Path.Combine(temp.FullPath, "usr", "lib64", "jvm", "not-a-home"));
+        var provider = new LinuxJvmProvider(
+        [
+            Path.Combine(temp.FullPath, "usr", "lib64", "jvm"),
+            Path.Combine(temp.FullPath, "usr", "java"),
+        ]);
+
+        Assert.Equal([a, b], provider.GetHomes());
+    }
+
+    [Fact]
     public void IntelliJ_ScansInjectedPrefix()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "temurin-21");

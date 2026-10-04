@@ -1,2 +1,6 @@
 #nullable enable
-
+JdkFind.Providers.AsdfJvmProvider
+JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider() -> void
+JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider(string? asdfDataHome) -> void
+JdkFind.Providers.AsdfJvmProvider.CommonPrefix.get -> string?
+JdkFind.Providers.AsdfJvmProvider.Name.get -> string!

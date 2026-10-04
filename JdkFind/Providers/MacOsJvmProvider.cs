@@ -2,6 +2,7 @@ namespace JdkFind.Providers;
 
 /// <summary>
 ///     Scans the macOS JVM directories: the system-wide
+///     <c>/System/Library/Java/JavaVirtualMachines</c>, the machine-wide
 ///     <c>/Library/Java/JavaVirtualMachines</c> and the per-user
 ///     <c>~/Library/Java/JavaVirtualMachines</c>. Together they cover everything
 ///     <c>/usr/libexec/java_home</c> reports, without spawning it.
@@ -25,6 +26,7 @@ public sealed class MacOsJvmProvider(IEnumerable<string> prefixes) : ICommonPref
 
         var prefixes = new List<string>
         {
+            "/System/Library/Java/JavaVirtualMachines",
             "/Library/Java/JavaVirtualMachines",
         };
 

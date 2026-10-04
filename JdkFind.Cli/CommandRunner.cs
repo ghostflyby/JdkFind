@@ -20,18 +20,22 @@ internal static partial class CommandRunner
         var home = jvm.Home.FullName;
         var bin = Path.Combine(home, "bin");
 
+        // jre/bin covers JDK 8 inner-JRE homes whose top-level bin has no java.
+        var javaDirectories = new[] { bin, Path.Combine(home, "jre", "bin") };
+        var pathValue = string.Join(Path.PathSeparator, javaDirectories.Append(Environment.GetEnvironmentVariable("PATH") ?? string.Empty));
+
         if (OperatingSystem.IsWindows())
         {
             // The Windows process block reflects these, and the spawned child inherits it.
             Environment.SetEnvironmentVariable("JAVA_HOME", home);
-            Environment.SetEnvironmentVariable("PATH", bin + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"));
+            Environment.SetEnvironmentVariable("PATH", pathValue);
             return Spawn(commandArgs);
         }
 
         // Environment.SetEnvironmentVariable does not reach the native environ that
         // execvp reads, so the child environment goes through libc directly.
         setenv("JAVA_HOME", home, overwrite: 1);
-        setenv("PATH", bin + Path.PathSeparator + (Environment.GetEnvironmentVariable("PATH") ?? string.Empty), overwrite: 1);
+        setenv("PATH", pathValue, overwrite: 1);
         return Exec(commandArgs);
     }
 
