@@ -9,31 +9,51 @@ namespace JdkFind.Providers;
 ///     <c>/usr/local</c> is scanned, and inside a snap (<c>$SNAP</c>) the JVM
 ///     directories are also scanned under the snap mount.
 /// </summary>
-public sealed class LinuxJvmProvider(string? commonPrefix) : ICommonPrefixJvmProvider
+public sealed class LinuxJvmProvider : ICommonPrefixJvmProvider
 {
+    private readonly string? commonPrefix;
+    private readonly string[]? scanPrefixes;
+
+    /// <summary>Scans the full platform list on Linux and <c>/usr/lib/jvm</c> plus
+    /// <c>/usr/local</c> on FreeBSD; nothing elsewhere.</summary>
+    public LinuxJvmProvider()
+    {
+        if (OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD())
+        {
+            commonPrefix = "/usr/lib/jvm";
+            scanPrefixes = DefaultScanPrefixes().ToArray();
+        }
+    }
+
+    /// <summary>Scans exactly one prefix directory — the injection seam for callers
+    /// (and tests) that control the candidate location themselves.</summary>
+    public LinuxJvmProvider(string? commonPrefix)
+    {
+        this.commonPrefix = commonPrefix;
+        scanPrefixes = commonPrefix is null ? null : [commonPrefix];
+    }
+
+    /// <summary>Test seam: scans exactly the given prefix directories.</summary>
+    internal LinuxJvmProvider(string[] prefixes)
+    {
+        commonPrefix = prefixes.FirstOrDefault(OperatingSystem.IsFreeBSD() ? "/usr/local" : "/usr/lib/jvm");
+        scanPrefixes = prefixes;
+    }
+
     /// <inheritdoc />
     public string Name => OperatingSystem.IsFreeBSD() ? "freebsd" : "linux";
 
-    /// <summary>Scans <c>/usr/lib/jvm</c> on Linux and <c>/usr/lib/jvm</c> plus
-    /// <c>/usr/local</c> on FreeBSD; nothing elsewhere.</summary>
-    public LinuxJvmProvider() : this(OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD() ? "/usr/lib/jvm" : (string?)null) { }
-
-    /// <inheritdoc />
+    /// <summary>The conventional directory of this provider, or null when the
+    /// platform is not covered.</summary>
     public string? CommonPrefix => commonPrefix;
-
-    private readonly string[]? injectedPrefixes;
-
-    /// <summary>Test seam: scans exactly the given prefix directories.</summary>
-    internal LinuxJvmProvider(string[] prefixes) : this((string?)null) => injectedPrefixes = prefixes;
 
     /// <inheritdoc />
     public IEnumerable<string> GetJavaHomes()
     {
-        if (commonPrefix is not null)
-            foreach (var home in JvmScanning.EnumerateGuarded(commonPrefix))
-                yield return home;
+        if (scanPrefixes is null)
+            yield break;
 
-        foreach (var prefix in injectedPrefixes ?? DefaultScanPrefixes())
+        foreach (var prefix in scanPrefixes)
             foreach (var home in JvmScanning.EnumerateGuarded(prefix))
                 yield return home;
     }
