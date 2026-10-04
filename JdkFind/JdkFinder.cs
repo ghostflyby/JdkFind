@@ -91,6 +91,7 @@ public sealed record JdkFinder
         new WindowsRegistryJvmProvider(),
         new IntelliJJvmProvider(),
         new SdkmanJvmProvider(),
+        new AsdfJvmProvider(),
         new GradleJvmProvider(),
         new JabbaJvmProvider(),
         new ScoopJvmProvider(),

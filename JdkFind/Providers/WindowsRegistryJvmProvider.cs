@@ -5,12 +5,13 @@ namespace JdkFind.Providers;
 
 /// <summary>
 ///     Reads <c>JavaHome</c> values from the Windows registry under the vendor roots
-///     known to write them (JavaSoft, Eclipse Adoptium, Microsoft, Azul Systems, Amazon
-///     Corretto). Each root is walked to a small bounded depth so vendor-specific
-///     nesting (e.g. <c>...\JDK\21\hotspot\MSI</c>) is covered without broad scans.
-///     Scope note: only the 64-bit registry view is read (32-bit installs registered
-///     under WOW6432Node are not covered), and vendor roots outside this list
-///     (Red Hat, BellSoft, ...) are intentionally out of scope.
+///     known to write them (JavaSoft, Eclipse Adoptium, Microsoft, Azul Systems,
+///     Amazon Corretto, AdoptOpenJDK, IBM Semeru, BellSoft). Each root is walked to
+///     a small bounded depth so vendor-specific nesting (e.g.
+///     <c>...\JDK\21\hotspot\MSI</c>) is covered without broad scans. Both the
+///     64-bit and 32-bit registry views are read. Scope note: HKCU is not read
+///     (machine-wide installs only), and vendor roots outside this list (Red Hat,
+///     ...) are intentionally out of scope.
 /// </summary>
 public sealed class WindowsRegistryJvmProvider : IJvmProvider
 {
@@ -21,6 +22,9 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
         (@"SOFTWARE\Microsoft\JDK", 3),
         (@"SOFTWARE\Azul Systems\Zulu", 3),
         (@"SOFTWARE\Amazon Corretto", 3),
+        (@"SOFTWARE\AdoptOpenJDK", 2),
+        (@"SOFTWARE\IBM Semeru", 2),
+        (@"SOFTWARE\BellSoft", 3),
     ];
 
     private readonly (string Path, int Depth)[] roots;
@@ -48,12 +52,17 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
         var homes = new List<string>();
         try
         {
-            using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            foreach (var (rootPath, depth) in roots)
+            // Both views: 64-bit keys plus the WOW6432Node mirrors the 32-bit view
+            // exposes; identical homes deduplicate at the facade.
+            foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
             {
-                using var root = baseKey.OpenSubKey(rootPath);
-                if (root is not null)
-                    Collect(root, depth, homes);
+                using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view);
+                foreach (var (rootPath, depth) in roots)
+                {
+                    using var root = baseKey.OpenSubKey(rootPath);
+                    if (root is not null)
+                        Collect(root, depth, homes);
+                }
             }
         }
         catch (Exception exception) when (

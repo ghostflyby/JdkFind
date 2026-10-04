@@ -47,6 +47,58 @@ public class ProviderTests : IDisposable
     }
 
     [Fact]
+    public void Asdf_ScansInjectedDataHome()
+    {
+        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "installs", "java", "21.0.5");
+        var provider = new AsdfJvmProvider(temp.FullPath);
+
+        Assert.Equal("asdf", provider.Name);
+        Assert.Equal([jdk], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Asdf_MissingInstallsDirectory_YieldsNothing()
+    {
+        var provider = new AsdfJvmProvider(Path.Combine(temp.FullPath, "missing"));
+
+        Assert.Empty(provider.GetHomes());
+    }
+
+    [Fact]
+    public void Probe_AcceptsJdk8InnerJreLayout()
+    {
+        var home = Path.Combine(temp.FullPath, "jdk8");
+        Directory.CreateDirectory(Path.Combine(home, "jre", "bin"));
+        File.WriteAllText(Path.Combine(home, "jre", "bin", JavaHomeLayout.JavaExecutableName), string.Empty);
+        File.WriteAllText(Path.Combine(home, "release"), "JAVA_VERSION=\"1.8.0_402\"");
+
+        // The home is the top directory; the java executable resolves through the
+        // inner JRE layout.
+        Assert.Equal(home, JavaHomeLayout.Probe(home));
+        Assert.Equal(
+            Path.Combine(home, "jre", "bin", JavaHomeLayout.JavaExecutableName),
+            JavaHomeLayout.JavaExecutablePath(home));
+    }
+
+    [Fact]
+    public void Linux_ScansPrefixesWithPatterns()
+    {
+        if (!OperatingSystem.IsLinux())
+            return;
+
+        var plain = TestJdk.Create(temp.FullPath, "21.0.5", "usr", "lib64", "jvm", "temurin-21");
+        var gentoo = TestJdk.Create(temp.FullPath, "17.0.2", "usr", "lib", "openjdk-17");
+        var scans = new (string Prefix, string? Pattern)[]
+        {
+            (Path.Combine(temp.FullPath, "usr", "lib64", "jvm"), null),
+            (Path.Combine(temp.FullPath, "usr", "lib"), "openjdk-*"),
+        };
+        var provider = new LinuxJvmProvider(scans);
+
+        Assert.Equal([gentoo, plain], provider.GetHomes());
+    }
+
+    [Fact]
     public void Sdkman_ScansInjectedCandidatesDirectory()
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "candidates", "java", "21.0.5");
