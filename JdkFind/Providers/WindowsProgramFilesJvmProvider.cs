@@ -1,8 +1,9 @@
 namespace JdkFind.Providers;
 
 /// <summary>
-///     Scans the vendor directories Windows installers use under <c>%ProgramFiles%</c>:
-///     Java, Eclipse Adoptium, Microsoft, Zulu, Amazon Corretto and BellSoft.
+///     Scans the vendor directories Windows installers use under
+///     <c>%ProgramFiles%</c> and <c>%ProgramFiles(x86)%</c>: Java, Eclipse Adoptium,
+///     legacy AdoptOpenJDK, Microsoft, Zulu, Amazon Corretto and BellSoft.
 /// </summary>
 public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes) : ICommonPrefixesJvmProvider
 {
@@ -15,6 +16,7 @@ public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes)
     [
         "Java",
         "Eclipse Adoptium",
+        "AdoptOpenJDK",
         "Microsoft",
         "Zulu",
         "Amazon Corretto",
@@ -33,10 +35,13 @@ public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes)
         if (!OperatingSystem.IsWindows())
             return [];
 
-        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-        if (string.IsNullOrEmpty(programFiles))
-            return [];
+        var roots = new List<string> { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles) };
+        var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        if (!string.IsNullOrEmpty(programFilesX86) &&
+            roots.All(root => !string.Equals(root, programFilesX86, StringComparison.OrdinalIgnoreCase)))
+            roots.Add(programFilesX86);
 
-        return SourceArray.Select(vendor => Path.Combine(programFiles, vendor));
+        return roots.Where(root => !string.IsNullOrEmpty(root))
+            .SelectMany(root => SourceArray.Select(vendor => Path.Combine(root, vendor)));
     }
 }
