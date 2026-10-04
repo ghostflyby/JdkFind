@@ -84,8 +84,7 @@ public sealed record JdkFinder
     [
         new JavaHomeJvmProvider(),
         new PathJvmProvider(),
-        new MacOsJvmProvider(),
-        new LinuxJvmProvider(),
+        new UnixJvmProvider(),
         new FlatpakJvmProvider(),
         new HomebrewJvmProvider(),
         new WindowsProgramFilesJvmProvider(),
