@@ -22,8 +22,9 @@ public sealed class UnixJvmProvider : IJvmProvider
     internal UnixJvmProvider(string[] prefixes) => injectedPrefixes = prefixes;
 
     /// <summary>Scans exactly one prefix directory — the injection seam for callers
-    /// (and tests) that control the candidate location themselves.</summary>
-    public UnixJvmProvider(string? commonPrefix) => injectedPrefixes = commonPrefix is null ? null : [commonPrefix];
+    /// (and tests) that control the candidate location themselves. A null prefix
+    /// means nothing to scan.</summary>
+    public UnixJvmProvider(string? commonPrefix) => injectedPrefixes = commonPrefix is null ? [] : [commonPrefix];
 
     /// <inheritdoc />
     public string Name => "unix";
