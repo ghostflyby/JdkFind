@@ -74,6 +74,29 @@ public class ProviderTests : IDisposable
     }
 
     [Fact]
+    public void Flatpak_ScansSharedExtensionJvms()
+    {
+        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "usr", "lib", "sdk", "openjdk", "jvm", "21.0.5");
+        // A non-jvm sibling extension dir and a non-jvm child of the extension must
+        // not appear.
+        Directory.CreateDirectory(Path.Combine(temp.FullPath, "usr", "lib", "sdk", "docs"));
+        TestJdk.Create(temp.FullPath, "17.0.2", "usr", "lib", "sdk", "openjdk", "stale");
+        var provider = new FlatpakJvmProvider(Path.Combine(temp.FullPath, "usr", "lib", "sdk"), active: true);
+
+        Assert.Equal("flatpak", provider.Name);
+        Assert.Equal([jdk], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Flatpak_InactiveOutsideSandbox_YieldsNothing()
+    {
+        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "usr", "lib", "sdk", "openjdk", "jvm", "21.0.5");
+        var provider = new FlatpakJvmProvider(Path.Combine(temp.FullPath, "usr", "lib", "sdk"), active: false);
+
+        Assert.Empty(provider.GetHomes());
+    }
+
+    [Fact]
     public void Probe_AcceptsJdk8InnerJreLayout()
     {
         var home = Path.Combine(temp.FullPath, "jdk8");
