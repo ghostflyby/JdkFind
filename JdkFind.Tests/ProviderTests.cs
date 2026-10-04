@@ -113,16 +113,14 @@ public class ProviderTests : IDisposable
     }
 
     [Fact]
-    public void Linux_ScansPrefixList()
+    public void Unix_ScansPrefixList()
     {
-        if (!OperatingSystem.IsLinux())
-            return;
 
         var a = TestJdk.Create(temp.FullPath, "21.0.5", "usr", "lib64", "jvm", "temurin-21");
         var b = TestJdk.Create(temp.FullPath, "17.0.2", "usr", "java", "jdk-17");
         // A non-home child of a scanned prefix must be filtered by the layout probe.
         Directory.CreateDirectory(Path.Combine(temp.FullPath, "usr", "lib64", "jvm", "not-a-home"));
-        var provider = new LinuxJvmProvider(
+        var provider = new UnixJvmProvider(
         [
             Path.Combine(temp.FullPath, "usr", "lib64", "jvm"),
             Path.Combine(temp.FullPath, "usr", "java"),
@@ -152,11 +150,11 @@ public class ProviderTests : IDisposable
     }
 
     [Fact]
-    public void MacOs_ScansSystemAndUserPrefixes()
+    public void Unix_ScansSystemAndUserPrefixes()
     {
         var system = TestJdk.Create(temp.FullPath, "21.0.5", "system-jvms", "jdk-21");
         var user = TestJdk.Create(temp.FullPath, "17.0.2", "user-jvms", "jdk-17");
-        var provider = new MacOsJvmProvider(
+        var provider = new UnixJvmProvider(
         [
             Path.Combine(temp.FullPath, "system-jvms"),
             Path.Combine(temp.FullPath, "user-jvms"),
@@ -170,7 +168,7 @@ public class ProviderTests : IDisposable
     {
         var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
 
-        Assert.Equal([jdk], new LinuxJvmProvider(temp.FullPath).GetHomes());
+        Assert.Equal([jdk], new UnixJvmProvider(temp.FullPath).GetHomes());
     }
 
     [Fact]
