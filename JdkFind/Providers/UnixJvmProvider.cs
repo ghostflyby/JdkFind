@@ -1,13 +1,11 @@
 namespace JdkFind.Providers;
 
 /// <summary>
-///     Scans the fixed system JVM directories of the unix-like platforms: on macOS
-///     the system, machine and per-user JavaVirtualMachines directories; on Linux
-///     /usr/lib/jvm, the distribution locations (/usr/java Oracle RPM,
-///     /usr/lib64/jvm, /usr/lib32/jvm, /opt/jdk, /opt/jdks, /opt/ibm, flatpak's
-///     /app/jdk, Gentoo's installs under /usr/lib, /usr/lib64, /opt) and $SNAP
-///     mirrors; on FreeBSD /usr/local. Nonexistent locations yield nothing, so one
-///     provider covers every unix platform. Source name: unix.
+///     Scans the fixed unix JVM directories: on Linux /usr/lib/jvm, the
+///     distribution locations (/usr/java Oracle RPM, /usr/lib64/jvm,
+///     /usr/lib32/jvm, /opt/jdk, /opt/jdks, /opt/ibm, flatpak's /app/jdk,
+///     Gentoo's installs under /usr/lib, /usr/lib64, /opt) and $SNAP mirrors; on
+///     FreeBSD /usr/local. Source name: unix.
 /// </summary>
 public sealed class UnixJvmProvider : IJvmProvider
 {
@@ -40,17 +38,6 @@ public sealed class UnixJvmProvider : IJvmProvider
 
     private static IEnumerable<string> ResolvePrefixes()
     {
-        if (OperatingSystem.IsMacOS())
-        {
-            yield return "/System/Library/Java/JavaVirtualMachines";
-            yield return "/Library/Java/JavaVirtualMachines";
-            var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            if (!string.IsNullOrEmpty(profile))
-                yield return Path.Combine(profile, "Library", "Java", "JavaVirtualMachines");
-
-            yield break;
-        }
-
         if (OperatingSystem.IsFreeBSD())
         {
             yield return "/usr/local";
