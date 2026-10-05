@@ -39,8 +39,7 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
   `HOMEBREW_PREFIX`.
 - **Platform guards.** Windows-only code checks `OperatingSystem.IsWindows()`
   and is annotated `[SupportedOSPlatform("windows")]`. The registry provider
-  reads the 64-bit view only (documented trade-off: 32-bit installs under
-  WOW6432Node are not covered).
+  reads both the 64-bit and 32-bit views.
 - **Resilience.** Missing and unreadable locations are skipped silently; one
   bad directory must never abort the scan.
 

@@ -35,7 +35,8 @@ public sealed class FlatpakJvmProvider : IJvmProvider
 
         foreach (var extension in JvmScanning.EnumerateGuarded(sdkRoot))
             foreach (var candidate in JvmScanning.EnumerateGuarded(Path.Combine(extension, "jvm")))
-                yield return candidate;
+                if (JavaHomeLayout.Probe(candidate) is { } home)
+                    yield return home;
     }
 
     private static bool InFlatpakSandbox() =>

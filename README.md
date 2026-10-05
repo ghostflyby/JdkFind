@@ -20,7 +20,7 @@ dotnet tool install --global JdkFind.Cli
 $ jdkfind                                        # newest home (stdout)
 $ jdkfind 21                                     # newest 21.x home
 $ jdkfind 8                                      # feature level; matches legacy 1.8.0_x installs
-$ jdkfind 21 -- java -version                    # run with JAVA_HOME and bin/ of the selection
+$ jdkfind 21 -- java -version                    # run with JAVA_HOME and bin/ (or jre/bin) of the selection
 $ jdkfind 21 java                                # newest 21.x bin/java
 $ jdkfind info 21                                # one installation's details (stderr)
 $ jdkfind list                                   # human-readable table (stderr)
