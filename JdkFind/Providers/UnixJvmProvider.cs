@@ -5,7 +5,7 @@ namespace JdkFind.Providers;
 ///     distribution locations (/usr/java Oracle RPM, /usr/lib64/jvm,
 ///     /usr/lib32/jvm, /opt/jdk, /opt/jdks, /opt/ibm, flatpak's /app/jdk,
 ///     Gentoo's installs under /usr/lib, /usr/lib64, /opt) and $SNAP mirrors; on
-///     FreeBSD /usr/local. Source name: unix.
+///     FreeBSD and OpenBSD /usr/local. Source name: unix.
 /// </summary>
 public sealed class UnixJvmProvider : IJvmProvider
 {
@@ -38,7 +38,7 @@ public sealed class UnixJvmProvider : IJvmProvider
 
     private static IEnumerable<string> ResolvePrefixes()
     {
-        if (OperatingSystem.IsFreeBSD())
+        if (OperatingSystem.IsFreeBSD() || IsOpenBsd())
         {
             yield return "/usr/local";
             yield break;
@@ -56,4 +56,8 @@ public sealed class UnixJvmProvider : IJvmProvider
             foreach (var prefix in new[] { "/usr/lib/jvm", "/usr/java", "/usr/lib64/jvm" })
                 yield return Path.Combine(snap.TrimEnd('/'), prefix.TrimStart('/'));
     }
+
+#pragma warning disable CA1418 // "OpenBSD" is not a platform name the analyzer knows
+    private static bool IsOpenBsd() => OperatingSystem.IsOSPlatform("OpenBSD");
+#pragma warning restore CA1418
 }

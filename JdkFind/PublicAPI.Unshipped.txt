@@ -1,4 +1,5 @@
 #nullable enable
+JdkFind.Jvm.Resolve(string! name) -> System.IO.FileInfo?
 JdkFind.Providers.AsdfJvmProvider
 JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider() -> void
 JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider(string? asdfDataHome) -> void
