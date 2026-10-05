@@ -9,10 +9,15 @@ public class JvmResolveTests : IDisposable
     {
         var home = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
         File.WriteAllText(Path.Combine(home, "bin", JavaHomeLayout.CompilerExecutableName), string.Empty);
+        // A JDK 8 inner JRE must not shadow the top-level bin executable.
+        Directory.CreateDirectory(Path.Combine(home, "jre", "bin"));
+        File.WriteAllText(Path.Combine(home, "jre", "bin", JavaHomeLayout.JavaExecutableName), string.Empty);
         var jvm = TestJvm(home);
 
         Assert.Equal(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), jvm.Resolve("java")!.FullName);
         Assert.Equal(Path.Combine(home, "bin", JavaHomeLayout.CompilerExecutableName), jvm.Resolve("javac")!.FullName);
+        // Outside Windows a literal .exe name is looked up as-is and finds nothing.
+        Assert.Null(jvm.Resolve("java.exe"));
     }
 
     [Fact]
@@ -45,7 +50,10 @@ public class JvmResolveTests : IDisposable
         var home = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
         var jvm = TestJvm(home);
 
+        // ThrowIfNullOrWhiteSpace: null is ArgumentNullException, the rest ArgumentException.
+        Assert.Throws<ArgumentNullException>(() => jvm.Resolve(null!));
         Assert.Throws<ArgumentException>(() => jvm.Resolve(string.Empty));
+        Assert.Throws<ArgumentException>(() => jvm.Resolve("  "));
         Assert.Throws<ArgumentException>(() => jvm.Resolve("bin/java"));
         Assert.Throws<ArgumentException>(() => jvm.Resolve(Path.Combine("bin", "java")));
         Assert.Throws<ArgumentException>(() => jvm.Resolve(home));
