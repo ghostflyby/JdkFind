@@ -20,7 +20,7 @@ dotnet tool install --global JdkFind.Cli
 $ jdkfind                                        # newest home (stdout)
 $ jdkfind 21                                     # newest 21.x home
 $ jdkfind 8                                      # feature level; matches legacy 1.8.0_x installs
-$ jdkfind 21 -- java -version                    # run with JAVA_HOME and bin/ of the selection
+$ jdkfind 21 -- java -version                    # run with JAVA_HOME and bin/ (or jre/bin) of the selection
 $ jdkfind 21 java                                # newest 21.x bin/java
 $ jdkfind info 21                                # one installation's details (stderr)
 $ jdkfind list                                   # human-readable table (stderr)
@@ -92,7 +92,7 @@ IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
 | `/System/Library/Java/JavaVirtualMachines` (system), `/Library/Java/JavaVirtualMachines` (machine) and `~/Library/Java/JavaVirtualMachines` (per-user; also IntelliJ's download target) | macOS |
 | Homebrew OpenJDK kegs (`HOMEBREW_PREFIX`, `/opt/homebrew`, …) | macOS, Linux |
 | `/usr/lib/jvm`, `/usr/java`, `/usr/lib64/jvm`, `/usr/lib32/jvm`, `/opt/jdk`, `/opt/jdks`, `/opt/ibm`, `/app/jdk`, Gentoo installs (`/usr/lib`, `/usr/lib64`, `/opt`), `$SNAP` mirrors | Linux |
-| `/usr/local` ports layout (`openjdk*`) | FreeBSD |
+| `/usr/local` ports layout (`openjdk*`) | FreeBSD, OpenBSD |
 | Flatpak sandbox JVMs — shared runtime extensions (`/usr/lib/sdk`) and the app-bundled `/app/jdk` (inside a flatpak sandbox) | Linux (flatpak) |
 | `%ProgramFiles%`/`%ProgramFiles(x86)%` vendor directories (Java, Eclipse Adoptium, AdoptOpenJDK, Microsoft, Zulu, Amazon Corretto, BellSoft), Windows registry (JavaSoft, Adoptium, Microsoft, Azul, Corretto, AdoptOpenJDK, IBM Semeru, BellSoft — 64+32-bit views) | Windows |
 | `~/.jdks` (IntelliJ) | Windows, Linux |

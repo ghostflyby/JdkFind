@@ -12,7 +12,7 @@
              fails the build instead of slipping past as a warning. -->
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <PackageId>JdkFind</PackageId>
-        <Version>0.2.0</Version>
+        <Version>0.3.0</Version>
         <Authors>ghostflyby</Authors>
         <Description>Locate installed JDKs across Windows, macOS and Linux.</Description>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>

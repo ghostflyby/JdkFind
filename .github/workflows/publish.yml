@@ -73,7 +73,7 @@ jobs:
     # NuGet API key (Trusted Publishing); attestations: write persists the build
     # provenance attestation in the repository's attestation store; contents: write
     # is for gh release create; pull-requests: write lets the housekeeping step
-    # create and auto-merge its PR (requires the repo setting "Allow GitHub Actions
+    # create and merge its PR (requires the repo setting "Allow GitHub Actions
     # to create and approve pull requests").
     permissions:
       id-token: write
@@ -237,6 +237,9 @@ jobs:
           gh pr create --base main --head "housekeeping/shipped-v$env:VERSION" `
             --title "chore: move shipped API to Shipped for $env:GITHUB_REF_NAME" `
             --body "Publish-time housekeeping: the API shipped in $env:GITHUB_REF_NAME moves from Unshipped to Shipped (the entries present on the tag commit)."
-          gh pr merge --auto --merge
+          # Direct merge, not --auto: the branch is pushed with the repository's own
+          # GITHUB_TOKEN, whose events start no workflow runs, so the PR never gains
+          # checks and GitHub rejects auto-merge with "Pull request is in clean status".
+          gh pr merge --merge
         env:
           GH_TOKEN: ${{ github.token }}

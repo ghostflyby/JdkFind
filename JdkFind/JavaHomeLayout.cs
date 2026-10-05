@@ -35,16 +35,35 @@ public static class JavaHomeLayout
 
     /// <summary>Resolves the java executable of a validated home: <c>bin/java</c>,
     /// falling back to the JDK 8 inner JRE layout (<c>jre/bin/java</c>).</summary>
-    internal static string JavaExecutablePath(string homeDirectory)
-    {
-        var executable = Path.Combine(homeDirectory, "bin", JavaExecutableName);
-        return File.Exists(executable)
-            ? executable
-            : Path.Combine(homeDirectory, "jre", "bin", JavaExecutableName);
-    }
+    internal static string JavaExecutablePath(string homeDirectory) =>
+        FindExecutable(homeDirectory, JavaExecutableName) ?? JreJavaExecutablePath(homeDirectory);
 
     internal static string JreJavaExecutablePath(string homeDirectory) =>
         Path.Combine(homeDirectory, "jre", "bin", JavaExecutableName);
+
+    /// <summary>Searches a validated home for the named executable: <c>bin</c>
+    /// first, falling back to the JDK 8 inner JRE layout (<c>jre/bin</c>). On
+    /// Windows a missing <c>.exe</c> suffix is tried as well. Null when no
+    /// candidate exists.</summary>
+    internal static string? FindExecutable(string homeDirectory, string name)
+    {
+        foreach (var directory in new[] { "bin", Path.Combine("jre", "bin") })
+            foreach (var candidate in ExecutableNameCandidates(name))
+            {
+                var executable = Path.Combine(homeDirectory, directory, candidate);
+                if (File.Exists(executable))
+                    return executable;
+            }
+
+        return null;
+    }
+
+    private static IEnumerable<string> ExecutableNameCandidates(string name)
+    {
+        yield return name;
+        if (OperatingSystem.IsWindows() && !name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            yield return name + ".exe";
+    }
 
     private static bool IsJavaHome(string homeDirectory) =>
         File.Exists(Path.Combine(homeDirectory, "release")) &&

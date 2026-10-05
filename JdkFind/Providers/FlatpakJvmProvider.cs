@@ -37,12 +37,14 @@ public sealed class FlatpakJvmProvider : IJvmProvider
 
         foreach (var extension in JvmScanning.EnumerateGuarded(sdkRoot))
             foreach (var candidate in JvmScanning.EnumerateGuarded(Path.Combine(extension, "jvm")))
-                yield return candidate;
+                if (JavaHomeLayout.Probe(candidate) is { } home)
+                    yield return home;
 
         // /app is the flatpak app directory; its bundled jdk is part of the
         // flatpak result for this run.
-        foreach (var home in JvmScanning.EnumerateGuarded(AppDirectory(sdkRoot)))
-            yield return home;
+        foreach (var candidate in JvmScanning.EnumerateGuarded(AppDirectory(sdkRoot)))
+            if (JavaHomeLayout.Probe(candidate) is { } home)
+                yield return home;
     }
 
     private static string AppDirectory(string sdkRoot) =>
