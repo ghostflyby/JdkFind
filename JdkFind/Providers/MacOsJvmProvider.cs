@@ -25,6 +25,7 @@ public sealed class MacOsJvmProvider(IEnumerable<string> prefixes) : ICommonPref
 
         var prefixes = new List<string>
         {
+            "/System/Library/Java/JavaVirtualMachines",
             "/Library/Java/JavaVirtualMachines",
         };
 

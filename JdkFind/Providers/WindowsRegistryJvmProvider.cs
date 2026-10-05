@@ -22,8 +22,8 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
         (@"SOFTWARE\Microsoft\JDK", 3),
         (@"SOFTWARE\Azul Systems\Zulu", 3),
         (@"SOFTWARE\Amazon Corretto", 3),
-        (@"SOFTWARE\AdoptOpenJDK", 2),
-        (@"SOFTWARE\IBM Semeru", 2),
+        (@"SOFTWARE\AdoptOpenJDK\JDK", 3),
+        (@"SOFTWARE\Semeru\JDK", 3),
         (@"SOFTWARE\BellSoft", 3),
     ];
 

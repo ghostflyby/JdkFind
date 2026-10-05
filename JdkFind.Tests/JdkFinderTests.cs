@@ -259,5 +259,18 @@ public class JdkFinderTests : IDisposable
         }
     }
 
+    [Fact]
+    public void CreateDefaultProviders_IncludesEverySource()
+    {
+        string[] expected =
+        [
+            "java-home", "path", "macos", "unix", "flatpak", "homebrew",
+            "windows-programs", "windows-registry", "intellij", "sdkman",
+            "asdf", "gradle", "jabba", "scoop",
+        ];
+
+        Assert.Equal(expected, JdkFinder.Default.Providers.Select(p => p.Name).ToArray());
+    }
+
     public void Dispose() => temp.Dispose();
 }
