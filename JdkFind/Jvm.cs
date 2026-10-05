@@ -30,6 +30,23 @@ public sealed record Jvm
     public bool SupportsSource(int sourceLevel) => (LanguageVersion ?? 0) >= sourceLevel;
 
     /// <summary>
+    ///     Resolves an executable of this installation by name — <c>java</c>,
+    ///     <c>javac</c>, <c>keytool</c>, ... — searching <c>bin</c> and, for the
+    ///     JDK 8 inner JRE layout, <c>jre/bin</c>. On Windows the <c>.exe</c>
+    ///     suffix may be omitted. Returns null when the installation ships no
+    ///     such executable; <paramref name="name" /> must be a bare file name,
+    ///     not a path.
+    /// </summary>
+    public FileInfo? Resolve(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (name.Contains('/') || name.Contains('\\') || Path.IsPathRooted(name))
+            throw new ArgumentException("The executable name must be a bare file name, not a path.", nameof(name));
+
+        return JavaHomeLayout.FindExecutable(Home.FullName, name) is { } path ? new FileInfo(path) : null;
+    }
+
+    /// <summary>
     ///     True when the installation ships a compiler (<c>bin/javac</c>), i.e. it is a
     ///     JDK rather than a runtime-only image (standalone JREs, jlink runtimes).
     /// </summary>
