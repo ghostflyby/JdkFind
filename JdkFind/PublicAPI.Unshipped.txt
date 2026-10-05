@@ -1,21 +1,2 @@
 #nullable enable
-JdkFind.Jvm.Resolve(string! name) -> System.IO.FileInfo?
-JdkFind.Providers.AsdfJvmProvider
-JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider() -> void
-JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider(string? asdfDataHome) -> void
-JdkFind.Providers.AsdfJvmProvider.CommonPrefix.get -> string?
-JdkFind.Providers.AsdfJvmProvider.Name.get -> string!
-JdkFind.Providers.FlatpakJvmProvider
-JdkFind.Providers.FlatpakJvmProvider.FlatpakJvmProvider() -> void
-JdkFind.Providers.FlatpakJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-JdkFind.Providers.FlatpakJvmProvider.Name.get -> string!
-JdkFind.Providers.UnixJvmProvider
-JdkFind.Providers.UnixJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-JdkFind.Providers.UnixJvmProvider.Name.get -> string!
-*REMOVED*JdkFind.Providers.LinuxJvmProvider
-*REMOVED*JdkFind.Providers.LinuxJvmProvider.CommonPrefix.get -> string?
-*REMOVED*JdkFind.Providers.LinuxJvmProvider.LinuxJvmProvider() -> void
-*REMOVED*JdkFind.Providers.LinuxJvmProvider.LinuxJvmProvider(string? commonPrefix) -> void
-*REMOVED*JdkFind.Providers.LinuxJvmProvider.Name.get -> string!
-JdkFind.Providers.UnixJvmProvider.UnixJvmProvider() -> void
-JdkFind.Providers.UnixJvmProvider.UnixJvmProvider(string? commonPrefix) -> void
+
