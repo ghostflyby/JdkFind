@@ -16,9 +16,5 @@ JdkFind.Providers.UnixJvmProvider.Name.get -> string!
 *REMOVED*JdkFind.Providers.LinuxJvmProvider.LinuxJvmProvider() -> void
 *REMOVED*JdkFind.Providers.LinuxJvmProvider.LinuxJvmProvider(string? commonPrefix) -> void
 *REMOVED*JdkFind.Providers.LinuxJvmProvider.Name.get -> string!
-*REMOVED*JdkFind.Providers.MacOsJvmProvider
-*REMOVED*JdkFind.Providers.MacOsJvmProvider.MacOsJvmProvider() -> void
-*REMOVED*JdkFind.Providers.MacOsJvmProvider.MacOsJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
-*REMOVED*JdkFind.Providers.MacOsJvmProvider.Name.get -> string!
 JdkFind.Providers.UnixJvmProvider.UnixJvmProvider() -> void
 JdkFind.Providers.UnixJvmProvider.UnixJvmProvider(string? commonPrefix) -> void

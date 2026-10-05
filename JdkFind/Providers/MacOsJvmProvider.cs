@@ -1,0 +1,37 @@
+namespace JdkFind.Providers;
+
+/// <summary>
+///     Scans the macOS JVM directories: the system-wide
+///     <c>/Library/Java/JavaVirtualMachines</c> and the per-user
+///     <c>~/Library/Java/JavaVirtualMachines</c>. Together they cover everything
+///     <c>/usr/libexec/java_home</c> reports, without spawning it.
+/// </summary>
+public sealed class MacOsJvmProvider(IEnumerable<string> prefixes) : ICommonPrefixesJvmProvider
+{
+    /// <inheritdoc />
+    public string Name => "macos";
+
+    private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
+
+    /// <summary>Scans the system-wide and per-user macOS JVM directories.</summary>
+    public MacOsJvmProvider() : this(ResolveDefaultPrefixes()) { }
+
+    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => prefixList;
+
+    private static IEnumerable<string> ResolveDefaultPrefixes()
+    {
+        if (!OperatingSystem.IsMacOS())
+            return [];
+
+        var prefixes = new List<string>
+        {
+            "/Library/Java/JavaVirtualMachines",
+        };
+
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrEmpty(profile))
+            prefixes.Add(Path.Combine(profile, "Library", "Java", "JavaVirtualMachines"));
+
+        return prefixes;
+    }
+}
