@@ -16,8 +16,12 @@ public class JvmResolveTests : IDisposable
 
         Assert.Equal(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), jvm.Resolve("java")!.FullName);
         Assert.Equal(Path.Combine(home, "bin", JavaHomeLayout.CompilerExecutableName), jvm.Resolve("javac")!.FullName);
-        // Outside Windows a literal .exe name is looked up as-is and finds nothing.
-        Assert.Null(jvm.Resolve("java.exe"));
+        // A literal .exe name matches the fixture's java.exe on Windows and,
+        // outside Windows, is looked up as-is and finds nothing.
+        if (OperatingSystem.IsWindows())
+            Assert.Equal(Path.Combine(home, "bin", "java.exe"), jvm.Resolve("java.exe")!.FullName);
+        else
+            Assert.Null(jvm.Resolve("java.exe"));
     }
 
     [Fact]
