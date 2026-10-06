@@ -31,6 +31,21 @@ internal static class ReleaseFile
         return entries;
     }
 
+    /// <summary>Parses the <c>release</c> file of a home directory, returning null
+    /// when it is missing or unreadable instead of throwing.</summary>
+    internal static IReadOnlyDictionary<string, string>? TryParse(string homePath)
+    {
+        try
+        {
+            return Parse(System.IO.Path.Combine(homePath, "release"));
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Extracts the feature version: <c>21.0.5</c> → 21, <c>1.8.0_402</c> → 8, <c>25-ea</c> → 25.</summary>
     internal static int? TryGetLanguageVersion(string? javaVersion)
     {

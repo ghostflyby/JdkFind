@@ -47,6 +47,61 @@ public class JdkFinderProbeTests : IDisposable
     }
 
     [Fact]
+    public void FromExecutable_ExposesDerivedHome()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The fake java executable is a POSIX shell script.
+
+        var home = CreateFakeHome(temp.FullPath, "21.0.5", "exit 0");
+
+        var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
+
+        Assert.NotNull(executable);
+        Assert.Equal(home, executable.Home?.FullName);
+    }
+
+    [Fact]
+    public void FromExecutable_StandaloneBinary_HasNoHome()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The fake java executable is a POSIX shell script.
+
+        var directory = Path.Combine(temp.FullPath, "standalone");
+        Directory.CreateDirectory(directory);
+        var java = Path.Combine(directory, JavaHomeLayout.JavaExecutableName);
+        File.WriteAllText(java, "#!/bin/sh\ncat >&2 <<'EOPROBE'\njava.version = 21.0.5\nEOPROBE\nexit 0\n");
+        File.SetUnixFileMode(java, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        var executable = new JdkFinder().FromExecutable(java);
+
+        Assert.NotNull(executable);
+        Assert.Equal("21.0.5", executable.Version.Original);
+        Assert.Null(executable.Home);
+        Assert.Null(executable.Installation); // No recognizable home — nothing to derive.
+    }
+
+    [Fact]
+    public void Installation_DerivesStandaloneInstallationWithoutSpawning()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The fake java executable is a POSIX shell script.
+
+        var home = CreateFakeHome(temp.FullPath, "17.0.5", "exit 0");
+
+        var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
+        Assert.NotNull(executable);
+
+        var installation = executable.Installation;
+
+        Assert.NotNull(installation);
+        Assert.Equal(home, installation.Home.FullName);
+        Assert.Same(executable, installation.Runtime); // The derivation reuses this instance — no spawn.
+        Assert.Equal("17.0.5", installation.Version.Original);
+        Assert.False(installation.HasCompiler); // No javac in the fixture.
+        Assert.Empty(installation.Providers); // Discovery data cannot be restored.
+    }
+
+    [Fact]
     public void FromExecutable_RejectsShowSettings_ReportsStartFailure()
     {
         if (OperatingSystem.IsWindows())
@@ -123,7 +178,7 @@ public class JdkFinderProbeTests : IDisposable
 
         Assert.NotNull(jvm);
         Assert.Equal(jre, jvm.Home.FullName);
-        Assert.Null(jvm.Executable.StartFailure);
+        Assert.Null(jvm.Runtime.StartFailure);
         Assert.Equal("17.0.5", jvm.Version.Original);
     }
 

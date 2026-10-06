@@ -3,7 +3,7 @@ namespace JdkFind;
 /// <summary>
 ///     A located JVM installation: a java home directory and what its release
 ///     file says about it. Running a java program needs only the binary —
-///     <see cref="Executable" /> — while the installation owns the layout
+///     <see cref="Runtime" /> — while the installation owns the layout
 ///     questions (the compiler, other executables via <see cref="Resolve" />).
 /// </summary>
 public sealed record Jvm
@@ -15,7 +15,7 @@ public sealed record Jvm
     public required IReadOnlyList<string> Providers { get; init; }
 
     /// <summary>The home's own java binary — probed when runtime probing ran.</summary>
-    public required JavaExecutable Executable { get; init; }
+    public required JavaRuntime Runtime { get; init; }
 
     /// <summary>The JDK version — a comparable value that also carries the raw <c>JAVA_VERSION</c> string.</summary>
     public required JvmVersion Version { get; init; }
@@ -68,4 +68,31 @@ public sealed record Jvm
     /// <summary>Summarizes the installation: language version, full version, distribution and home.</summary>
     public override string ToString() =>
         $"{LanguageVersion?.ToString() ?? "?"} ({Version}) {Distribution} — {Home.FullName}";
+
+    /// <summary>Builds the installation a release file describes, with
+    /// <paramref name="runtime" /> as its own java binary.</summary>
+    internal static Jvm FromRelease(string homePath, JavaRuntime runtime, IReadOnlyDictionary<string, string> release)
+    {
+        var version = JvmVersion.Parse(release.GetValueOrDefault("JAVA_VERSION"));
+        var vendorRaw = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR"));
+
+        return new Jvm
+        {
+            Home = new DirectoryInfo(homePath),
+            Providers = [],
+            Runtime = runtime,
+            Version = version,
+            LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
+            HasCompiler = File.Exists(Path.Combine(homePath, "bin", JavaHomeLayout.CompilerExecutableName)),
+            VendorRaw = vendorRaw,
+            Vendor = JvmIdentity.DetectVendor(vendorRaw),
+            Distribution = JvmIdentity.DetectDistribution(
+                NonEmpty(release.GetValueOrDefault("IMPLEMENTOR_VERSION")),
+                vendorRaw,
+                release.ContainsKey("GRAALVM_VERSION")),
+        };
+    }
+
+    private static string? NonEmpty(string? value) =>
+        string.IsNullOrEmpty(value) ? null : value;
 }

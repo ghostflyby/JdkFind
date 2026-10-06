@@ -11,7 +11,7 @@ public class CommandLineTests
     {
         Home = new DirectoryInfo(HomePath),
         Providers = ["macos"],
-        Executable = new JavaExecutable
+        Runtime = new JavaRuntime
         {
             Path = Path.Combine(HomePath, "bin", "java"),
             Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1"),
@@ -47,7 +47,7 @@ public class CommandLineTests
     {
         Home = new DirectoryInfo(HomePath),
         Providers = ["macos"],
-        Executable = new JavaExecutable
+        Runtime = new JavaRuntime
         {
             Path = Path.Combine(HomePath, "bin", "java"),
             Version = new JvmVersion(new Version(1, 8, 0), false, "1.8.0_402"),
@@ -74,7 +74,7 @@ public class CommandLineTests
     {
         Home = new DirectoryInfo(HomePath),
         Providers = ["macos"],
-        Executable = new JavaExecutable { Path = Path.Combine(HomePath, "bin", "java"), Version = JvmVersion.Unknown("unknown") },
+        Runtime = new JavaRuntime { Path = Path.Combine(HomePath, "bin", "java"), Version = JvmVersion.Unknown("unknown") },
         Version = JvmVersion.Unknown("unknown"),
         LanguageVersion = null,
     };

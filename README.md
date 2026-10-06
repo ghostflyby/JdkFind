@@ -109,25 +109,26 @@ with `Providers` (the SOURCE column) faithfully listing every one of them.
 Discovery answers "what exists"; probing answers "does *this* binary run,
 and what does it say about itself?" — the pre-flight check before launching
 with a user-configured java. The two concepts live on separate types: a
-`JavaExecutable` is the runnable binary, a `Jvm` is an installation directory
-whose `Executable` property carries its own java.
+`JavaRuntime` is the runnable binary — the minimal JRE — and a `Jvm` is an
+installation directory whose `Runtime` property carries its own java.
 
 ```csharp
-JavaExecutable? executable = JdkFinder.Default.FromExecutable(userConfiguredJavaPath);
-// or: JdkFinder.Default.FromHome(javaHomeDirectory);  → Jvm?, with jvm.Executable
-if (executable is null)
+JavaRuntime? runtime = JdkFinder.Default.FromExecutable(userConfiguredJavaPath);
+// or: JdkFinder.Default.FromHome(javaHomeDirectory);  → Jvm?, with jvm.Runtime
+if (runtime is null)
 {
     // The path does not yield a JVM at all.
 }
-else if (executable.StartFailure is { } failure)
+else if (runtime.StartFailure is { } failure)
 {
     // The binary did not run to completion — `failure` carries the reason
     // (spawn error, exit code, or timeout) plus the output tail for display.
 }
 else
 {
-    // executable.Version, executable.Architecture, ... describe what the
-    // binary reported.
+    // runtime.Version, runtime.Architecture, ... describe what the binary
+    // reported; runtime.Home is the backing installation directory (null for a
+    // standalone binary) and runtime.Installation derives the full Jvm.
 }
 ```
 

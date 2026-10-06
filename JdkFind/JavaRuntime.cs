@@ -1,17 +1,52 @@
 namespace JdkFind;
 
 /// <summary>
-///     A java binary that can run programs — the only thing running a java
-///     program actually needs. The probed properties are the binary's own word;
-///     <c>-XshowSettings:properties</c> output is an implementation detail rather
-///     than a spec promise, so any property except <c>java.version</c> may be
-///     absent (null). Where a release file backs the binary, its values fill the
-///     properties the binary did not report.
+///     A java binary that can run programs — the minimal JRE: what running a
+///     java program actually needs. The probed properties are the binary's own
+///     word; <c>-XshowSettings:properties</c> output is an implementation detail
+///     rather than a spec promise, so any property except <c>java.version</c>
+///     may be absent (null). Where a release file backs the binary, its values
+///     fill the properties the binary did not report.
 /// </summary>
-public sealed record JavaExecutable
+public sealed record JavaRuntime
 {
     /// <summary>The binary's path, taken verbatim.</summary>
     public required string Path { get; init; }
+
+    /// <summary>The installation directory backing this binary, when one was
+    /// recognized; null for a standalone binary.</summary>
+    public DirectoryInfo? Home { get; init; }
+
+    /// <summary>
+    ///     Derives the installation this binary belongs to: the home is derived
+    ///     by walking up from <see cref="Path" /> and the release file supplies
+    ///     the installation facts, with <see cref="Jvm.Runtime" /> being this
+    ///     instance — no child process is spawned. Filesystem reads happen on
+    ///     every access, and discovery data such as <see cref="Jvm.Providers" />
+    ///     cannot be restored, so for a runtime obtained from a
+    ///     <see cref="Jvm" />, that instance remains the better handle. Null when
+    ///     no home is recognizable or its release file is unreadable.
+    /// </summary>
+    public Jvm? Installation
+    {
+        get
+        {
+            string? home = null;
+            if (System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(Path)) is { } directory)
+            {
+                home = JavaHomeLayout.Probe(directory)
+                    ?? (System.IO.Path.GetDirectoryName(directory) is { } parentDirectory
+                        ? JavaHomeLayout.Probe(parentDirectory)
+                        : null);
+            }
+
+            if (home is null)
+                return null;
+
+            var release = ReleaseFile.TryParse(home);
+            return release is null ? null : Jvm.FromRelease(home, this, release);
+        }
+    }
 
     /// <summary>
     ///     Why the binary could not be started — a spawn error, the probe

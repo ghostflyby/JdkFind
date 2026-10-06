@@ -15,41 +15,44 @@
 *REMOVED*JdkFind.Jvm.VmName.init -> void
 *REMOVED*JdkFind.Jvm.VmVersion.get -> string?
 *REMOVED*JdkFind.Jvm.VmVersion.init -> void
-JdkFind.JavaExecutable
-JdkFind.JavaExecutable.<Clone>$() -> JdkFind.JavaExecutable!
-JdkFind.JavaExecutable.Architecture.get -> string?
-JdkFind.JavaExecutable.Architecture.init -> void
-JdkFind.JavaExecutable.Equals(JdkFind.JavaExecutable? other) -> bool
-JdkFind.JavaExecutable.JavaExecutable() -> void
-JdkFind.JavaExecutable.OsName.get -> string?
-JdkFind.JavaExecutable.OsName.init -> void
-JdkFind.JavaExecutable.Path.get -> string!
-JdkFind.JavaExecutable.Path.init -> void
-JdkFind.JavaExecutable.RuntimeName.get -> string?
-JdkFind.JavaExecutable.RuntimeName.init -> void
-JdkFind.JavaExecutable.RuntimeVersion.get -> string?
-JdkFind.JavaExecutable.RuntimeVersion.init -> void
-JdkFind.JavaExecutable.StartFailure.get -> string?
-JdkFind.JavaExecutable.StartFailure.init -> void
-JdkFind.JavaExecutable.Vendor.get -> JdkFind.JvmVendor
-JdkFind.JavaExecutable.Vendor.init -> void
-JdkFind.JavaExecutable.VendorRaw.get -> string?
-JdkFind.JavaExecutable.VendorRaw.init -> void
-JdkFind.JavaExecutable.Version.get -> JdkFind.JvmVersion
-JdkFind.JavaExecutable.Version.init -> void
-JdkFind.JavaExecutable.VmName.get -> string?
-JdkFind.JavaExecutable.VmName.init -> void
-JdkFind.JavaExecutable.VmVersion.get -> string?
-JdkFind.JavaExecutable.VmVersion.init -> void
-override JdkFind.JavaExecutable.Equals(object? obj) -> bool
-override JdkFind.JavaExecutable.GetHashCode() -> int
-override JdkFind.JavaExecutable.ToString() -> string!
-static JdkFind.JavaExecutable.operator !=(JdkFind.JavaExecutable? left, JdkFind.JavaExecutable? right) -> bool
-static JdkFind.JavaExecutable.operator ==(JdkFind.JavaExecutable? left, JdkFind.JavaExecutable? right) -> bool
-JdkFind.JdkFinder.FromExecutable(string! javaExecutablePath, System.TimeSpan? timeout = null) -> JdkFind.JavaExecutable?
-JdkFind.JdkFinder.FromExecutableAsync(string! javaExecutablePath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<JdkFind.JavaExecutable?>!
+JdkFind.JavaRuntime
+JdkFind.JavaRuntime.<Clone>$() -> JdkFind.JavaRuntime!
+JdkFind.JavaRuntime.Architecture.get -> string?
+JdkFind.JavaRuntime.Architecture.init -> void
+JdkFind.JavaRuntime.Equals(JdkFind.JavaRuntime? other) -> bool
+JdkFind.JavaRuntime.Home.get -> System.IO.DirectoryInfo?
+JdkFind.JavaRuntime.Home.init -> void
+JdkFind.JavaRuntime.Installation.get -> JdkFind.Jvm?
+JdkFind.JavaRuntime.JavaRuntime() -> void
+JdkFind.JavaRuntime.OsName.get -> string?
+JdkFind.JavaRuntime.OsName.init -> void
+JdkFind.JavaRuntime.Path.get -> string!
+JdkFind.JavaRuntime.Path.init -> void
+JdkFind.JavaRuntime.RuntimeName.get -> string?
+JdkFind.JavaRuntime.RuntimeName.init -> void
+JdkFind.JavaRuntime.RuntimeVersion.get -> string?
+JdkFind.JavaRuntime.RuntimeVersion.init -> void
+JdkFind.JavaRuntime.StartFailure.get -> string?
+JdkFind.JavaRuntime.StartFailure.init -> void
+JdkFind.JavaRuntime.Vendor.get -> JdkFind.JvmVendor
+JdkFind.JavaRuntime.Vendor.init -> void
+JdkFind.JavaRuntime.VendorRaw.get -> string?
+JdkFind.JavaRuntime.VendorRaw.init -> void
+JdkFind.JavaRuntime.Version.get -> JdkFind.JvmVersion
+JdkFind.JavaRuntime.Version.init -> void
+JdkFind.JavaRuntime.VmName.get -> string?
+JdkFind.JavaRuntime.VmName.init -> void
+JdkFind.JavaRuntime.VmVersion.get -> string?
+JdkFind.JavaRuntime.VmVersion.init -> void
+override JdkFind.JavaRuntime.Equals(object? obj) -> bool
+override JdkFind.JavaRuntime.GetHashCode() -> int
+override JdkFind.JavaRuntime.ToString() -> string!
+static JdkFind.JavaRuntime.operator !=(JdkFind.JavaRuntime? left, JdkFind.JavaRuntime? right) -> bool
+static JdkFind.JavaRuntime.operator ==(JdkFind.JavaRuntime? left, JdkFind.JavaRuntime? right) -> bool
+JdkFind.JdkFinder.FromExecutable(string! javaExecutablePath, System.TimeSpan? timeout = null) -> JdkFind.JavaRuntime?
+JdkFind.JdkFinder.FromExecutableAsync(string! javaExecutablePath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<JdkFind.JavaRuntime?>!
 JdkFind.JdkFinder.FromHome(string! homeDirectory, System.TimeSpan? timeout = null) -> JdkFind.Jvm?
 JdkFind.JdkFinder.FromHomeAsync(string! homeDirectory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<JdkFind.Jvm?>!
-JdkFind.Jvm.Executable.get -> JdkFind.JavaExecutable!
-JdkFind.Jvm.Executable.init -> void
+JdkFind.Jvm.Runtime.get -> JdkFind.JavaRuntime!
+JdkFind.Jvm.Runtime.init -> void
 
