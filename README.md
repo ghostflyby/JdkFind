@@ -56,10 +56,10 @@ removed.
 | `prerelease` | boolean | Early-access build (e.g. `25-ea`) |
 | `vendor` | string | Normalized upstream vendor (e.g. `Azul`) |
 | `distribution` | string | foojay-style distribution name (e.g. `Zulu`) |
-| `vendorRaw` | string \| null | Raw `IMPLEMENTOR` string |
+| `vendorRaw` | string \| null | The binary's reported vendor, falling back to the release `IMPLEMENTOR` |
 | `runtimeName` / `runtimeVersion` | string \| null | Probed `java.runtime.*` |
 | `vmName` / `vmVersion` | string \| null | Probed `java.vm.*` |
-| `architecture` / `osName` | string \| null | Release file or probe |
+| `architecture` / `osName` | string \| null | Probed, falling back to the release file |
 | `providers` | string[] | Detection sources that reported this home |
 
 Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled;

@@ -56,12 +56,12 @@ public class JdkFinderProbeTests : IDisposable
         // compatibility case: the release metadata still stands in.
         var home = CreateFakeHome(temp.FullPath, "21.0.5", "echo 'Unrecognized option: -XshowSettings:properties' >&2\nexit 1");
 
-        var jvm = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
+        var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
-        Assert.NotNull(jvm);
-        Assert.Contains("exit code 1", jvm.StartFailure);
-        Assert.Contains("Unrecognized option", jvm.StartFailure);
-        Assert.Equal("21.0.5", jvm.Version.Original);
+        Assert.NotNull(executable);
+        Assert.Contains("exit code 1", executable.StartFailure);
+        Assert.Contains("Unrecognized option", executable.StartFailure);
+        Assert.Equal("21.0.5", executable.Version.Original);
     }
 
     [Fact]
@@ -83,10 +83,10 @@ public class JdkFinderProbeTests : IDisposable
 
         var home = CreateFakeHome(temp.FullPath, "17.0.5", "sleep 30");
 
-        var jvm = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), TimeSpan.FromMilliseconds(200));
+        var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), TimeSpan.FromMilliseconds(200));
 
-        Assert.NotNull(jvm);
-        Assert.Contains("timed out", jvm.StartFailure);
+        Assert.NotNull(executable);
+        Assert.Contains("timed out", executable.StartFailure);
     }
 
     [Fact]

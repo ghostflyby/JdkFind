@@ -23,10 +23,12 @@ public sealed record JdkFinder
     public bool DeduplicateHomes { get; init; } = true;
 
     /// <summary>
-    ///     Execute each candidate's own java executable to enrich the metadata with
-    ///     runtime properties (runtime/VM name and version, vendor fallback). Adds a
-    ///     few hundred milliseconds per installation; failures degrade silently to
-    ///     the release-file metadata. Default is true.
+    ///     Execute each candidate's own java executable, probing its runtime
+    ///     properties (runtime/VM name and version, vendor, architecture, OS
+    ///     name) onto the installation's <see cref="Jvm.Executable" />. Adds a
+    ///     few hundred milliseconds per installation; failures degrade silently —
+    ///     the release-file metadata stands and <see cref="Jvm.Executable" />
+    ///     carries only the path. Default is true.
     /// </summary>
     public bool ProbeRuntimeProperties { get; init; } = true;
 
@@ -149,7 +151,7 @@ public sealed record JdkFinder
     ///     (environment, timeout override, precedence) match
     ///     <see cref="FromExecutable" />, with the verdict and enrichment landing
     ///     on <see cref="Jvm.Executable" />. Null when the directory is not a java
-    ///     home.
+    ///     home, or when its release file turns out to be unreadable.
     /// </summary>
     public Jvm? FromHome(string homeDirectory, TimeSpan? timeout = null)
     {
