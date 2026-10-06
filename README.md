@@ -104,6 +104,42 @@ deduplicated by canonical path (symbolic links expanded), so the same
 physical JDK is reported once no matter how many providers found it —
 with `Providers` (the SOURCE column) faithfully listing every one of them.
 
+## Probing a specific JVM
+
+Discovery answers "what exists"; probing answers "does *this* binary run,
+and what does it say about itself?" — the pre-flight check before launching
+with a user-configured java:
+
+```csharp
+Jvm? jvm = JdkFinder.Default.FromExecutable(userConfiguredJavaPath);
+// or: JdkFinder.Default.FromHome(javaHomeDirectory);
+if (jvm is null)
+{
+    // The path does not yield a JVM at all.
+}
+else if (jvm.StartFailure is { } failure)
+{
+    // The binary did not run to completion — `failure` carries the reason
+    // (spawn error, exit code, or timeout) plus the output tail for display.
+}
+else
+{
+    // jvm.Version, jvm.Architecture, ... describe what the binary reported.
+}
+```
+
+The probe runs `-XshowSettings:properties -version` under a 15-second cap
+that kills the child on overrun — the synchronous factories accept a
+`timeout` override, while the async twins take a cancellation token (compose
+`CancellationTokenSource.CancelAfter` to bound the wait yourself); runtimes
+that reject that option are reported as a start failure rather than specially
+accommodated. The child's environment has the JVM-affecting
+variables (`_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`,
+`CLASSPATH`, `LD_PRELOAD`, `LD_LIBRARY_PATH`) removed, so the verdict
+describes the binary, not the launcher's shell. Values the binary reports
+take precedence over the home's release file, which only fills what the
+binary did not say.
+
 ## Build and test
 
 ```bash
