@@ -9,7 +9,7 @@ public class JdkFinderProbeTests : IDisposable
     [Fact]
     public void FromExecutable_MissingPath_ReturnsNull()
     {
-        Assert.Null(JdkFinder.Default.FromExecutable(Path.Combine(temp.FullPath, "nowhere", "java")));
+        Assert.Null(new JdkFinder().FromExecutable(Path.Combine(temp.FullPath, "nowhere", "java")));
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class JdkFinderProbeTests : IDisposable
             exit 0
             """);
 
-        var jvm = JdkFinder.Default.FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
+        var jvm = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
         Assert.NotNull(jvm);
         Assert.Null(jvm.StartFailure);
@@ -59,7 +59,7 @@ public class JdkFinderProbeTests : IDisposable
         // compatibility case: the release metadata still stands in.
         var home = CreateFakeHome(temp.FullPath, "21.0.5", "echo 'Unrecognized option: -XshowSettings:properties' >&2\nexit 1");
 
-        var jvm = JdkFinder.Default.FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
+        var jvm = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
         Assert.NotNull(jvm);
         Assert.Contains("exit code 1", jvm.StartFailure);
@@ -75,7 +75,7 @@ public class JdkFinderProbeTests : IDisposable
 
         var home = CreateFakeHome(temp.FullPath, string.Empty, "echo 'total garbage' >&2\nexit 1", includeRelease: false);
 
-        Assert.Null(JdkFinder.Default.FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName)));
+        Assert.Null(new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName)));
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class JdkFinderProbeTests : IDisposable
             return; // The fake java executable is a POSIX shell script.
 
         var home = CreateFakeHome(temp.FullPath, "17.0.5", "sleep 30");
-        var finder = JdkFinder.Default with { ProbeTimeout = TimeSpan.FromMilliseconds(200) };
+        var finder = new JdkFinder { ProbeTimeout = TimeSpan.FromMilliseconds(200) };
 
         var jvm = finder.FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
@@ -97,7 +97,7 @@ public class JdkFinderProbeTests : IDisposable
     public async Task FromExecutableAsync_PreCancelledToken_Throws()
     {
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => JdkFinder.Default.FromExecutableAsync(Path.Combine(temp.FullPath, "any"), new CancellationToken(true)));
+            () => new JdkFinder().FromExecutableAsync(Path.Combine(temp.FullPath, "any"), new CancellationToken(true)));
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class JdkFinderProbeTests : IDisposable
         File.SetUnixFileMode(java, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         File.WriteAllText(Path.Combine(jre, "release"), "JAVA_VERSION=\"17.0.5\"\n");
 
-        var jvm = JdkFinder.Default.FromHome(jre);
+        var jvm = new JdkFinder().FromHome(jre);
 
         Assert.NotNull(jvm);
         Assert.Equal(jre, jvm.Home.FullName);
@@ -132,9 +132,15 @@ public class JdkFinderProbeTests : IDisposable
     }
 
     [Fact]
+    public async Task FromHomeAsync_MissingDirectory_ReturnsNull()
+    {
+        Assert.Null(await new JdkFinder().FromHomeAsync(Path.Combine(temp.FullPath, "missing"), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public void FromHome_MissingDirectory_ReturnsNull()
     {
-        Assert.Null(JdkFinder.Default.FromHome(Path.Combine(temp.FullPath, "missing")));
+        Assert.Null(new JdkFinder().FromHome(Path.Combine(temp.FullPath, "missing")));
     }
 
     [Fact]

@@ -145,7 +145,7 @@ public sealed record JdkFinder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(homeDirectory);
 
-        var home = JavaHomeLayout.Probe(homeDirectory);
+        var home = JavaHomeLayout.Probe(Path.GetFullPath(homeDirectory));
         if (home is null)
             return null;
 
@@ -160,7 +160,7 @@ public sealed record JdkFinder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(homeDirectory);
 
-        var home = JavaHomeLayout.Probe(homeDirectory);
+        var home = JavaHomeLayout.Probe(Path.GetFullPath(homeDirectory));
         if (home is null)
             return null;
 

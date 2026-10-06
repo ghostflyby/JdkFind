@@ -47,9 +47,11 @@ public sealed record Jvm
     }
 
     /// <summary>
-    ///     Why the installation's java executable could not be started — a spawn
-    ///     error, a non-zero exit (carrying the output tail), or the probe
-    ///     timeout — or null when it ran (or when no probe ran).
+    ///     Why the java executable could not be started — a spawn error, the
+    ///     probe timeout, or (on <see cref="JdkFinder.FromExecutable" /> /
+    ///     <see cref="JdkFinder.FromHome" />, which require a successful exit) a
+    ///     non-zero exit carrying the output tail — or null when it ran, reported
+    ///     nothing parseable, or no probe ran.
     /// </summary>
     public string? StartFailure { get; init; }
 
@@ -59,7 +61,12 @@ public sealed record Jvm
     /// </summary>
     public bool HasCompiler { get; init; }
 
-    /// <summary>The raw vendor string (<c>IMPLEMENTOR</c>, falling back to the probed <c>java.vendor</c>).</summary>
+    /// <summary>
+    ///     The raw vendor string. Discovery prefers the release file's
+    ///     <c>IMPLEMENTOR</c> with the probed <c>java.vendor</c> as fallback; the
+    ///     probe factories prefer the binary's word and let the release file fill
+    ///     the gap.
+    /// </summary>
     public string? VendorRaw { get; init; }
 
     /// <summary>The normalized upstream vendor the raw string matched, or <see cref="JvmVendor.Unknown" />.</summary>
@@ -68,7 +75,8 @@ public sealed record Jvm
     /// <summary>The distribution per the foojay API naming, or <see cref="JvmDistribution.Unknown" />.</summary>
     public JvmDistribution Distribution { get; init; }
 
-    /// <summary><c>java.runtime.name</c> from the runtime probe; null when probing is off or failed.</summary>
+    /// <summary><c>java.runtime.name</c> from the runtime probe; null when no probe
+    /// ran or the binary did not report it.</summary>
     public string? RuntimeName { get; init; }
 
     /// <summary><c>java.runtime.version</c> from the runtime probe (includes build metadata).</summary>
@@ -83,7 +91,9 @@ public sealed record Jvm
     /// <summary>Raw <c>OS_NAME</c> value, e.g. <c>Darwin</c>.</summary>
     public string? OsName { get; init; }
 
-    /// <summary>Raw <c>OS_ARCH</c> value, falling back to the probed <c>os.arch</c>.</summary>
+    /// <summary>Raw <c>OS_ARCH</c> value or the probed <c>os.arch</c>, by the same
+    /// precedence as <see cref="VendorRaw" /> (discovery prefers the release file;
+    /// probing prefers the binary).</summary>
     public string? Architecture { get; init; }
 
     /// <summary>Summarizes the installation: language version, full version, distribution and home.</summary>

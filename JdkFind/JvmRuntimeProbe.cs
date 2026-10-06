@@ -42,7 +42,8 @@ internal static class JvmRuntimeProbe
     /// the timeout cap, or (under <c>requireExitSuccess</c>) a non-zero exit —
     /// carrying the reason plus an output tail for display.
     /// <see cref="Properties" /> holds the parsed system properties when the
-    /// output was parseable; <see cref="ExitCode" /> is null when the child never
+    /// output was parseable and the exit rule was satisfied;
+    /// <see cref="ExitCode" /> is null when the child never
     /// ran to completion.</summary>
     internal sealed record Outcome(
         int? ExitCode,
