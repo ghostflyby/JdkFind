@@ -24,8 +24,10 @@ public sealed record JavaRuntime
     ///     instance — no child process is spawned. Filesystem reads happen on
     ///     every access, and discovery data such as <see cref="Jvm.Providers" />
     ///     cannot be restored, so for a runtime obtained from a
-    ///     <see cref="Jvm" />, that instance remains the better handle. Null when
-    ///     no home is recognizable or its release file is unreadable.
+    ///     <see cref="Jvm" />, that instance remains the better handle — for a
+    ///     JDK 8 outer home whose binary lives in <c>jre/bin</c>, the derivation
+    ///     yields the inner JRE rather than the outer JDK. Null when no home is
+    ///     recognizable or its release file is unreadable.
     /// </summary>
     public Jvm? Installation
     {
