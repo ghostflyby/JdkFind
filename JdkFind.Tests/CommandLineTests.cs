@@ -11,17 +11,23 @@ public class CommandLineTests
     {
         Home = new DirectoryInfo(HomePath),
         Providers = ["macos"],
+        Executable = new JavaExecutable
+        {
+            Path = Path.Combine(HomePath, "bin", "java"),
+            Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1"),
+            VendorRaw = "Azul Systems, Inc.",
+            RuntimeName = "OpenJDK Runtime Environment",
+            RuntimeVersion = "21.0.12+44",
+            VmName = "OpenJDK 64-Bit Server VM",
+            VmVersion = "21.0.12+44",
+            Architecture = "aarch64",
+        },
         Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1"),
         LanguageVersion = 21,
         HasCompiler = true,
         Vendor = JvmVendor.Azul,
         Distribution = JvmDistribution.Zulu,
         VendorRaw = "Azul Systems, Inc.",
-        RuntimeName = "OpenJDK Runtime Environment",
-        RuntimeVersion = "21.0.12+44",
-        VmName = "OpenJDK 64-Bit Server VM",
-        VmVersion = "21.0.12+44",
-        Architecture = "aarch64",
     };
 
     [Theory]
@@ -41,13 +47,18 @@ public class CommandLineTests
     {
         Home = new DirectoryInfo(HomePath),
         Providers = ["macos"],
+        Executable = new JavaExecutable
+        {
+            Path = Path.Combine(HomePath, "bin", "java"),
+            Version = new JvmVersion(new Version(1, 8, 0), false, "1.8.0_402"),
+            Architecture = "aarch64",
+        },
         Version = new JvmVersion(new Version(1, 8, 0), false, "1.8.0_402"),
         LanguageVersion = 8,
         HasCompiler = true,
         Vendor = JvmVendor.Azul,
         Distribution = JvmDistribution.Zulu,
         VendorRaw = "Azul Systems, Inc.",
-        Architecture = "aarch64",
     };
 
     [Theory]
@@ -63,6 +74,7 @@ public class CommandLineTests
     {
         Home = new DirectoryInfo(HomePath),
         Providers = ["macos"],
+        Executable = new JavaExecutable { Path = Path.Combine(HomePath, "bin", "java"), Version = JvmVersion.Unknown("unknown") },
         Version = JvmVersion.Unknown("unknown"),
         LanguageVersion = null,
     };

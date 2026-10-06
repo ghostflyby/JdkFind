@@ -67,6 +67,7 @@ public class JvmResolveTests : IDisposable
     {
         Home = new DirectoryInfo(home),
         Providers = ["test"],
+        Executable = new JavaExecutable { Path = Path.Combine(home, "bin", "java"), Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21") },
         Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"),
     };
 

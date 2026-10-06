@@ -32,21 +32,18 @@ public class JdkFinderProbeTests : IDisposable
             exit 0
             """);
 
-        var jvm = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
+        var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
-        Assert.NotNull(jvm);
-        Assert.Null(jvm.StartFailure);
+        Assert.NotNull(executable);
+        Assert.Null(executable.StartFailure);
         // The binary's own word beats the release file's claim.
-        Assert.Equal("17.0.9", jvm.Version.Original);
-        Assert.Equal(17, jvm.LanguageVersion);
-        Assert.Equal("Probe Vendor", jvm.VendorRaw);
-        Assert.Equal("testarch", jvm.Architecture);
-        Assert.Equal("TestOS", jvm.OsName);
-        Assert.Equal("Probe Runtime", jvm.RuntimeName);
-        Assert.Equal("Probe VM", jvm.VmName);
-        Assert.Equal(home, jvm.Home.FullName);
-        Assert.False(jvm.HasCompiler); // No javac in the fixture.
-        Assert.Empty(jvm.Providers); // No provider reported this; the caller did.
+        Assert.Equal("17.0.9", executable.Version.Original);
+        Assert.Equal("Probe Vendor", executable.VendorRaw);
+        Assert.Equal("testarch", executable.Architecture);
+        Assert.Equal("TestOS", executable.OsName);
+        Assert.Equal("Probe Runtime", executable.RuntimeName);
+        Assert.Equal("Probe VM", executable.VmName);
+        Assert.Equal(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), executable.Path);
     }
 
     [Fact]
@@ -126,7 +123,7 @@ public class JdkFinderProbeTests : IDisposable
 
         Assert.NotNull(jvm);
         Assert.Equal(jre, jvm.Home.FullName);
-        Assert.Null(jvm.StartFailure);
+        Assert.Null(jvm.Executable.StartFailure);
         Assert.Equal("17.0.5", jvm.Version.Original);
     }
 
