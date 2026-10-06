@@ -108,23 +108,26 @@ with `Providers` (the SOURCE column) faithfully listing every one of them.
 
 Discovery answers "what exists"; probing answers "does *this* binary run,
 and what does it say about itself?" — the pre-flight check before launching
-with a user-configured java:
+with a user-configured java. The two concepts live on separate types: a
+`JavaExecutable` is the runnable binary, a `Jvm` is an installation directory
+whose `Executable` property carries its own java.
 
 ```csharp
-Jvm? jvm = JdkFinder.Default.FromExecutable(userConfiguredJavaPath);
-// or: JdkFinder.Default.FromHome(javaHomeDirectory);
-if (jvm is null)
+JavaExecutable? executable = JdkFinder.Default.FromExecutable(userConfiguredJavaPath);
+// or: JdkFinder.Default.FromHome(javaHomeDirectory);  → Jvm?, with jvm.Executable
+if (executable is null)
 {
     // The path does not yield a JVM at all.
 }
-else if (jvm.StartFailure is { } failure)
+else if (executable.StartFailure is { } failure)
 {
     // The binary did not run to completion — `failure` carries the reason
     // (spawn error, exit code, or timeout) plus the output tail for display.
 }
 else
 {
-    // jvm.Version, jvm.Architecture, ... describe what the binary reported.
+    // executable.Version, executable.Architecture, ... describe what the
+    // binary reported.
 }
 ```
 
@@ -138,7 +141,8 @@ variables (`_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`,
 `CLASSPATH`, `LD_PRELOAD`, `LD_LIBRARY_PATH`) removed, so the verdict
 describes the binary, not the launcher's shell. Values the binary reports
 take precedence over the home's release file, which only fills what the
-binary did not say.
+binary did not say; any property except `java.version` may be absent (null) —
+the settings output is an implementation detail, not a spec promise.
 
 ## Build and test
 
