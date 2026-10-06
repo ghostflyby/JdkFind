@@ -133,10 +133,12 @@ public sealed record JdkFinder
 
     /// <summary>
     ///     Probes a java home directory under any layout
-    ///     <see cref="JavaHomeLayout.Probe" /> recognizes, running the home's own
-    ///     java executable. The returned <see cref="Jvm.Home" /> is the probed
-    ///     layout root — a JDK 8 inner-JRE directory stays the inner JRE — and the
-    ///     probe semantics (environment, timeout, precedence) match
+    ///     <see cref="JavaHomeLayout.Probe" /> recognizes — relative paths resolve
+    ///     against the process working directory and the returned
+    ///     <see cref="Jvm.Home" /> is absolute — running the home's own java
+    ///     executable. The returned home is the probed layout root — a JDK 8
+    ///     inner-JRE directory stays the inner JRE — and the probe semantics
+    ///     (environment, timeout override, precedence) match
     ///     <see cref="FromExecutable" />. Null when the directory is not a java
     ///     home.
     /// </summary>

@@ -102,10 +102,10 @@ public class JdkFinderProbeTests : IDisposable
     [Fact]
     public void FromExecutable_BlankPath_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => JdkFinder.Default.FromExecutable(null!));
-        Assert.Throws<ArgumentException>(() => JdkFinder.Default.FromExecutable(string.Empty));
-        Assert.Throws<ArgumentException>(() => JdkFinder.Default.FromExecutable("  "));
-        Assert.Throws<ArgumentException>(() => JdkFinder.Default.FromHome("  "));
+        Assert.Throws<ArgumentNullException>(() => new JdkFinder().FromExecutable(null!));
+        Assert.Throws<ArgumentException>(() => new JdkFinder().FromExecutable(string.Empty));
+        Assert.Throws<ArgumentException>(() => new JdkFinder().FromExecutable("  "));
+        Assert.Throws<ArgumentException>(() => new JdkFinder().FromHome("  "));
     }
 
     [Fact]
