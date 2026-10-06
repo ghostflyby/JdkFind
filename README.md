@@ -128,10 +128,12 @@ else
 }
 ```
 
-The probe runs `-XshowSettings:properties -version` under the
-`ProbeTimeout` cap (15 seconds by default, killing the child on overrun);
-runtimes that reject that option are reported as a start failure rather
-than specially accommodated. The child's environment has the JVM-affecting
+The probe runs `-XshowSettings:properties -version` under a 15-second cap
+that kills the child on overrun — the synchronous factories accept a
+`timeout` override, while the async twins take a cancellation token (compose
+`CancellationTokenSource.CancelAfter` to bound the wait yourself); runtimes
+that reject that option are reported as a start failure rather than specially
+accommodated. The child's environment has the JVM-affecting
 variables (`_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`,
 `CLASSPATH`, `LD_PRELOAD`, `LD_LIBRARY_PATH`) removed, so the verdict
 describes the binary, not the launcher's shell. Values the binary reports

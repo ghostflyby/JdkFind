@@ -11,7 +11,7 @@ namespace JdkFind;
 /// </summary>
 internal static class JvmRuntimeProbe
 {
-    private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
+    internal static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
 
     private const int TailLength = 4096;
 
@@ -51,19 +51,19 @@ internal static class JvmRuntimeProbe
         IReadOnlyDictionary<string, string>? Properties);
 
     /// <summary>Probes the candidate; null when the java executable is missing, broken, or too slow.</summary>
-    internal static Info? Probe(string homePath, TimeSpan? timeout = null) =>
-        ProbeWithFailure(homePath, timeout ?? DefaultTimeout).Info;
+    internal static Info? Probe(string homePath) =>
+        ProbeWithFailure(homePath).Info;
 
     /// <summary>Probes the candidate and additionally reports why it failed. A null
     /// info with a null failure means the java executable is missing (or ran but
     /// printed nothing parseable — not a start failure).</summary>
-    internal static (Info? Info, string? Failure) ProbeWithFailure(string homePath, TimeSpan timeout)
+    internal static (Info? Info, string? Failure) ProbeWithFailure(string homePath)
     {
         var java = JavaHomeLayout.JavaExecutablePath(homePath);
         if (!File.Exists(java))
             return (null, null);
 
-        var outcome = Run(java, timeout, requireExitSuccess: false, sanitizeEnvironment: false);
+        var outcome = Run(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false);
         return outcome.Properties is null ? (null, outcome.Failure) : (Project(outcome.Properties), null);
     }
 
@@ -112,13 +112,13 @@ internal static class JvmRuntimeProbe
     ///     kills the child process and propagates; the internal timeout still degrades
     ///     to null, exactly like the synchronous probe.
     /// </summary>
-    internal static async Task<Info?> ProbeAsync(string homePath, CancellationToken cancellationToken, TimeSpan? timeout = null) =>
-        (await ProbeWithFailureAsync(homePath, timeout ?? DefaultTimeout, cancellationToken).ConfigureAwait(false)).Info;
+    internal static async Task<Info?> ProbeAsync(string homePath, CancellationToken cancellationToken) =>
+        (await ProbeWithFailureAsync(homePath, cancellationToken).ConfigureAwait(false)).Info;
 
     /// <summary>Async twin of <see cref="ProbeWithFailure" />; a user cancellation
     /// kills the child and propagates.</summary>
     internal static async Task<(Info? Info, string? Failure)> ProbeWithFailureAsync(
-        string homePath, TimeSpan timeout, CancellationToken cancellationToken)
+        string homePath, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -126,7 +126,7 @@ internal static class JvmRuntimeProbe
         if (!File.Exists(java))
             return (null, null);
 
-        var outcome = await RunAsync(java, timeout, requireExitSuccess: false, sanitizeEnvironment: false, cancellationToken).ConfigureAwait(false);
+        var outcome = await RunAsync(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false, cancellationToken).ConfigureAwait(false);
         return outcome.Properties is null ? (null, outcome.Failure) : (Project(outcome.Properties), null);
     }
 

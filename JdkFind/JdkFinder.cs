@@ -30,11 +30,6 @@ public sealed record JdkFinder
     /// </summary>
     public bool ProbeRuntimeProperties { get; init; } = true;
 
-    /// <summary>How long a single runtime probe — enumeration enrichment and the
-    /// <see cref="FromExecutable" /> / <see cref="FromHome" /> factories alike — may
-    /// take before the child process is killed. Default is 15 seconds.</summary>
-    public TimeSpan ProbeTimeout { get; init; } = TimeSpan.FromSeconds(15);
-
     /// <summary>The shared ready-to-use finder bound to the platform's built-in sources.</summary>
     public static JdkFinder Default { get; } = new() { Providers = CreateDefaultProviders() };
 
@@ -69,7 +64,7 @@ public sealed record JdkFinder
                     CancellationToken = cancellationToken,
                 },
                 async (index, token) =>
-                    results[index] = await CreateJvmAsync(order[index], probeRuntime: true, ProbeTimeout, token).ConfigureAwait(false))
+                    results[index] = await CreateJvmAsync(order[index], probeRuntime: true, token).ConfigureAwait(false))
                 .ConfigureAwait(false);
         }
         else
@@ -77,7 +72,7 @@ public sealed record JdkFinder
             for (var index = 0; index < order.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                results[index] = await CreateJvmAsync(order[index], probeRuntime: false, ProbeTimeout, cancellationToken).ConfigureAwait(false);
+                results[index] = await CreateJvmAsync(order[index], probeRuntime: false, cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -92,11 +87,12 @@ public sealed record JdkFinder
     ///     (<c>bin</c>, <c>jre/bin</c> and macOS bundle layouts); a release file
     ///     found there fills what the binary itself does not report — the values
     ///     the binary reports take precedence. The probe runs the child with
-    ///     JVM-affecting environment variables removed, under the
-    ///     <see cref="ProbeTimeout" /> cap; a child that does not run to completion
-    ///     surfaces as <see cref="Jvm.StartFailure" />.
+    ///     JVM-affecting environment variables removed, under the built-in
+    ///     15-second cap (overridable via <paramref name="timeout" />); a child
+    ///     that does not run to completion surfaces as
+    ///     <see cref="Jvm.StartFailure" />.
     /// </summary>
-    public Jvm? FromExecutable(string javaExecutablePath)
+    public Jvm? FromExecutable(string javaExecutablePath, TimeSpan? timeout = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(javaExecutablePath);
 
@@ -108,12 +104,15 @@ public sealed record JdkFinder
                 ?? (Path.GetDirectoryName(directory) is { } parentDirectory ? JavaHomeLayout.Probe(parentDirectory) : null);
         }
 
-        var outcome = JvmRuntimeProbe.Run(javaExecutablePath, ProbeTimeout, requireExitSuccess: true, sanitizeEnvironment: true);
+        var outcome = JvmRuntimeProbe.Run(
+            javaExecutablePath, timeout ?? JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true);
         return BuildFromProbe(home, fullPath, outcome, TryParseRelease(home));
     }
 
     /// <summary>Async twin of <see cref="FromExecutable" />; a cancellation token
-    /// kills the child process and propagates.</summary>
+    /// kills the child process and propagates. The child is still killed at the
+    /// built-in 15-second cap — bound the wait yourself by passing a token
+    /// cancelled earlier (e.g. via <c>CancellationTokenSource.CancelAfter</c>).</summary>
     public async Task<Jvm?> FromExecutableAsync(string javaExecutablePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(javaExecutablePath);
@@ -127,7 +126,7 @@ public sealed record JdkFinder
         }
 
         var outcome = await JvmRuntimeProbe.RunAsync(
-                javaExecutablePath, ProbeTimeout, requireExitSuccess: true, sanitizeEnvironment: true, cancellationToken)
+                javaExecutablePath, JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true, cancellationToken)
             .ConfigureAwait(false);
         return BuildFromProbe(home, fullPath, outcome, TryParseRelease(home));
     }
@@ -141,7 +140,7 @@ public sealed record JdkFinder
     ///     <see cref="FromExecutable" />. Null when the directory is not a java
     ///     home.
     /// </summary>
-    public Jvm? FromHome(string homeDirectory)
+    public Jvm? FromHome(string homeDirectory, TimeSpan? timeout = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(homeDirectory);
 
@@ -150,12 +149,15 @@ public sealed record JdkFinder
             return null;
 
         var executable = JavaHomeLayout.JavaExecutablePath(home);
-        var outcome = JvmRuntimeProbe.Run(executable, ProbeTimeout, requireExitSuccess: true, sanitizeEnvironment: true);
+        var outcome = JvmRuntimeProbe.Run(
+            executable, timeout ?? JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true);
         return BuildFromProbe(home, executable, outcome, TryParseRelease(home));
     }
 
     /// <summary>Async twin of <see cref="FromHome" />; a cancellation token kills
-    /// the child process and propagates.</summary>
+    /// the child process and propagates. The child is still killed at the built-in
+    /// 15-second cap — bound the wait yourself by passing a token cancelled
+    /// earlier (e.g. via <c>CancellationTokenSource.CancelAfter</c>).</summary>
     public async Task<Jvm?> FromHomeAsync(string homeDirectory, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(homeDirectory);
@@ -166,7 +168,7 @@ public sealed record JdkFinder
 
         var executable = JavaHomeLayout.JavaExecutablePath(home);
         var outcome = await JvmRuntimeProbe.RunAsync(
-                executable, ProbeTimeout, requireExitSuccess: true, sanitizeEnvironment: true, cancellationToken)
+                executable, JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true, cancellationToken)
             .ConfigureAwait(false);
         return BuildFromProbe(home, executable, outcome, TryParseRelease(home));
     }
@@ -205,12 +207,12 @@ public sealed record JdkFinder
             return order
                 .AsParallel()
                 .AsOrdered()
-                .Select(entry => CreateJvm(entry.HomePath, entry.Providers, probeRuntime: true, finder.ProbeTimeout))
+                .Select(entry => CreateJvm(entry.HomePath, entry.Providers, probeRuntime: true))
                 .OfType<Jvm>();
         }
 
         return order
-            .Select(entry => CreateJvm(entry.HomePath, entry.Providers, probeRuntime: false, finder.ProbeTimeout))
+            .Select(entry => CreateJvm(entry.HomePath, entry.Providers, probeRuntime: false))
             .OfType<Jvm>();
     }
 
@@ -250,7 +252,7 @@ public sealed record JdkFinder
         return order;
     }
 
-    private static Jvm? CreateJvm(string homePath, IReadOnlyList<string> providers, bool probeRuntime, TimeSpan probeTimeout)
+    private static Jvm? CreateJvm(string homePath, IReadOnlyList<string> providers, bool probeRuntime)
     {
         // The provider contract guarantees validated homes, so the release file is
         // expected to exist; parse failures (missing or unreadable) count as no JVM.
@@ -271,7 +273,7 @@ public sealed record JdkFinder
         JvmRuntimeProbe.Info? runtime = null;
         string? startFailure = null;
         if (probeRuntime)
-            (runtime, startFailure) = JvmRuntimeProbe.ProbeWithFailure(homePath, probeTimeout);
+            (runtime, startFailure) = JvmRuntimeProbe.ProbeWithFailure(homePath);
 
         return Build(homePath, providers, release, runtime, startFailure);
     }
@@ -279,7 +281,7 @@ public sealed record JdkFinder
     /// <summary>Async twin of <see cref="CreateJvm" /> for cancellation-aware callers;
     /// a cancelled token propagates instead of counting as a broken installation.</summary>
     private static async Task<Jvm?> CreateJvmAsync(
-        (string HomePath, List<string> Providers) entry, bool probeRuntime, TimeSpan probeTimeout, CancellationToken cancellationToken)
+        (string HomePath, List<string> Providers) entry, bool probeRuntime, CancellationToken cancellationToken)
     {
         // The provider contract guarantees validated homes, so the release file is
         // expected to exist; parse failures (missing or unreadable) count as no JVM.
@@ -300,7 +302,7 @@ public sealed record JdkFinder
         JvmRuntimeProbe.Info? runtime = null;
         string? startFailure = null;
         if (probeRuntime)
-            (runtime, startFailure) = await JvmRuntimeProbe.ProbeWithFailureAsync(entry.HomePath, probeTimeout, cancellationToken).ConfigureAwait(false);
+            (runtime, startFailure) = await JvmRuntimeProbe.ProbeWithFailureAsync(entry.HomePath, cancellationToken).ConfigureAwait(false);
 
         return Build(entry.HomePath, entry.Providers, release, runtime, startFailure);
     }

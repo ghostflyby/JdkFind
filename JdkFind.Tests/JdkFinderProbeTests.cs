@@ -85,9 +85,8 @@ public class JdkFinderProbeTests : IDisposable
             return; // The fake java executable is a POSIX shell script.
 
         var home = CreateFakeHome(temp.FullPath, "17.0.5", "sleep 30");
-        var finder = new JdkFinder { ProbeTimeout = TimeSpan.FromMilliseconds(200) };
 
-        var jvm = finder.FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
+        var jvm = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), TimeSpan.FromMilliseconds(200));
 
         Assert.NotNull(jvm);
         Assert.Contains("timed out", jvm.StartFailure);
