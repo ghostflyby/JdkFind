@@ -47,6 +47,13 @@ public sealed record Jvm
     }
 
     /// <summary>
+    ///     Why the installation's java executable could not be started — a spawn
+    ///     error, a non-zero exit (carrying the output tail), or the probe
+    ///     timeout — or null when it ran (or when no probe ran).
+    /// </summary>
+    public string? StartFailure { get; init; }
+
+    /// <summary>
     ///     True when the installation ships a compiler (<c>bin/javac</c>), i.e. it is a
     ///     JDK rather than a runtime-only image (standalone JREs, jlink runtimes).
     /// </summary>

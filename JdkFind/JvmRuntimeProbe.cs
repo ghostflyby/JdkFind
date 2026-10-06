@@ -4,13 +4,29 @@ using System.Diagnostics;
 namespace JdkFind;
 
 /// <summary>
-///     Executes the candidate's own java executable to read its runtime system
-///     properties (the Gradle approach): runtime and VM name/version are always
-///     present there, while the release file's key set varies by vendor.
+///     Executes a java executable to read its runtime system properties (the
+///     Gradle approach): runtime and VM name/version are always present there,
+///     while the release file's key set varies by vendor. The shared pipeline
+///     behind runtime enrichment and JdkFinder's probe factories.
 /// </summary>
 internal static class JvmRuntimeProbe
 {
-    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
+
+    private const int TailLength = 4096;
+
+    /// <summary>Environment variables removed from a sanitized probe child's
+    /// environment: every JVM-domain variable that can distort what the binary
+    /// reports — injected options, a foreign libjvm through the dynamic loader.</summary>
+    internal static readonly string[] SanitizedVariables =
+    [
+        "_JAVA_OPTIONS",
+        "JDK_JAVA_OPTIONS",
+        "JAVA_TOOL_OPTIONS",
+        "CLASSPATH",
+        "LD_PRELOAD",
+        "LD_LIBRARY_PATH",
+    ];
 
     internal sealed record Info(
         string Vendor,
@@ -21,22 +37,43 @@ internal static class JvmRuntimeProbe
         string VmVersion,
         string OsArch);
 
+    /// <summary>The pipeline outcome for one executable. <see cref="Failure" /> is
+    /// set when the child did not run to completion successfully — a spawn error,
+    /// the timeout cap, or (under <c>requireExitSuccess</c>) a non-zero exit —
+    /// carrying the reason plus an output tail for display.
+    /// <see cref="Properties" /> holds the parsed system properties when the
+    /// output was parseable; <see cref="ExitCode" /> is null when the child never
+    /// ran to completion.</summary>
+    internal sealed record Outcome(
+        int? ExitCode,
+        string? Failure,
+        IReadOnlyDictionary<string, string>? Properties);
+
     /// <summary>Probes the candidate; null when the java executable is missing, broken, or too slow.</summary>
-    internal static Info? Probe(string homePath)
+    internal static Info? Probe(string homePath, TimeSpan? timeout = null) =>
+        ProbeWithFailure(homePath, timeout ?? DefaultTimeout).Info;
+
+    /// <summary>Probes the candidate and additionally reports why it failed. A null
+    /// info with a null failure means the java executable is missing (or ran but
+    /// printed nothing parseable — not a start failure).</summary>
+    internal static (Info? Info, string? Failure) ProbeWithFailure(string homePath, TimeSpan timeout)
     {
         var java = JavaHomeLayout.JavaExecutablePath(homePath);
         if (!File.Exists(java))
-            return null;
+            return (null, null);
 
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = java,
-            Arguments = "-XshowSettings:properties -version",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
+        var outcome = Run(java, timeout, requireExitSuccess: false, sanitizeEnvironment: false);
+        return outcome.Properties is null ? (null, outcome.Failure) : (Project(outcome.Properties), null);
+    }
+
+    /// <summary>Runs the probe pipeline against one executable: spawn, drain both
+    /// streams, wait under the timeout (killing the child tree on overrun), then
+    /// parse. With <paramref name="requireExitSuccess" /> a non-zero exit counts as
+    /// a failure; with <paramref name="sanitizeEnvironment" /> the JVM-domain
+    /// environment variables are removed from the child.</summary>
+    internal static Outcome Run(string javaExecutablePath, TimeSpan timeout, bool requireExitSuccess, bool sanitizeEnvironment)
+    {
+        var startInfo = CreateStartInfo(javaExecutablePath, sanitizeEnvironment);
 
         Process process;
         try
@@ -46,20 +83,26 @@ internal static class JvmRuntimeProbe
         catch (Exception exception) when (
             exception is Win32Exception or IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            return null;
+            return new Outcome(null, exception.Message, null);
         }
 
         using (process)
         {
-            var stderr = process.StandardError.ReadToEndAsync();
-            _ = process.StandardOutput.ReadToEndAsync();
-            if (!process.WaitForExit(Timeout))
+            var standardError = process.StandardError.ReadToEndAsync();
+            var standardOutput = process.StandardOutput.ReadToEndAsync();
+            if (!process.WaitForExit(timeout))
             {
                 TryKill(process);
-                return null;
+                return new Outcome(null, TimeoutFailure(timeout), null);
             }
 
-            return Parse(stderr.GetAwaiter().GetResult());
+            var exitCode = process.ExitCode;
+            var error = standardError.GetAwaiter().GetResult();
+            var output = standardOutput.GetAwaiter().GetResult();
+            if (requireExitSuccess && exitCode != 0)
+                return new Outcome(exitCode, ExitFailure(exitCode, error, output), null);
+
+            return new Outcome(exitCode, null, ParseProperties(error));
         }
     }
 
@@ -68,61 +111,73 @@ internal static class JvmRuntimeProbe
     ///     kills the child process and propagates; the internal timeout still degrades
     ///     to null, exactly like the synchronous probe.
     /// </summary>
-    internal static async Task<Info?> ProbeAsync(string homePath, CancellationToken cancellationToken)
+    internal static async Task<Info?> ProbeAsync(string homePath, CancellationToken cancellationToken, TimeSpan? timeout = null) =>
+        (await ProbeWithFailureAsync(homePath, timeout ?? DefaultTimeout, cancellationToken).ConfigureAwait(false)).Info;
+
+    /// <summary>Async twin of <see cref="ProbeWithFailure" />; a user cancellation
+    /// kills the child and propagates.</summary>
+    internal static async Task<(Info? Info, string? Failure)> ProbeWithFailureAsync(
+        string homePath, TimeSpan timeout, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var java = JavaHomeLayout.JavaExecutablePath(homePath);
         if (!File.Exists(java))
-            return null;
+            return (null, null);
 
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = java,
-            Arguments = "-XshowSettings:properties -version",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
+        var outcome = await RunAsync(java, timeout, requireExitSuccess: false, sanitizeEnvironment: false, cancellationToken).ConfigureAwait(false);
+        return outcome.Properties is null ? (null, outcome.Failure) : (Project(outcome.Properties), null);
+    }
+
+    /// <summary>Async twin of <see cref="Run" />; a user cancellation kills the child
+    /// process and propagates.</summary>
+    internal static async Task<Outcome> RunAsync(
+        string javaExecutablePath, TimeSpan timeout, bool requireExitSuccess, bool sanitizeEnvironment, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
 
         Process process;
         try
         {
-            process = Process.Start(startInfo)!;
+            process = Process.Start(CreateStartInfo(javaExecutablePath, sanitizeEnvironment))!;
         }
         catch (Exception exception) when (
             exception is Win32Exception or IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            return null;
+            return new Outcome(null, exception.Message, null);
         }
 
         using (process)
         {
             try
             {
-                var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+                var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
 
-                // The stdout stream carries nothing the probe uses; without the token
-                // it simply completes when the kill below closes the pipe, and the
-                // discarded task can never end cancelled.
-                _ = process.StandardOutput.ReadToEndAsync();
+                // The stdout stream carries nothing the probe parses; without the
+                // token it simply completes when the pipes close.
+                var standardOutput = process.StandardOutput.ReadToEndAsync();
 
-                // The 15-second cap feeds a linked source so a hung child degrades to
-                // null like before; the caller's token distinguishes a user cancel.
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeout.CancelAfter(Timeout);
+                // The timeout feeds a linked source so a hung child degrades to a
+                // timeout failure; the caller's token distinguishes a user cancel.
+                using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutSource.CancelAfter(timeout);
                 try
                 {
-                    await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+                    await process.WaitForExitAsync(timeoutSource.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
                     TryKill(process);
-                    return null;
+                    return new Outcome(null, TimeoutFailure(timeout), null);
                 }
 
-                return Parse(await stderr.ConfigureAwait(false));
+                var exitCode = process.ExitCode;
+                var error = await standardError.ConfigureAwait(false);
+                var output = await standardOutput.ConfigureAwait(false);
+                if (requireExitSuccess && exitCode != 0)
+                    return new Outcome(exitCode, ExitFailure(exitCode, error, output), null);
+
+                return new Outcome(exitCode, null, ParseProperties(error));
             }
             catch (OperationCanceledException)
             {
@@ -130,6 +185,33 @@ internal static class JvmRuntimeProbe
                 throw;
             }
         }
+    }
+
+    /// <summary>Returns the environment without the JVM-domain variables that can
+    /// distort what the binary reports.</summary>
+    internal static IDictionary<string, string?> SanitizeEnvironment(IDictionary<string, string?> environment)
+    {
+        foreach (var variable in SanitizedVariables)
+            environment.Remove(variable);
+
+        return environment;
+    }
+
+    private static ProcessStartInfo CreateStartInfo(string javaExecutablePath, bool sanitizeEnvironment)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = javaExecutablePath,
+            Arguments = "-XshowSettings:properties -version",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        if (sanitizeEnvironment)
+            SanitizeEnvironment(startInfo.Environment);
+
+        return startInfo;
     }
 
     /// <summary>Kills the child best-effort: it may exit between the wait and the kill,
@@ -147,7 +229,7 @@ internal static class JvmRuntimeProbe
         }
     }
 
-    private static Info? Parse(string stderr)
+    private static IReadOnlyDictionary<string, string>? ParseProperties(string stderr)
     {
         var properties = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var line in stderr.Split('\n'))
@@ -164,16 +246,28 @@ internal static class JvmRuntimeProbe
             properties[key] = line[(separator + 3)..].Trim();
         }
 
-        if (!properties.TryGetValue("java.version", out var javaVersion))
-            return null;
-
-        return new Info(
-            properties.GetValueOrDefault("java.vendor") ?? string.Empty,
-            javaVersion,
-            properties.GetValueOrDefault("java.runtime.name") ?? string.Empty,
-            properties.GetValueOrDefault("java.runtime.version") ?? string.Empty,
-            properties.GetValueOrDefault("java.vm.name") ?? string.Empty,
-            properties.GetValueOrDefault("java.vm.version") ?? string.Empty,
-            properties.GetValueOrDefault("os.arch") ?? string.Empty);
+        return properties.ContainsKey("java.version") ? properties : null;
     }
+
+    private static Info Project(IReadOnlyDictionary<string, string> properties) => new(
+        properties.GetValueOrDefault("java.vendor") ?? string.Empty,
+        properties["java.version"],
+        properties.GetValueOrDefault("java.runtime.name") ?? string.Empty,
+        properties.GetValueOrDefault("java.runtime.version") ?? string.Empty,
+        properties.GetValueOrDefault("java.vm.name") ?? string.Empty,
+        properties.GetValueOrDefault("java.vm.version") ?? string.Empty,
+        properties.GetValueOrDefault("os.arch") ?? string.Empty);
+
+    private static string ExitFailure(int exitCode, string standardError, string standardOutput)
+    {
+        // The child's stderr is what launchers display; fall back to stdout when the
+        // failure produced nothing there. Bounded so a chatty child cannot flood.
+        var tail = standardError.Length > 0 ? standardError : standardOutput;
+        tail = tail.Length <= TailLength ? tail : tail[^TailLength..];
+
+        return tail.Length > 0 ? $"exit code {exitCode}{Environment.NewLine}{tail}" : $"exit code {exitCode}";
+    }
+
+    private static string TimeoutFailure(TimeSpan timeout) =>
+        $"the probe timed out after {timeout.TotalSeconds:0.#}s";
 }

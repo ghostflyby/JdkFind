@@ -1,2 +1,10 @@
 #nullable enable
+JdkFind.JdkFinder.FromExecutable(string! javaExecutablePath) -> JdkFind.Jvm?
+JdkFind.JdkFinder.FromExecutableAsync(string! javaExecutablePath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<JdkFind.Jvm?>!
+JdkFind.JdkFinder.FromHome(string! homeDirectory) -> JdkFind.Jvm?
+JdkFind.JdkFinder.FromHomeAsync(string! homeDirectory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<JdkFind.Jvm?>!
+JdkFind.JdkFinder.ProbeTimeout.get -> System.TimeSpan
+JdkFind.JdkFinder.ProbeTimeout.init -> void
+JdkFind.Jvm.StartFailure.get -> string?
+JdkFind.Jvm.StartFailure.init -> void
 
