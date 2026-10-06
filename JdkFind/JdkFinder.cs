@@ -82,17 +82,17 @@ public sealed record JdkFinder
     /// <summary>
     ///     Probes the java executable at <paramref name="javaExecutablePath" /> —
     ///     taken verbatim, with no name normalization and no layout requirement —
-    ///     and returns the <see cref="Jvm" /> it yields, or null when no JVM can be
-    ///     established. The home is derived by walking up from the binary
-    ///     (<c>bin</c>, <c>jre/bin</c> and macOS bundle layouts); a release file
-    ///     found there fills what the binary itself does not report — the values
+    ///     and returns the <see cref="JavaExecutable" /> it yields, or null when no
+    ///     JVM can be established. Where a home is derived by walking up from the
+    ///     binary (<c>bin</c>, <c>jre/bin</c> and macOS bundle layouts), its
+    ///     release file fills what the binary itself does not report — the values
     ///     the binary reports take precedence. The probe runs the child with
     ///     JVM-affecting environment variables removed, under the built-in
     ///     15-second cap (overridable via <paramref name="timeout" />); a child
     ///     that does not run to completion surfaces as
-    ///     <see cref="Jvm.StartFailure" />.
+    ///     <see cref="JavaExecutable.StartFailure" />.
     /// </summary>
-    public Jvm? FromExecutable(string javaExecutablePath, TimeSpan? timeout = null)
+    public JavaExecutable? FromExecutable(string javaExecutablePath, TimeSpan? timeout = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(javaExecutablePath);
 
@@ -106,14 +106,18 @@ public sealed record JdkFinder
 
         var outcome = JvmRuntimeProbe.Run(
             javaExecutablePath, timeout ?? JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true);
-        return BuildFromProbe(home, fullPath, outcome, TryParseRelease(home));
+        var release = TryParseRelease(home);
+        if (outcome.Properties?.ContainsKey("java.version") is not true && release?.ContainsKey("JAVA_VERSION") is not true)
+            return null;
+
+        return BuildExecutable(fullPath, release, outcome);
     }
 
     /// <summary>Async twin of <see cref="FromExecutable" />; a cancellation token
     /// kills the child process and propagates. The child is still killed at the
     /// built-in 15-second cap — bound the wait yourself by passing a token
     /// cancelled earlier (e.g. via <c>CancellationTokenSource.CancelAfter</c>).</summary>
-    public async Task<Jvm?> FromExecutableAsync(string javaExecutablePath, CancellationToken cancellationToken = default)
+    public async Task<JavaExecutable?> FromExecutableAsync(string javaExecutablePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(javaExecutablePath);
 
@@ -128,7 +132,11 @@ public sealed record JdkFinder
         var outcome = await JvmRuntimeProbe.RunAsync(
                 javaExecutablePath, JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true, cancellationToken)
             .ConfigureAwait(false);
-        return BuildFromProbe(home, fullPath, outcome, TryParseRelease(home));
+        var release = TryParseRelease(home);
+        if (outcome.Properties?.ContainsKey("java.version") is not true && release?.ContainsKey("JAVA_VERSION") is not true)
+            return null;
+
+        return BuildExecutable(fullPath, release, outcome);
     }
 
     /// <summary>
@@ -139,7 +147,8 @@ public sealed record JdkFinder
     ///     executable. The returned home is the probed layout root — a JDK 8
     ///     inner-JRE directory stays the inner JRE — and the probe semantics
     ///     (environment, timeout override, precedence) match
-    ///     <see cref="FromExecutable" />. Null when the directory is not a java
+    ///     <see cref="FromExecutable" />, with the verdict and enrichment landing
+    ///     on <see cref="Jvm.Executable" />. Null when the directory is not a java
     ///     home.
     /// </summary>
     public Jvm? FromHome(string homeDirectory, TimeSpan? timeout = null)
@@ -150,10 +159,10 @@ public sealed record JdkFinder
         if (home is null)
             return null;
 
-        var executable = JavaHomeLayout.JavaExecutablePath(home);
         var outcome = JvmRuntimeProbe.Run(
-            executable, timeout ?? JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true);
-        return BuildFromProbe(home, executable, outcome, TryParseRelease(home));
+            JavaHomeLayout.JavaExecutablePath(home), timeout ?? JvmRuntimeProbe.DefaultTimeout,
+            requireExitSuccess: true, sanitizeEnvironment: true);
+        return BuildHomeJvm(home, outcome, TryParseRelease(home));
     }
 
     /// <summary>Async twin of <see cref="FromHome" />; a cancellation token kills
@@ -168,11 +177,11 @@ public sealed record JdkFinder
         if (home is null)
             return null;
 
-        var executable = JavaHomeLayout.JavaExecutablePath(home);
         var outcome = await JvmRuntimeProbe.RunAsync(
-                executable, JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true, cancellationToken)
+                JavaHomeLayout.JavaExecutablePath(home), JvmRuntimeProbe.DefaultTimeout,
+                requireExitSuccess: true, sanitizeEnvironment: true, cancellationToken)
             .ConfigureAwait(false);
-        return BuildFromProbe(home, executable, outcome, TryParseRelease(home));
+        return BuildHomeJvm(home, outcome, TryParseRelease(home));
     }
 
     /// <summary>The built-in provider set for the current platform, in priority order.</summary>
@@ -270,14 +279,11 @@ public sealed record JdkFinder
             return null;
         }
 
-        // The runtime probe executes the installation's own java executable; anything
-        // it adds is enrichment — release-file values keep precedence.
-        JvmRuntimeProbe.Info? runtime = null;
-        string? startFailure = null;
-        if (probeRuntime)
-            (runtime, startFailure) = JvmRuntimeProbe.ProbeWithFailure(homePath);
+        // The runtime probe executes the installation's own java executable; its
+        // verdict and enrichment land on Executable.
+        var outcome = probeRuntime ? JvmRuntimeProbe.ProbeWithFailure(homePath) : null;
 
-        return Build(homePath, providers, release, runtime, startFailure);
+        return Build(homePath, providers, release, outcome);
     }
 
     /// <summary>Async twin of <see cref="CreateJvm" /> for cancellation-aware callers;
@@ -299,94 +305,95 @@ public sealed record JdkFinder
             return null;
         }
 
-        // The runtime probe executes the installation's own java executable; anything
-        // it adds is enrichment — release-file values keep precedence.
-        JvmRuntimeProbe.Info? runtime = null;
-        string? startFailure = null;
-        if (probeRuntime)
-            (runtime, startFailure) = await JvmRuntimeProbe.ProbeWithFailureAsync(entry.HomePath, cancellationToken).ConfigureAwait(false);
+        // The runtime probe executes the installation's own java executable; its
+        // verdict and enrichment land on Executable.
+        var outcome = probeRuntime
+            ? await JvmRuntimeProbe.ProbeWithFailureAsync(entry.HomePath, cancellationToken).ConfigureAwait(false)
+            : null;
 
-        return Build(entry.HomePath, entry.Providers, release, runtime, startFailure);
+        return Build(entry.HomePath, entry.Providers, release, outcome);
     }
 
     private static Jvm Build(
         string homePath,
         IReadOnlyList<string> providers,
         IReadOnlyDictionary<string, string> release,
-        JvmRuntimeProbe.Info? runtime,
-        string? startFailure)
+        JvmRuntimeProbe.Outcome? outcome)
     {
         // The raw JAVA_VERSION string is preserved on JvmVersion.Original; unparseable
         // values degrade to the Unknown placeholder (sorts before every known version).
         var version = JvmVersion.Parse(release.GetValueOrDefault("JAVA_VERSION"));
-
-        var vendorRaw = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR")) ?? runtime?.Vendor;
-        var implementorVersion = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR_VERSION"));
-        var graalVmRelease = release.ContainsKey("GRAALVM_VERSION");
-        var vendor = JvmIdentity.DetectVendor(vendorRaw);
-        var distribution = JvmIdentity.DetectDistribution(implementorVersion, vendorRaw, graalVmRelease);
+        var vendorRaw = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR"));
 
         return new Jvm
         {
             Home = new DirectoryInfo(homePath),
             Providers = providers,
+            Executable = BuildExecutable(JavaHomeLayout.JavaExecutablePath(homePath), release, outcome),
             Version = version,
             LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
             HasCompiler = File.Exists(Path.Combine(homePath, "bin", JavaHomeLayout.CompilerExecutableName)),
-            StartFailure = startFailure,
-            VendorRaw = vendorRaw,
-            Vendor = vendor,
-            Distribution = distribution,
-            RuntimeName = runtime?.RuntimeName,
-            RuntimeVersion = runtime?.RuntimeVersion,
-            VmName = runtime?.VmName,
-            VmVersion = runtime?.VmVersion,
-            OsName = release.GetValueOrDefault("OS_NAME"),
-            Architecture = NonEmpty(release.GetValueOrDefault("OS_ARCH")) ?? runtime?.OsArch,
-        };
-    }
-
-    /// <summary>Builds the Jvm a probe yielded: the binary's reported values take
-    /// precedence and the home's release file fills what the binary did not report.
-    /// Null when neither source yields a version — no JVM can be established.</summary>
-    private static Jvm? BuildFromProbe(
-        string? homePath,
-        string javaExecutablePath,
-        JvmRuntimeProbe.Outcome outcome,
-        IReadOnlyDictionary<string, string>? release)
-    {
-        var properties = outcome.Properties;
-        var probedVersion = properties?.GetValueOrDefault("java.version");
-        var releaseVersion = release?.GetValueOrDefault("JAVA_VERSION");
-        if (probedVersion is null && releaseVersion is null)
-            return null;
-
-        var version = JvmVersion.Parse(probedVersion ?? releaseVersion!);
-        var vendorRaw = NonEmpty(properties?.GetValueOrDefault("java.vendor"))
-            ?? NonEmpty(release?.GetValueOrDefault("IMPLEMENTOR"));
-
-        return new Jvm
-        {
-            // A home-less binary reports the binary's own directory as its home.
-            Home = new DirectoryInfo(homePath ?? Path.GetDirectoryName(javaExecutablePath)!),
-            Providers = [],
-            Version = version,
-            LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
-            HasCompiler = homePath is not null
-                && File.Exists(Path.Combine(homePath, "bin", JavaHomeLayout.CompilerExecutableName)),
-            StartFailure = outcome.Failure,
             VendorRaw = vendorRaw,
             Vendor = JvmIdentity.DetectVendor(vendorRaw),
             Distribution = JvmIdentity.DetectDistribution(
-                NonEmpty(release?.GetValueOrDefault("IMPLEMENTOR_VERSION")), vendorRaw,
-                release is not null && release.ContainsKey("GRAALVM_VERSION")),
+                NonEmpty(release.GetValueOrDefault("IMPLEMENTOR_VERSION")), vendorRaw,
+                release.ContainsKey("GRAALVM_VERSION")),
+        };
+    }
+
+    /// <summary>Builds the installation a probed home yields. Null when the release
+    /// file — expected to exist on a probed home — is unreadable.</summary>
+    private static Jvm? BuildHomeJvm(
+        string homePath, JvmRuntimeProbe.Outcome outcome, IReadOnlyDictionary<string, string>? release)
+    {
+        if (release is null)
+            return null;
+
+        var version = JvmVersion.Parse(release.GetValueOrDefault("JAVA_VERSION"));
+        var vendorRaw = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR"));
+
+        return new Jvm
+        {
+            Home = new DirectoryInfo(homePath),
+            Providers = [],
+            Executable = BuildExecutable(JavaHomeLayout.JavaExecutablePath(homePath), release, outcome),
+            Version = version,
+            LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
+            HasCompiler = File.Exists(Path.Combine(homePath, "bin", JavaHomeLayout.CompilerExecutableName)),
+            VendorRaw = vendorRaw,
+            Vendor = JvmIdentity.DetectVendor(vendorRaw),
+            Distribution = JvmIdentity.DetectDistribution(
+                NonEmpty(release.GetValueOrDefault("IMPLEMENTOR_VERSION")), vendorRaw,
+                release.ContainsKey("GRAALVM_VERSION")),
+        };
+    }
+
+    /// <summary>Builds a java executable dossier: every property probes first and
+    /// the release file fills what the binary did not report. The runtime-only
+    /// properties stay null when no probe ran or the binary did not report
+    /// them.</summary>
+    private static JavaExecutable BuildExecutable(
+        string javaExecutablePath, IReadOnlyDictionary<string, string>? release, JvmRuntimeProbe.Outcome? outcome)
+    {
+        var properties = outcome?.Properties;
+        var vendorRaw = NonEmpty(properties?.GetValueOrDefault("java.vendor"))
+            ?? NonEmpty(release?.GetValueOrDefault("IMPLEMENTOR"));
+
+        return new JavaExecutable
+        {
+            Path = javaExecutablePath,
+            StartFailure = outcome?.Failure,
+            Version = JvmVersion.Parse(
+                properties?.GetValueOrDefault("java.version") ?? release?.GetValueOrDefault("JAVA_VERSION")),
+            VendorRaw = vendorRaw,
+            Vendor = JvmIdentity.DetectVendor(vendorRaw),
+            OsName = NonEmpty(properties?.GetValueOrDefault("os.name")) ?? release?.GetValueOrDefault("OS_NAME"),
+            Architecture = NonEmpty(properties?.GetValueOrDefault("os.arch"))
+                ?? NonEmpty(release?.GetValueOrDefault("OS_ARCH")),
             RuntimeName = properties?.GetValueOrDefault("java.runtime.name"),
             RuntimeVersion = properties?.GetValueOrDefault("java.runtime.version"),
             VmName = properties?.GetValueOrDefault("java.vm.name"),
             VmVersion = properties?.GetValueOrDefault("java.vm.version"),
-            OsName = properties?.GetValueOrDefault("os.name") ?? release?.GetValueOrDefault("OS_NAME"),
-            Architecture = NonEmpty(properties?.GetValueOrDefault("os.arch"))
-                ?? NonEmpty(release?.GetValueOrDefault("OS_ARCH")),
         };
     }
 

@@ -52,19 +52,18 @@ internal static class JvmRuntimeProbe
 
     /// <summary>Probes the candidate; null when the java executable is missing, broken, or too slow.</summary>
     internal static Info? Probe(string homePath) =>
-        ProbeWithFailure(homePath).Info;
+        ProbeWithFailure(homePath).Properties is { } properties ? Project(properties) : null;
 
-    /// <summary>Probes the candidate and additionally reports why it failed. A null
-    /// info with a null failure means the java executable is missing (or ran but
+    /// <summary>Probes the candidate, returning the raw pipeline outcome. Properties
+    /// and Failure both null means the java executable is missing (or ran but
     /// printed nothing parseable — not a start failure).</summary>
-    internal static (Info? Info, string? Failure) ProbeWithFailure(string homePath)
+    internal static Outcome ProbeWithFailure(string homePath)
     {
         var java = JavaHomeLayout.JavaExecutablePath(homePath);
         if (!File.Exists(java))
-            return (null, null);
+            return new Outcome(null, null, null);
 
-        var outcome = Run(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false);
-        return outcome.Properties is null ? (null, outcome.Failure) : (Project(outcome.Properties), null);
+        return Run(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false);
     }
 
     /// <summary>Runs the probe pipeline against one executable: spawn, drain both
@@ -113,21 +112,21 @@ internal static class JvmRuntimeProbe
     ///     to null, exactly like the synchronous probe.
     /// </summary>
     internal static async Task<Info?> ProbeAsync(string homePath, CancellationToken cancellationToken) =>
-        (await ProbeWithFailureAsync(homePath, cancellationToken).ConfigureAwait(false)).Info;
+        (await ProbeWithFailureAsync(homePath, cancellationToken).ConfigureAwait(false)).Properties is { } properties
+            ? Project(properties)
+            : null;
 
     /// <summary>Async twin of <see cref="ProbeWithFailure" />; a user cancellation
     /// kills the child and propagates.</summary>
-    internal static async Task<(Info? Info, string? Failure)> ProbeWithFailureAsync(
-        string homePath, CancellationToken cancellationToken)
+    internal static async Task<Outcome> ProbeWithFailureAsync(string homePath, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var java = JavaHomeLayout.JavaExecutablePath(homePath);
         if (!File.Exists(java))
-            return (null, null);
+            return new Outcome(null, null, null);
 
-        var outcome = await RunAsync(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false, cancellationToken).ConfigureAwait(false);
-        return outcome.Properties is null ? (null, outcome.Failure) : (Project(outcome.Properties), null);
+        return await RunAsync(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Async twin of <see cref="Run" />; a user cancellation kills the child

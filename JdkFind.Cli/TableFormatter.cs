@@ -12,7 +12,7 @@ internal static class TableFormatter
             jvm.Version.Original,
             jvm.Vendor.ToString(),
             jvm.Distribution.ToString(),
-            jvm.Architecture ?? "-",
+            jvm.Executable.Architecture ?? "-",
             jvm.HasCompiler ? "jdk" : "jre",
             string.Join('+', jvm.Providers),
             jvm.Home.FullName,

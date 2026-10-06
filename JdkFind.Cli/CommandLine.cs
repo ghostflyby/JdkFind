@@ -216,7 +216,7 @@ internal static class CommandLine
         if (string.IsNullOrEmpty(text))
             return true;
 
-        var architecture = jvm.Architecture;
+        var architecture = jvm.Executable.Architecture;
         if (string.IsNullOrEmpty(architecture))
             return false;
 
@@ -233,13 +233,13 @@ internal static class CommandLine
         jvm.Version.IsPreRelease,
         jvm.Vendor.ToString(),
         jvm.Distribution.ToString(),
-        jvm.VendorRaw,
-        jvm.RuntimeName,
-        jvm.RuntimeVersion,
-        jvm.VmName,
-        jvm.VmVersion,
-        jvm.Architecture,
-        jvm.OsName,
+        jvm.Executable.VendorRaw,
+        jvm.Executable.RuntimeName,
+        jvm.Executable.RuntimeVersion,
+        jvm.Executable.VmName,
+        jvm.Executable.VmVersion,
+        jvm.Executable.Architecture,
+        jvm.Executable.OsName,
         jvm.Providers);
 
     internal static void WriteInfo(Jvm jvm, TextWriter writer)
@@ -249,12 +249,12 @@ internal static class CommandLine
         writer.WriteLine($"vendor: {jvm.Vendor}");
         writer.WriteLine($"distribution: {jvm.Distribution}");
 
-        if (!string.IsNullOrEmpty(jvm.RuntimeName))
-            writer.WriteLine($"runtime: {jvm.RuntimeName} {jvm.RuntimeVersion}");
-        if (!string.IsNullOrEmpty(jvm.VmName))
-            writer.WriteLine($"vm: {jvm.VmName} {jvm.VmVersion}");
-        if (!string.IsNullOrEmpty(jvm.Architecture))
-            writer.WriteLine($"arch: {jvm.Architecture}");
+        if (!string.IsNullOrEmpty(jvm.Executable.RuntimeName))
+            writer.WriteLine($"runtime: {jvm.Executable.RuntimeName} {jvm.Executable.RuntimeVersion}");
+        if (!string.IsNullOrEmpty(jvm.Executable.VmName))
+            writer.WriteLine($"vm: {jvm.Executable.VmName} {jvm.Executable.VmVersion}");
+        if (!string.IsNullOrEmpty(jvm.Executable.Architecture))
+            writer.WriteLine($"arch: {jvm.Executable.Architecture}");
 
         writer.WriteLine($"type: {(jvm.HasCompiler ? "jdk" : "jre")}");
         writer.WriteLine($"providers: {string.Join(", ", jvm.Providers)}");
