@@ -1,13 +1,15 @@
 namespace JdkFind.Providers;
 
 /// <summary>
-///     Scans the shared JVM runtime extensions flatpak mounts inside a sandbox
-///     (<c>/usr/lib/sdk/&lt;extension&gt;/jvm/&lt;version&gt;</c>) — JDKs installed via
-///     <c>flatpak install org.freedesktop.Sdk.Extension.openjdk//…</c> and shared by
-///     every app depending on the same runtime. Active only inside a flatpak
-///     sandbox (detected via <c>/.flatpak-info</c> or <c>$FLATPAK_ID</c>). The
-///     app-bundled <c>/app/jdk</c> is deliberately not attributed to flatpak — it
-///     belongs to the application that packaged it.
+///     Scans the JVMs visible inside a flatpak sandbox: the shared runtime
+///     extensions mounted at <c>/usr/lib/sdk/&lt;extension&gt;/jvm/&lt;version&gt;</c>
+///     (JDKs installed via <c>flatpak install
+///     org.freedesktop.Sdk.Extension.openjdk//…</c> and shared by every app on the
+///     same runtime) and the app-bundled <c>/app/jdk</c>. Active only inside a
+///     flatpak sandbox (detected via <c>/.flatpak-info</c> or
+///     <c>$FLATPAK_ID</c>) — that check is the positive proof that <c>/app</c> is
+///     this flatpak instance's app directory, so attributing it to flatpak is
+///     exact.
 /// </summary>
 public sealed class FlatpakJvmProvider : IJvmProvider
 {
@@ -37,7 +39,16 @@ public sealed class FlatpakJvmProvider : IJvmProvider
             foreach (var candidate in JvmScanning.EnumerateGuarded(Path.Combine(extension, "jvm")))
                 if (JavaHomeLayout.Probe(candidate) is { } home)
                     yield return home;
+
+        // /app is the flatpak app directory; its bundled jdk is part of the
+        // flatpak result for this run.
+        foreach (var candidate in JvmScanning.EnumerateGuarded(AppDirectory(sdkRoot)))
+            if (JavaHomeLayout.Probe(candidate) is { } home)
+                yield return home;
     }
+
+    private static string AppDirectory(string sdkRoot) =>
+        Path.GetFullPath(Path.Combine(sdkRoot, "..", "..", "..", "app"));
 
     private static bool InFlatpakSandbox() =>
         Environment.GetEnvironmentVariable("FLATPAK_ID") is not null || File.Exists("/.flatpak-info");
