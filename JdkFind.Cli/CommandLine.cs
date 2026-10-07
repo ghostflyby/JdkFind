@@ -1,5 +1,5 @@
-using System.CommandLine;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace JdkFind.Cli;
@@ -37,15 +37,19 @@ internal static class CommandLine
     internal static async Task<int> RunAsync(string[] args, JdkFinder? finder = null)
     {
         // The run command travels through the closure: the wired action re-maps the
-        // parse result into a fresh Options instance, which cannot carry it.
-        string[]? commandArgs = null;
+        // parse result into a fresh Options instance, which cannot carry it. The
+        // trailing arguments only exist after parsing, so the closure reads them
+        // through a holder box — capturing the assigned variable directly would
+        // leave it modified in the outer scope after the capture.
+        var commandArgs = new StrongBox<string[]?>();
         var tree = Options.CreateTree((options, cancellationToken) =>
-            ExecuteAsync(options, commandArgs, cancellationToken, finder));
+            ExecuteAsync(options, commandArgs.Value, cancellationToken, finder));
 
         Options options;
         try
         {
-            options = Options.ParseInto(tree, args, out commandArgs);
+            options = Options.ParseInto(tree, args, out var parsedCommandArgs);
+            commandArgs.Value = parsedCommandArgs;
         }
         catch (ArgumentException exception)
         {
