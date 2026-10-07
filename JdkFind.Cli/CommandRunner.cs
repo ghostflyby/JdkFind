@@ -102,7 +102,8 @@ internal static partial class CommandRunner
         // clean error instead of a stack trace.
         try
         {
-            using var process = new Process { StartInfo = startInfo };
+            using var process = new Process();
+            process.StartInfo = startInfo;
             if (!process.Start())
             {
                 Console.Error.WriteLine($"jdkfind: cannot execute '{commandArgs[0]}'.");
@@ -133,10 +134,23 @@ internal static partial class CommandRunner
     {
         var extensions = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD")
             .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var directories = Path.IsPathRooted(command) || command.Contains('/') || command.Contains('\\')
-            ? [Path.GetDirectoryName(Path.GetFullPath(command))!]
-            : (Environment.GetEnvironmentVariable("PATH") ?? "")
-            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        string[] directories;
+        if (Path.IsPathRooted(command) || command.Contains('/') || command.Contains('\\'))
+        {
+            // A root path ("C:\") has no directory component and can never name an
+            // executable; report it like any other unresolved command.
+            var directory = Path.GetDirectoryName(Path.GetFullPath(command));
+            if (directory is null)
+                return null;
+
+            directories = [directory];
+        }
+        else
+        {
+            directories = (Environment.GetEnvironmentVariable("PATH") ?? "")
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
 
         return directories
             .SelectMany(directory => extensions
