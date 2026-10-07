@@ -388,15 +388,16 @@ public sealed record JdkFinder
             StartFailure = outcome?.Failure,
             Version = JvmVersion.Parse(
                 properties?.GetValueOrDefault("java.version") ?? release?.GetValueOrDefault("JAVA_VERSION")),
-            VendorRaw = vendorRaw,
+            VendorRaw = vendorRaw ?? string.Empty,
             Vendor = JvmIdentity.DetectVendor(vendorRaw),
-            OsName = NonEmpty(properties?.GetValueOrDefault("os.name")) ?? release?.GetValueOrDefault("OS_NAME"),
+            OsName = NonEmpty(properties?.GetValueOrDefault("os.name"))
+                     ?? NonEmpty(release?.GetValueOrDefault("OS_NAME")) ?? string.Empty,
             Architecture = NonEmpty(properties?.GetValueOrDefault("os.arch"))
-                           ?? NonEmpty(release?.GetValueOrDefault("OS_ARCH")),
+                           ?? NonEmpty(release?.GetValueOrDefault("OS_ARCH")) ?? string.Empty,
             RuntimeName = properties?.GetValueOrDefault("java.runtime.name"),
             RuntimeVersion = properties?.GetValueOrDefault("java.runtime.version"),
-            VmName = properties?.GetValueOrDefault("java.vm.name"),
-            VmVersion = properties?.GetValueOrDefault("java.vm.version"),
+            VmName = properties?.GetValueOrDefault("java.vm.name") ?? string.Empty,
+            VmVersion = properties?.GetValueOrDefault("java.vm.version") ?? string.Empty,
         };
     }
 

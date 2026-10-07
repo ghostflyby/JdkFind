@@ -17,14 +17,14 @@
 *REMOVED*JdkFind.Jvm.VmVersion.init -> void
 JdkFind.JavaRuntime
 JdkFind.JavaRuntime.<Clone>$() -> JdkFind.JavaRuntime!
-JdkFind.JavaRuntime.Architecture.get -> string?
+JdkFind.JavaRuntime.Architecture.get -> string!
 JdkFind.JavaRuntime.Architecture.init -> void
 JdkFind.JavaRuntime.Equals(JdkFind.JavaRuntime? other) -> bool
 JdkFind.JavaRuntime.Home.get -> System.IO.DirectoryInfo?
 JdkFind.JavaRuntime.Home.init -> void
 JdkFind.JavaRuntime.Installation.get -> JdkFind.Jvm?
 JdkFind.JavaRuntime.JavaRuntime() -> void
-JdkFind.JavaRuntime.OsName.get -> string?
+JdkFind.JavaRuntime.OsName.get -> string!
 JdkFind.JavaRuntime.OsName.init -> void
 JdkFind.JavaRuntime.Path.get -> string!
 JdkFind.JavaRuntime.Path.init -> void
@@ -36,13 +36,13 @@ JdkFind.JavaRuntime.StartFailure.get -> string?
 JdkFind.JavaRuntime.StartFailure.init -> void
 JdkFind.JavaRuntime.Vendor.get -> JdkFind.JvmVendor
 JdkFind.JavaRuntime.Vendor.init -> void
-JdkFind.JavaRuntime.VendorRaw.get -> string?
+JdkFind.JavaRuntime.VendorRaw.get -> string!
 JdkFind.JavaRuntime.VendorRaw.init -> void
 JdkFind.JavaRuntime.Version.get -> JdkFind.JvmVersion
 JdkFind.JavaRuntime.Version.init -> void
-JdkFind.JavaRuntime.VmName.get -> string?
+JdkFind.JavaRuntime.VmName.get -> string!
 JdkFind.JavaRuntime.VmName.init -> void
-JdkFind.JavaRuntime.VmVersion.get -> string?
+JdkFind.JavaRuntime.VmVersion.get -> string!
 JdkFind.JavaRuntime.VmVersion.init -> void
 override JdkFind.JavaRuntime.Equals(object? obj) -> bool
 override JdkFind.JavaRuntime.GetHashCode() -> int

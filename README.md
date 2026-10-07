@@ -142,8 +142,11 @@ variables (`_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`,
 `CLASSPATH`, `LD_PRELOAD`, `LD_LIBRARY_PATH`) removed, so the verdict
 describes the binary, not the launcher's shell. Values the binary reports
 take precedence over the home's release file, which only fills what the
-binary did not say; any property except `java.version` may be absent (null) —
-the settings output is an implementation detail, not a spec promise.
+binary did not say. The platform specification guarantees the standard
+property set (vendor, os.name, os.arch, java.vm.name, java.vm.version), so
+their counterparts on `JavaRuntime` are non-nullable strings — empty only
+when no probe ran, the probe degraded, or an implementation broke that
+promise; the runtime-only `java.runtime.*` pair is null in those cases.
 
 ## Build and test
 
