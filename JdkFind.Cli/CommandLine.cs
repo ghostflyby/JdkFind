@@ -31,25 +31,17 @@ internal static class CommandLine
     /// <summary>
     ///     Async entry point. Dispatch goes through System.CommandLine's invocation so
     ///     the framework's termination-signal token (Ctrl+C, SIGINT, SIGTERM) reaches
-    ///     the actions — the locate pipeline (runtime probes, release-file reads)
-    ///     honors it.
+    ///     the execution — the locate pipeline (runtime probes, release-file reads)
+    ///     honors it. The execution binds after parsing, so it receives the parsed
+    ///     <see cref="Options" /> (including the '--' tail) instead of closing over
+    ///     pre-parse state.
     /// </summary>
     internal static async Task<int> RunAsync(string[] args, JdkFinder? finder = null)
     {
-        // The run command travels through the closure: the wired action re-maps the
-        // parse result into a fresh Options instance, which cannot carry it. The
-        // trailing arguments only exist after parsing, so the closure reads them
-        // through a holder box — capturing the assigned variable directly would
-        // leave it modified in the outer scope after the capture.
-        var commandArgs = new StrongBox<string[]?>();
-        var tree = Options.CreateTree((options, cancellationToken) =>
-            ExecuteAsync(options, commandArgs.Value, cancellationToken, finder));
-
         Options options;
         try
         {
-            options = Options.ParseInto(tree, args, out var parsedCommandArgs);
-            commandArgs.Value = parsedCommandArgs;
+            options = Options.Parse(args);
         }
         catch (ArgumentException exception)
         {
@@ -61,13 +53,14 @@ internal static class CommandLine
         if (options.ShowHelp || options.ShowVersion)
             return options.RenderFrameworkOutput();
 
-        return await options.InvokeAsync().ConfigureAwait(false);
+        return await options.InvokeAsync(cancellationToken =>
+            ExecuteAsync(options, cancellationToken, finder)).ConfigureAwait(false);
     }
 
     /// <summary>The action shared by the default command and both subcommands:
     /// runs the locate pipeline and prints or executes the selection.</summary>
     private static async Task<int> ExecuteAsync(
-        Options options, string[]? commandArgs, CancellationToken cancellationToken, JdkFinder? finder)
+        Options options, CancellationToken cancellationToken, JdkFinder? finder)
     {
         finder ??= options.NoProbe
             ? JdkFinder.Default with { ProbeRuntimeProperties = false }
@@ -96,7 +89,7 @@ internal static class CommandLine
 
         // Run mode: '-- <command>' executes with the installation's environment
         // instead of printing anything.
-        if (commandArgs is { Length: > 0 } command)
+        if (options.CommandArgs is { Count: > 0 } command)
             return CommandRunner.RunCommand(chosen, command);
 
         // --json wins over the human formats on every command.
