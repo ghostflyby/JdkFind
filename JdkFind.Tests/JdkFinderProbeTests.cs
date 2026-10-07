@@ -120,7 +120,7 @@ public class JdkFinderProbeTests : IDisposable
 
         Assert.NotNull(installation);
         Assert.Equal(home, installation.Home.FullName);
-        Assert.Same(executable, installation.Runtime); // The derivation reuses this instance — no spawn.
+        Assert.Same(executable, installation.Executable); // The derivation reuses this instance — no spawn.
         Assert.Equal("17.0.5", installation.Version.Original);
         Assert.False(installation.HasCompiler); // No javac in the fixture.
         Assert.Empty(installation.Providers); // Discovery data cannot be restored.
@@ -207,7 +207,7 @@ public class JdkFinderProbeTests : IDisposable
 
         Assert.NotNull(jvm);
         Assert.Equal(jre, jvm.Home.FullName);
-        Assert.Null(jvm.Runtime.StartFailure);
+        Assert.Null(jvm.Executable.StartFailure);
         Assert.Equal("17.0.5", jvm.Version.Original);
     }
 

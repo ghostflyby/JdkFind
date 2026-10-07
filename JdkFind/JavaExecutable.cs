@@ -12,7 +12,7 @@ namespace JdkFind;
 ///     <c>java.runtime.name</c>/<c>java.runtime.version</c> pair is not part of
 ///     that guarantee and stays nullable.
 /// </summary>
-public sealed record JavaRuntime
+public sealed record JavaExecutable
 {
     /// <summary>The binary's path, taken verbatim.</summary>
     public required string Path { get; init; }
@@ -27,7 +27,7 @@ public sealed record JavaRuntime
     ///     up from <see cref="Path" /> (a JDK 8 outer home whose binary lives in
     ///     <c>jre/bin</c> yields the inner JRE rather than the outer JDK) — and
     ///     the release file found there supplies the installation facts, with
-    ///     <see cref="Jvm.Runtime" /> being this instance — no child process is
+    ///     <see cref="Jvm.Executable" /> being this instance — no child process is
     ///     spawned. Filesystem reads happen on every access, and discovery data
     ///     such as <see cref="Jvm.Providers" /> cannot be restored, so for a
     ///     runtime obtained from a <see cref="Jvm" />, that instance remains the

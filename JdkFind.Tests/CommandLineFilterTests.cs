@@ -8,7 +8,7 @@ public class CommandLineFilterTests
     {
         Home = new DirectoryInfo("/jvm/zulu"),
         Providers = ["stub"],
-        Runtime = new JavaRuntime { Path = "/jvm/zulu/bin/java", Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1") },
+        Executable = new JavaExecutable { Path = "/jvm/zulu/bin/java", Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1") },
         Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1"),
         Vendor = JvmVendor.Azul,
         Distribution = JvmDistribution.Zulu,
@@ -19,7 +19,7 @@ public class CommandLineFilterTests
     {
         Home = new DirectoryInfo("/jvm/temurin"),
         Providers = ["stub"],
-        Runtime = new JavaRuntime { Path = "/jvm/temurin/bin/java", Version = new JvmVersion(new Version(21, 0, 5, 9), false, "21.0.5+9"), Architecture = "aarch64" },
+        Executable = new JavaExecutable { Path = "/jvm/temurin/bin/java", Version = new JvmVersion(new Version(21, 0, 5, 9), false, "21.0.5+9"), Architecture = "aarch64" },
         Version = new JvmVersion(new Version(21, 0, 5, 9), false, "21.0.5+9"),
         Vendor = JvmVendor.Adoptium,
         Distribution = JvmDistribution.Temurin,
@@ -30,7 +30,7 @@ public class CommandLineFilterTests
     {
         Home = new DirectoryInfo("/jvm/corretto"),
         Providers = ["stub"],
-        Runtime = new JavaRuntime { Path = "/jvm/corretto/bin/java", Version = new JvmVersion(new Version(17, 0, 9, 1), false, "17.0.9.1"), Architecture = "x86_64" },
+        Executable = new JavaExecutable { Path = "/jvm/corretto/bin/java", Version = new JvmVersion(new Version(17, 0, 9, 1), false, "17.0.9.1"), Architecture = "x86_64" },
         Version = new JvmVersion(new Version(17, 0, 9, 1), false, "17.0.9.1"),
         Vendor = JvmVendor.Amazon,
         Distribution = JvmDistribution.Corretto,
@@ -114,7 +114,7 @@ public class CommandLineFilterTests
         {
             Home = new DirectoryInfo("/jvm/empty"),
             Providers = ["stub"],
-            Runtime = new JavaRuntime { Path = "/jvm/empty/bin/java", Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21") },
+            Executable = new JavaExecutable { Path = "/jvm/empty/bin/java", Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21") },
             Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"),
         };
         Assert.False(CommandLine.MatchesArchFilter(empty, "aarch64"));
@@ -128,7 +128,7 @@ public class CommandLineFilterTests
         {
             Home = new DirectoryInfo("/jvm/upper"),
             Providers = ["stub"],
-            Runtime = new JavaRuntime { Path = "/jvm/upper/bin/java", Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"), Architecture = "AARCH64" },
+            Executable = new JavaExecutable { Path = "/jvm/upper/bin/java", Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"), Architecture = "AARCH64" },
             Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"),
         };
         Assert.True(CommandLine.MatchesArchFilter(upper, "arm64"));

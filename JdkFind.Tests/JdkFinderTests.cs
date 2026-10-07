@@ -29,7 +29,7 @@ public class JdkFinderTests : IDisposable
         Assert.Equal(21, jvm.LanguageVersion);
         Assert.Equal(JvmVendor.Unknown, jvm.Vendor);
         Assert.Equal(JvmDistribution.Unknown, jvm.Distribution);
-        Assert.Equal("aarch64", jvm.Runtime.Architecture);
+        Assert.Equal("aarch64", jvm.Executable.Architecture);
         Assert.Equal(jdk, jvm.Home.FullName);
     }
 
