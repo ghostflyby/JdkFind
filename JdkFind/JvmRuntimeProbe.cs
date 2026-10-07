@@ -43,11 +43,8 @@ internal static class JvmRuntimeProbe
     /// the timeout cap, or (under <c>requireExitSuccess</c>) a non-zero exit —
     /// carrying the reason plus an output tail for display.
     /// <see cref="Properties" /> holds the parsed system properties when the
-    /// output was parseable and the exit rule was satisfied;
-    /// <see cref="ExitCode" /> is null when the child never
-    /// ran to completion.</summary>
+    /// output was parseable and the exit rule was satisfied.</summary>
     internal sealed record Outcome(
-        int? ExitCode,
         string? Failure,
         IReadOnlyDictionary<string, string>? Properties);
 
@@ -62,7 +59,7 @@ internal static class JvmRuntimeProbe
     {
         var java = JavaHomeLayout.JavaExecutablePath(homePath);
         if (!File.Exists(java))
-            return new Outcome(null, null, null);
+            return new Outcome(null, null);
 
         return Run(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false);
     }
@@ -75,16 +72,17 @@ internal static class JvmRuntimeProbe
     internal static Outcome Run(string javaExecutablePath, TimeSpan timeout, bool requireExitSuccess,
         bool sanitizeEnvironment)
     {
-        using var process = new Process { StartInfo = CreateStartInfo(javaExecutablePath, sanitizeEnvironment) };
+        using var process = new Process();
+        process.StartInfo = CreateStartInfo(javaExecutablePath, sanitizeEnvironment);
         try
         {
             if (!process.Start())
-                return new Outcome(null, "no process was started", null);
+                return new Outcome("no process was started", null);
         }
         catch (Exception exception) when (
             exception is Win32Exception or IOException or UnauthorizedAccessException or SecurityException)
         {
-            return new Outcome(null, exception.Message, null);
+            return new Outcome(exception.Message, null);
         }
 
         var standardError = process.StandardError.ReadToEndAsync();
@@ -92,16 +90,16 @@ internal static class JvmRuntimeProbe
         if (!process.WaitForExit(timeout))
         {
             TryKill(process);
-            return new Outcome(null, TimeoutFailure(timeout), null);
+            return new Outcome(TimeoutFailure(timeout), null);
         }
 
         var exitCode = process.ExitCode;
         var error = standardError.GetAwaiter().GetResult();
         var output = standardOutput.GetAwaiter().GetResult();
         if (requireExitSuccess && exitCode != 0)
-            return new Outcome(exitCode, ExitFailure(exitCode, error, output), null);
+            return new Outcome(ExitFailure(exitCode, error, output), null);
 
-        return new Outcome(exitCode, null, ParseProperties(error));
+        return new Outcome(null, ParseProperties(error));
     }
 
     /// <summary>
@@ -122,7 +120,7 @@ internal static class JvmRuntimeProbe
 
         var java = JavaHomeLayout.JavaExecutablePath(homePath);
         if (!File.Exists(java))
-            return new Outcome(null, null, null);
+            return new Outcome(null, null);
 
         return await RunAsync(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false,
             cancellationToken).ConfigureAwait(false);
@@ -136,16 +134,17 @@ internal static class JvmRuntimeProbe
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        using var process = new Process { StartInfo = CreateStartInfo(javaExecutablePath, sanitizeEnvironment) };
+        using var process = new Process();
+        process.StartInfo = CreateStartInfo(javaExecutablePath, sanitizeEnvironment);
         try
         {
             if (!process.Start())
-                return new Outcome(null, "no process was started", null);
+                return new Outcome("no process was started", null);
         }
         catch (Exception exception) when (
             exception is Win32Exception or IOException or UnauthorizedAccessException or SecurityException)
         {
-            return new Outcome(null, exception.Message, null);
+            return new Outcome(exception.Message, null);
         }
 
         try
@@ -168,16 +167,16 @@ internal static class JvmRuntimeProbe
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 TryKill(process);
-                return new Outcome(null, TimeoutFailure(timeout), null);
+                return new Outcome(TimeoutFailure(timeout), null);
             }
 
             var exitCode = process.ExitCode;
             var error = await standardError.ConfigureAwait(false);
             var output = await standardOutput.ConfigureAwait(false);
             if (requireExitSuccess && exitCode != 0)
-                return new Outcome(exitCode, ExitFailure(exitCode, error, output), null);
+                return new Outcome(ExitFailure(exitCode, error, output), null);
 
-            return new Outcome(exitCode, null, ParseProperties(error));
+            return new Outcome(null, ParseProperties(error));
         }
         catch (OperationCanceledException)
         {

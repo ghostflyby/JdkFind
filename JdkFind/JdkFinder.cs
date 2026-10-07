@@ -448,6 +448,7 @@ public sealed record JdkFinder
                 continue;
 
             // The link target may be relative, and the joined remainder may still contain links; re-resolve.
+            // ReSharper disable once NullableWarningSuppressionIsUsed
             var targetFull = Path.GetFullPath(target, Path.GetDirectoryName(resolved)!);
             var rest = string.Join(Path.DirectorySeparatorChar, segments[(index + 1)..]);
             var combined = rest.Length == 0 ? targetFull : Path.Combine(targetFull, rest);
