@@ -1,33 +1,115 @@
 #nullable enable
 JdkFind.ICommonPrefixesJvmProvider
-static JdkFind.JvmVersion.Parse(string? javaVersion) -> JdkFind.JvmVersion
-override JdkFind.JvmVersion.ToString() -> string!
-static JdkFind.JvmVersion.TryParse(string? javaVersion, out JdkFind.JvmVersion version) -> bool
-static JdkFind.JvmVersion.Unknown(string! original = "") -> JdkFind.JvmVersion
-JdkFind.Providers.GradleJvmProvider
-JdkFind.Providers.GradleJvmProvider.CommonPrefix.get -> string?
-JdkFind.Providers.GradleJvmProvider.GradleJvmProvider() -> void
-JdkFind.Providers.GradleJvmProvider.GradleJvmProvider(string? gradleUserHome) -> void
-JdkFind.Providers.GradleJvmProvider.Name.get -> string!
-JdkFind.JvmVersion.Original.get -> string!
-JdkFind.Providers.HomebrewJvmProvider
-JdkFind.Providers.HomebrewJvmProvider.HomebrewJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
-JdkFind.Providers.HomebrewJvmProvider.Name.get -> string!
-JdkFind.Providers.IntelliJJvmProvider
-JdkFind.Providers.IntelliJJvmProvider.CommonPrefix.get -> string?
-JdkFind.Providers.IntelliJJvmProvider.IntelliJJvmProvider() -> void
-JdkFind.Providers.IntelliJJvmProvider.IntelliJJvmProvider(string? commonPrefix) -> void
-JdkFind.Providers.IntelliJJvmProvider.Name.get -> string!
-JdkFind.Providers.JabbaJvmProvider
-JdkFind.Providers.JabbaJvmProvider.JabbaJvmProvider() -> void
-JdkFind.Providers.HomebrewJvmProvider.HomebrewJvmProvider() -> void
-JdkFind.Providers.JabbaJvmProvider.JabbaJvmProvider(string? home) -> void
-static JdkFind.JvmVersion.operator >=(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
-static JdkFind.JvmVersion.operator ==(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
-JdkFind.JvmVendor.Huawei = 9 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Ibm = 11 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.JetBrains = 12 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Microsoft = 13 -> JdkFind.JvmVendor
+JdkFind.Jvm.Providers.init -> void
+JdkFind.JvmDistribution.Liberica = 10 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Mandrel = 11 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Microsoft = 12 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.OjdkBuild = 13 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.OpenLogic = 14 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.OracleGraalVm = 15 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.OracleOpenJdk = 16 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.RedHatBuildOfOpenJdk = 17 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.SapMachine = 18 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Kona = 9 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Semeru = 19 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Trava = 21 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Unknown = 0 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Zulu = 22 -> JdkFind.JvmDistribution
+JdkFind.JvmVendor
+JdkFind.JvmVendor.Adoptium = 2 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.AdoptOpenJdk = 1 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Alibaba = 3 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Amazon = 4 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Apple = 5 -> JdkFind.JvmVendor
+JdkFind.JvmDistribution.Temurin = 20 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.JetBrainsRuntime = 8 -> JdkFind.JvmDistribution
+JdkFind.JvmVendor.Azul = 7 -> JdkFind.JvmVendor
+static JdkFind.JdkFinder.Default.get -> JdkFind.JdkFinder!
+JdkFind.JdkFinder.ProbeRuntimeProperties.get -> bool
+static JdkFind.JdkFinder.operator ==(JdkFind.JdkFinder? left, JdkFind.JdkFinder? right) -> bool
+static JdkFind.Jvm.operator !=(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
+static JdkFind.Jvm.operator ==(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
+JdkFind.Jvm.HasCompiler.init -> void
+JdkFind.Jvm.Providers.get -> System.Collections.Generic.IReadOnlyList<string!>!
+JdkFind.JdkFinder.Providers.init -> void
+JdkFind.JdkFinder.ProbeRuntimeProperties.init -> void
+JdkFind.ICommonPrefixJvmProvider
+JdkFind.IJvmProvider
+JdkFind.IJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
+JdkFind.IJvmProvider.Name.get -> string!
+JdkFind.JavaHomeLayout
+JdkFind.JvmDistribution.GluonGraalVm = 6 -> JdkFind.JvmDistribution
+static JdkFind.JavaHomeLayout.Probe(string! candidateDirectory) -> string?
+JdkFind.JdkFinder.<Clone>$() -> JdkFind.JdkFinder!
+JdkFind.JdkFinder.DeduplicateHomes.get -> bool
+JdkFind.JdkFinder.Providers.get -> System.Collections.Generic.IReadOnlyList<JdkFind.IJvmProvider!>!
+JdkFind.JdkFinder.DeduplicateHomes.init -> void
+JdkFind.JdkFinder.Equals(JdkFind.JdkFinder? other) -> bool
+override JdkFind.JdkFinder.Equals(object? obj) -> bool
+override JdkFind.JdkFinder.GetHashCode() -> int
+JdkFind.JdkFinder.JdkFinder() -> void
+JdkFind.JdkFinder.Locate() -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
+JdkFind.JdkFinder.LocateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!>!
+static JdkFind.JdkFinder.operator !=(JdkFind.JdkFinder? left, JdkFind.JdkFinder? right) -> bool
+JdkFind.JdkFinder
+JdkFind.Jvm.LanguageVersion.init -> void
+JdkFind.Jvm.SupportsSource(int sourceLevel) -> bool
+JdkFind.Jvm.Vendor.get -> JdkFind.JvmVendor
+JdkFind.JavaExecutable.RuntimeVersion.get -> string?
+JdkFind.JavaExecutable.RuntimeVersion.init -> void
+JdkFind.JavaExecutable.StartFailure.get -> string?
+JdkFind.JavaExecutable.StartFailure.init -> void
+JdkFind.JavaExecutable.Vendor.get -> JdkFind.JvmVendor
+JdkFind.JavaExecutable.Vendor.init -> void
+JdkFind.JavaExecutable.VendorRaw.get -> string!
+JdkFind.JavaExecutable.VendorRaw.init -> void
+JdkFind.JavaExecutable.Version.get -> JdkFind.JvmVersion
+JdkFind.JavaExecutable.Version.init -> void
+JdkFind.JavaExecutable.VmName.get -> string!
+JdkFind.JavaExecutable.VmName.init -> void
+JdkFind.JavaExecutable.VmVersion.get -> string!
+JdkFind.JavaExecutable.VmVersion.init -> void
+JdkFind.JdkFinder.FromExecutable(string! javaExecutablePath, System.TimeSpan? timeout = null) -> JdkFind.JavaExecutable?
+JdkFind.JdkFinder.FromExecutableAsync(string! javaExecutablePath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<JdkFind.JavaExecutable?>!
+JdkFind.Jvm.Executable.get -> JdkFind.JavaExecutable!
+JdkFind.Jvm.Executable.init -> void
+override JdkFind.JavaExecutable.Equals(object? obj) -> bool
+override JdkFind.JavaExecutable.GetHashCode() -> int
+override JdkFind.JavaExecutable.ToString() -> string!
+static JdkFind.JavaExecutable.operator !=(JdkFind.JavaExecutable? left, JdkFind.JavaExecutable? right) -> bool
+static JdkFind.JavaExecutable.operator ==(JdkFind.JavaExecutable? left, JdkFind.JavaExecutable? right) -> bool
+JdkFind.JavaExecutable.RuntimeName.init -> void
+JdkFind.JavaExecutable.RuntimeName.get -> string?
+JdkFind.JavaExecutable.Path.init -> void
+JdkFind.JavaExecutable.Path.get -> string!
+JdkFind.Jvm.Vendor.init -> void
+JdkFind.Jvm.VendorRaw.get -> string?
+JdkFind.Jvm.VendorRaw.init -> void
+JdkFind.Jvm.Version.get -> JdkFind.JvmVersion
+JdkFind.JvmDistribution.GraalVmCommunity = 7 -> JdkFind.JvmDistribution
+JdkFind.Jvm.Version.init -> void
+JdkFind.JvmDistribution
+JdkFind.JvmDistribution.AdoptOpenJdk = 1 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Bisheng = 2 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Corretto = 3 -> JdkFind.JvmDistribution
+JdkFind.JvmDistribution.Dragonwell = 4 -> JdkFind.JvmDistribution
+override JdkFind.Jvm.ToString() -> string!
+JdkFind.JvmDistribution.Eliya = 5 -> JdkFind.JvmDistribution
+JdkFind.JavaExecutable
+JdkFind.JavaExecutable.<Clone>$() -> JdkFind.JavaExecutable!
+JdkFind.JavaExecutable.Architecture.get -> string!
+JdkFind.JavaExecutable.Architecture.init -> void
+JdkFind.JavaExecutable.Equals(JdkFind.JavaExecutable? other) -> bool
+JdkFind.JavaExecutable.Home.get -> System.IO.DirectoryInfo?
+JdkFind.JavaExecutable.Home.init -> void
+JdkFind.JavaExecutable.Installation.get -> JdkFind.Jvm?
+JdkFind.JavaExecutable.JavaExecutable() -> void
+JdkFind.JavaExecutable.OsName.get -> string!
+JdkFind.JavaExecutable.OsName.init -> void
+JdkFind.Providers.UnixJvmProvider.UnixJvmProvider(string? commonPrefix) -> void
+JdkFind.JdkFinder.FromHome(string! homeDirectory, System.TimeSpan? timeout = null) -> JdkFind.Jvm?
+JdkFind.Jvm.LanguageVersion.get -> int?
+JdkFind.Jvm.Home.init -> void
 JdkFind.JvmVendor.OpenLogic = 14 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Oracle = 15 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.RedHat = 16 -> JdkFind.JvmVendor
@@ -51,38 +133,38 @@ JdkFind.Providers.JavaHomeJvmProvider.GetJavaHomes() -> System.Collections.Gener
 JdkFind.Providers.WindowsProgramFilesJvmProvider.WindowsProgramFilesJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
 JdkFind.Providers.WindowsRegistryJvmProvider
 JdkFind.Providers.WindowsRegistryJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
+JdkFind.JvmVendor.Microsoft = 13 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.JetBrains = 12 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Ibm = 11 -> JdkFind.JvmVendor
+JdkFind.JvmVendor.Huawei = 9 -> JdkFind.JvmVendor
+static JdkFind.JvmVersion.Parse(string? javaVersion) -> JdkFind.JvmVersion
+override JdkFind.JvmVersion.ToString() -> string!
+static JdkFind.JvmVersion.TryParse(string? javaVersion, out JdkFind.JvmVersion version) -> bool
+static JdkFind.JvmVersion.Unknown(string! original = "") -> JdkFind.JvmVersion
+JdkFind.Providers.GradleJvmProvider
+JdkFind.Providers.GradleJvmProvider.CommonPrefix.get -> string?
+JdkFind.Providers.GradleJvmProvider.GradleJvmProvider() -> void
+JdkFind.Providers.GradleJvmProvider.GradleJvmProvider(string? gradleUserHome) -> void
+JdkFind.Providers.GradleJvmProvider.Name.get -> string!
+JdkFind.JvmVersion.Original.get -> string!
+JdkFind.Providers.HomebrewJvmProvider
 JdkFind.Providers.WindowsRegistryJvmProvider.Name.get -> string!
+JdkFind.Providers.HomebrewJvmProvider.HomebrewJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
+JdkFind.Providers.IntelliJJvmProvider
+JdkFind.Providers.IntelliJJvmProvider.CommonPrefix.get -> string?
+JdkFind.Providers.IntelliJJvmProvider.IntelliJJvmProvider() -> void
+JdkFind.Providers.IntelliJJvmProvider.IntelliJJvmProvider(string? commonPrefix) -> void
+JdkFind.Providers.IntelliJJvmProvider.Name.get -> string!
+JdkFind.Providers.JabbaJvmProvider
+JdkFind.Providers.JabbaJvmProvider.JabbaJvmProvider() -> void
+JdkFind.Providers.HomebrewJvmProvider.HomebrewJvmProvider() -> void
+JdkFind.Providers.JabbaJvmProvider.JabbaJvmProvider(string? home) -> void
+static JdkFind.JvmVersion.operator >=(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
+static JdkFind.JvmVersion.operator ==(JdkFind.JvmVersion left, JdkFind.JvmVersion right) -> bool
+JdkFind.Providers.HomebrewJvmProvider.Name.get -> string!
+JdkFind.Jvm.Jvm() -> void
 JdkFind.Providers.WindowsRegistryJvmProvider.WindowsRegistryJvmProvider() -> void
-JdkFind.Providers.WindowsRegistryJvmProvider.WindowsRegistryJvmProvider(string! rootPath, int subKeyDepth) -> void
 ~override JdkFind.JvmVersion.Equals(object obj) -> bool
-JdkFind.Jvm.Resolve(string! name) -> System.IO.FileInfo?
-JdkFind.Providers.AsdfJvmProvider
-JdkFind.Providers.WindowsProgramFilesJvmProvider.WindowsProgramFilesJvmProvider() -> void
-JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider() -> void
-JdkFind.Providers.AsdfJvmProvider.CommonPrefix.get -> string?
-JdkFind.Providers.AsdfJvmProvider.Name.get -> string!
-JdkFind.Providers.FlatpakJvmProvider
-JdkFind.Providers.FlatpakJvmProvider.FlatpakJvmProvider() -> void
-JdkFind.Providers.FlatpakJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-JdkFind.Providers.FlatpakJvmProvider.Name.get -> string!
-JdkFind.Providers.UnixJvmProvider
-JdkFind.Providers.UnixJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-JdkFind.Providers.UnixJvmProvider.Name.get -> string!
-JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider(string? asdfDataHome) -> void
-JdkFind.Providers.JavaHomeJvmProvider
-JdkFind.Providers.WindowsProgramFilesJvmProvider.Name.get -> string!
-JdkFind.Providers.SdkmanJvmProvider.SdkmanJvmProvider(string? commonPrefix) -> void
-JdkFind.Providers.JavaHomeJvmProvider.JavaHomeJvmProvider() -> void
-JdkFind.Providers.JavaHomeJvmProvider.JavaHomeJvmProvider(string? home) -> void
-JdkFind.Providers.JavaHomeJvmProvider.Name.get -> string!
-JdkFind.Providers.MacOsJvmProvider
-JdkFind.Providers.MacOsJvmProvider.MacOsJvmProvider() -> void
-JdkFind.Providers.MacOsJvmProvider.MacOsJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
-JdkFind.Providers.MacOsJvmProvider.Name.get -> string!
-JdkFind.Providers.PathJvmProvider
-JdkFind.Providers.PathJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-JdkFind.Providers.WindowsProgramFilesJvmProvider
-JdkFind.Providers.PathJvmProvider.Name.get -> string!
 JdkFind.Providers.PathJvmProvider.PathJvmProvider(string? path) -> void
 JdkFind.Providers.ScoopJvmProvider
 JdkFind.Providers.ScoopJvmProvider.Name.get -> string!
@@ -98,8 +180,6 @@ JdkFind.JvmVendor.BellSoft = 8 -> JdkFind.JvmVendor
 JdkFind.JvmVendor.Asymm = 6 -> JdkFind.JvmVendor
 JdkFind.Jvm
 JdkFind.Jvm.<Clone>$() -> JdkFind.Jvm!
-JdkFind.Jvm.Architecture.get -> string?
-JdkFind.Jvm.Architecture.init -> void
 JdkFind.Jvm.Distribution.get -> JdkFind.JvmDistribution
 JdkFind.Jvm.Distribution.init -> void
 JdkFind.Jvm.Equals(JdkFind.Jvm? other) -> bool
@@ -108,85 +188,33 @@ override JdkFind.Jvm.GetHashCode() -> int
 override JdkFind.JdkFinder.ToString() -> string!
 JdkFind.Jvm.HasCompiler.get -> bool
 JdkFind.Jvm.Home.get -> System.IO.DirectoryInfo!
-JdkFind.Jvm.Home.init -> void
-JdkFind.Jvm.Jvm() -> void
-JdkFind.Jvm.LanguageVersion.get -> int?
-JdkFind.Jvm.LanguageVersion.init -> void
-static JdkFind.Jvm.operator !=(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
-static JdkFind.Jvm.operator ==(JdkFind.Jvm? left, JdkFind.Jvm? right) -> bool
-JdkFind.Jvm.OsName.get -> string?
-JdkFind.Jvm.OsName.init -> void
-JdkFind.Jvm.HasCompiler.init -> void
-JdkFind.Jvm.Providers.get -> System.Collections.Generic.IReadOnlyList<string!>!
-JdkFind.JdkFinder.Providers.init -> void
-JdkFind.JdkFinder.ProbeRuntimeProperties.init -> void
-JdkFind.ICommonPrefixJvmProvider
-JdkFind.IJvmProvider
-JdkFind.IJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
-JdkFind.IJvmProvider.Name.get -> string!
-JdkFind.JavaHomeLayout
-static JdkFind.JavaHomeLayout.Probe(string! candidateDirectory) -> string?
-JdkFind.JdkFinder
-JdkFind.JdkFinder.<Clone>$() -> JdkFind.JdkFinder!
-JdkFind.JdkFinder.DeduplicateHomes.get -> bool
-JdkFind.JdkFinder.Providers.get -> System.Collections.Generic.IReadOnlyList<JdkFind.IJvmProvider!>!
-JdkFind.JdkFinder.DeduplicateHomes.init -> void
-JdkFind.JdkFinder.Equals(JdkFind.JdkFinder? other) -> bool
-override JdkFind.JdkFinder.Equals(object? obj) -> bool
-override JdkFind.JdkFinder.GetHashCode() -> int
-JdkFind.JdkFinder.JdkFinder() -> void
-JdkFind.JdkFinder.Locate() -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
-JdkFind.JdkFinder.LocateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!>!
-static JdkFind.JdkFinder.operator !=(JdkFind.JdkFinder? left, JdkFind.JdkFinder? right) -> bool
-static JdkFind.JdkFinder.operator ==(JdkFind.JdkFinder? left, JdkFind.JdkFinder? right) -> bool
-JdkFind.JdkFinder.ProbeRuntimeProperties.get -> bool
-static JdkFind.JdkFinder.Default.get -> JdkFind.JdkFinder!
-JdkFind.JvmVendor.Azul = 7 -> JdkFind.JvmVendor
-JdkFind.Jvm.Providers.init -> void
-JdkFind.Jvm.RuntimeName.init -> void
-JdkFind.JvmDistribution.Liberica = 10 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Mandrel = 11 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Microsoft = 12 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.OjdkBuild = 13 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.OpenLogic = 14 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.OracleGraalVm = 15 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.OracleOpenJdk = 16 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.RedHatBuildOfOpenJdk = 17 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.SapMachine = 18 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Kona = 9 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Semeru = 19 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Trava = 21 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Unknown = 0 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Zulu = 22 -> JdkFind.JvmDistribution
-JdkFind.JvmVendor
-JdkFind.JvmVendor.Adoptium = 2 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.AdoptOpenJdk = 1 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Alibaba = 3 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Amazon = 4 -> JdkFind.JvmVendor
-JdkFind.JvmVendor.Apple = 5 -> JdkFind.JvmVendor
-JdkFind.JvmDistribution.Temurin = 20 -> JdkFind.JvmDistribution
-JdkFind.Jvm.RuntimeName.get -> string?
-JdkFind.JvmDistribution.JetBrainsRuntime = 8 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.GluonGraalVm = 6 -> JdkFind.JvmDistribution
-JdkFind.Jvm.RuntimeVersion.get -> string?
-JdkFind.Jvm.RuntimeVersion.init -> void
-JdkFind.Jvm.SupportsSource(int sourceLevel) -> bool
-override JdkFind.Jvm.ToString() -> string!
-JdkFind.Jvm.Vendor.get -> JdkFind.JvmVendor
-JdkFind.Jvm.Vendor.init -> void
-JdkFind.Jvm.VendorRaw.get -> string?
-JdkFind.Jvm.VendorRaw.init -> void
-JdkFind.Jvm.Version.get -> JdkFind.JvmVersion
-JdkFind.JvmDistribution.GraalVmCommunity = 7 -> JdkFind.JvmDistribution
-JdkFind.Jvm.Version.init -> void
-JdkFind.Jvm.VmName.init -> void
-JdkFind.Jvm.VmVersion.get -> string?
-JdkFind.Jvm.VmVersion.init -> void
-JdkFind.JvmDistribution
-JdkFind.JvmDistribution.AdoptOpenJdk = 1 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Bisheng = 2 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Corretto = 3 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Dragonwell = 4 -> JdkFind.JvmDistribution
-JdkFind.JvmDistribution.Eliya = 5 -> JdkFind.JvmDistribution
-JdkFind.Jvm.VmName.get -> string?
-JdkFind.Providers.UnixJvmProvider.UnixJvmProvider(string? commonPrefix) -> void
+JdkFind.Providers.PathJvmProvider.Name.get -> string!
+JdkFind.Providers.WindowsProgramFilesJvmProvider
+JdkFind.Providers.PathJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
+JdkFind.Providers.PathJvmProvider
+JdkFind.Jvm.Resolve(string! name) -> System.IO.FileInfo?
+JdkFind.Providers.AsdfJvmProvider
+JdkFind.Providers.WindowsProgramFilesJvmProvider.WindowsProgramFilesJvmProvider() -> void
+JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider() -> void
+JdkFind.Providers.AsdfJvmProvider.CommonPrefix.get -> string?
+JdkFind.Providers.AsdfJvmProvider.Name.get -> string!
+JdkFind.Providers.FlatpakJvmProvider
+JdkFind.Providers.FlatpakJvmProvider.FlatpakJvmProvider() -> void
+JdkFind.Providers.FlatpakJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
+JdkFind.Providers.FlatpakJvmProvider.Name.get -> string!
+JdkFind.Providers.UnixJvmProvider
+JdkFind.Providers.WindowsRegistryJvmProvider.WindowsRegistryJvmProvider(string! rootPath, int subKeyDepth) -> void
+JdkFind.Providers.UnixJvmProvider.GetJavaHomes() -> System.Collections.Generic.IEnumerable<string!>!
+JdkFind.Providers.AsdfJvmProvider.AsdfJvmProvider(string? asdfDataHome) -> void
+JdkFind.Providers.JavaHomeJvmProvider
+JdkFind.Providers.WindowsProgramFilesJvmProvider.Name.get -> string!
+JdkFind.Providers.SdkmanJvmProvider.SdkmanJvmProvider(string? commonPrefix) -> void
+JdkFind.Providers.JavaHomeJvmProvider.JavaHomeJvmProvider() -> void
+JdkFind.Providers.JavaHomeJvmProvider.JavaHomeJvmProvider(string? home) -> void
+JdkFind.Providers.JavaHomeJvmProvider.Name.get -> string!
+JdkFind.Providers.MacOsJvmProvider
+JdkFind.Providers.MacOsJvmProvider.MacOsJvmProvider() -> void
+JdkFind.Providers.MacOsJvmProvider.MacOsJvmProvider(System.Collections.Generic.IEnumerable<string!>! prefixes) -> void
+JdkFind.Providers.MacOsJvmProvider.Name.get -> string!
+JdkFind.Providers.UnixJvmProvider.Name.get -> string!
+JdkFind.JdkFinder.FromHomeAsync(string! homeDirectory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<JdkFind.Jvm?>!
