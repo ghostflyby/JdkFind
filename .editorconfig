@@ -1,5 +1,6 @@
 # EditorConfig is awesome: https://EditorConfig.org
 
+# Added on top of the Rider export: the root marker.
 # top-most EditorConfig file
 root = true
 
@@ -13,7 +14,6 @@ indent_size = 4
 # Microsoft .NET properties
 csharp_new_line_before_members_in_object_initializers = false
 csharp_preferred_modifier_order = public, private, protected, internal, file, new, static, abstract, virtual, closed, sealed, readonly, override, safe, unsafe, extern, volatile, async, required:suggestion
-csharp_style_namespace_declarations = file_scoped:suggestion
 csharp_style_prefer_utf8_string_literals = true:suggestion
 csharp_style_var_elsewhere = true:suggestion
 csharp_style_var_for_built_in_types = true:suggestion
@@ -89,6 +89,11 @@ dotnet_style_qualification_for_method = false:suggestion
 dotnet_style_qualification_for_property = false:suggestion
 dotnet_style_require_accessibility_modifiers = for_non_interface_members:suggestion
 
+# Repository additions on top of the Rider export
+dotnet_diagnostic.IDE0005.severity = suggestion
+dotnet_sort_system_directives_first = true
+csharp_style_namespace_declarations = file_scoped:suggestion
+
 # ReSharper properties
 resharper_apply_auto_detected_rules = false
 resharper_autodetect_indent_settings = true
@@ -124,7 +129,8 @@ resharper_web_config_module_not_resolved_highlighting = warning
 resharper_web_config_type_not_resolved_highlighting = warning
 resharper_web_config_wrong_module_highlighting = warning
 
-# XML solution, project and config files
+# Repository addition: XML solution, project and config files (the Rider export
+# pins only the yaml group below)
 [*.{csproj,props,targets,config,nuspec,resx,slnx}]
 indent_size = 2
 
