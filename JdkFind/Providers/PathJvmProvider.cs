@@ -20,7 +20,8 @@ public sealed class PathJvmProvider(string? path) : IJvmProvider
         if (string.IsNullOrWhiteSpace(path))
             return [];
 
-        return Enumerate(path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        return Enumerate(path.Split(Path.PathSeparator,
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
 
     private static IEnumerable<string> Enumerate(IEnumerable<string> entries) =>

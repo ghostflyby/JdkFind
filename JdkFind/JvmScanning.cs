@@ -1,3 +1,5 @@
+using System.Security;
+
 namespace JdkFind;
 
 /// <summary>
@@ -20,7 +22,7 @@ internal static class JvmScanning
             return [.. Directory.EnumerateDirectories(directory, searchPattern ?? "*")];
         }
         catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            exception is IOException or UnauthorizedAccessException or SecurityException)
         {
             return [];
         }

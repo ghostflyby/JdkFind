@@ -14,12 +14,12 @@ public class JvmResolveTests : IDisposable
         File.WriteAllText(Path.Combine(home, "jre", "bin", JavaHomeLayout.JavaExecutableName), string.Empty);
         var jvm = TestJvm(home);
 
-        Assert.Equal(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), jvm.Resolve("java")!.FullName);
-        Assert.Equal(Path.Combine(home, "bin", JavaHomeLayout.CompilerExecutableName), jvm.Resolve("javac")!.FullName);
+        Assert.Equal(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), jvm.Resolve("java")?.FullName);
+        Assert.Equal(Path.Combine(home, "bin", JavaHomeLayout.CompilerExecutableName), jvm.Resolve("javac")?.FullName);
         // A literal .exe name matches the fixture's java.exe on Windows and,
         // outside Windows, is looked up as-is and finds nothing.
         if (OperatingSystem.IsWindows())
-            Assert.Equal(Path.Combine(home, "bin", "java.exe"), jvm.Resolve("java.exe")!.FullName);
+            Assert.Equal(Path.Combine(home, "bin", "java.exe"), jvm.Resolve("java.exe")?.FullName);
         else
             Assert.Null(jvm.Resolve("java.exe"));
     }
@@ -43,7 +43,7 @@ public class JvmResolveTests : IDisposable
 
         Assert.Equal(
             Path.Combine(home, "jre", "bin", JavaHomeLayout.JavaExecutableName),
-            jvm.Resolve("java")!.FullName);
+            jvm.Resolve("java")?.FullName);
         // The inner JRE ships no compiler and the top-level bin does not exist.
         Assert.Null(jvm.Resolve("javac"));
     }
@@ -55,6 +55,7 @@ public class JvmResolveTests : IDisposable
         var jvm = TestJvm(home);
 
         // ThrowIfNullOrWhiteSpace: null is ArgumentNullException, the rest ArgumentException.
+        // ReSharper disable once NullableWarningSuppressionIsUsed
         Assert.Throws<ArgumentNullException>(() => jvm.Resolve(null!));
         Assert.Throws<ArgumentException>(() => jvm.Resolve(string.Empty));
         Assert.Throws<ArgumentException>(() => jvm.Resolve("  "));
@@ -63,10 +64,15 @@ public class JvmResolveTests : IDisposable
         Assert.Throws<ArgumentException>(() => jvm.Resolve(home));
     }
 
-    private Jvm TestJvm(string home) => new()
+    private static Jvm TestJvm(string home) => new()
     {
         Home = new DirectoryInfo(home),
         Providers = ["test"],
+        Executable = new JavaExecutable
+        {
+            Path = Path.Combine(home, "bin", "java"),
+            Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21")
+        },
         Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"),
     };
 

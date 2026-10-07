@@ -80,8 +80,8 @@ public class JdkFinderAsyncTests : IDisposable
         var unprobed = await (new JdkFinder { Providers = providers, ProbeRuntimeProperties = false })
             .LocateAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal("ScriptedRuntime", probed[0].RuntimeName);
-        Assert.Null(unprobed[0].RuntimeName);
+        Assert.Equal("ScriptedRuntime", probed[0].Executable.RuntimeName);
+        Assert.Null(unprobed[0].Executable.RuntimeName);
     }
 
     [Fact]

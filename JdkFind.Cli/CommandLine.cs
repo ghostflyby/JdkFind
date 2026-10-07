@@ -1,4 +1,3 @@
-using System.CommandLine;
 using System.Globalization;
 using System.Text.Json;
 
@@ -31,21 +30,17 @@ internal static class CommandLine
     /// <summary>
     ///     Async entry point. Dispatch goes through System.CommandLine's invocation so
     ///     the framework's termination-signal token (Ctrl+C, SIGINT, SIGTERM) reaches
-    ///     the actions — the locate pipeline (runtime probes, release-file reads)
-    ///     honors it.
+    ///     the execution — the locate pipeline (runtime probes, release-file reads)
+    ///     honors it. The execution binds after parsing, so it receives the parsed
+    ///     <see cref="Options" /> (including the '--' tail) instead of closing over
+    ///     pre-parse state.
     /// </summary>
     internal static async Task<int> RunAsync(string[] args, JdkFinder? finder = null)
     {
-        // The run command travels through the closure: the wired action re-maps the
-        // parse result into a fresh Options instance, which cannot carry it.
-        string[]? commandArgs = null;
-        var tree = Options.CreateTree((options, cancellationToken) =>
-            ExecuteAsync(options, commandArgs, cancellationToken, finder));
-
         Options options;
         try
         {
-            options = Options.ParseInto(tree, args, out commandArgs);
+            options = Options.Parse(args);
         }
         catch (ArgumentException exception)
         {
@@ -57,13 +52,14 @@ internal static class CommandLine
         if (options.ShowHelp || options.ShowVersion)
             return options.RenderFrameworkOutput();
 
-        return await options.InvokeAsync().ConfigureAwait(false);
+        return await options.InvokeAsync(cancellationToken =>
+            ExecuteAsync(options, cancellationToken, finder)).ConfigureAwait(false);
     }
 
     /// <summary>The action shared by the default command and both subcommands:
     /// runs the locate pipeline and prints or executes the selection.</summary>
     private static async Task<int> ExecuteAsync(
-        Options options, string[]? commandArgs, CancellationToken cancellationToken, JdkFinder? finder)
+        Options options, CancellationToken cancellationToken, JdkFinder? finder)
     {
         finder ??= options.NoProbe
             ? JdkFinder.Default with { ProbeRuntimeProperties = false }
@@ -92,7 +88,7 @@ internal static class CommandLine
 
         // Run mode: '-- <command>' executes with the installation's environment
         // instead of printing anything.
-        if (commandArgs is { Length: > 0 } command)
+        if (options.CommandArgs is { Count: > 0 } command)
             return CommandRunner.RunCommand(chosen, command);
 
         // --json wins over the human formats on every command.
@@ -216,10 +212,11 @@ internal static class CommandLine
         if (string.IsNullOrEmpty(text))
             return true;
 
-        var architecture = jvm.Architecture;
+        var architecture = jvm.Executable.Architecture;
         if (string.IsNullOrEmpty(architecture))
             return false;
 
+        // ReSharper disable once VariableHidesOuterVariable
         return ArchAliases.FirstOrDefault(group => group.Contains(text, StringComparer.OrdinalIgnoreCase)) is { } group
             ? group.Any(alias => architecture.Contains(alias, StringComparison.OrdinalIgnoreCase))
             : architecture.Contains(text, StringComparison.OrdinalIgnoreCase);
@@ -233,13 +230,13 @@ internal static class CommandLine
         jvm.Version.IsPreRelease,
         jvm.Vendor.ToString(),
         jvm.Distribution.ToString(),
-        jvm.VendorRaw,
-        jvm.RuntimeName,
-        jvm.RuntimeVersion,
-        jvm.VmName,
-        jvm.VmVersion,
-        jvm.Architecture,
-        jvm.OsName,
+        jvm.Executable.VendorRaw,
+        jvm.Executable.RuntimeName,
+        jvm.Executable.RuntimeVersion,
+        jvm.Executable.VmName,
+        jvm.Executable.VmVersion,
+        jvm.Executable.Architecture,
+        jvm.Executable.OsName,
         jvm.Providers);
 
     internal static void WriteInfo(Jvm jvm, TextWriter writer)
@@ -249,12 +246,12 @@ internal static class CommandLine
         writer.WriteLine($"vendor: {jvm.Vendor}");
         writer.WriteLine($"distribution: {jvm.Distribution}");
 
-        if (!string.IsNullOrEmpty(jvm.RuntimeName))
-            writer.WriteLine($"runtime: {jvm.RuntimeName} {jvm.RuntimeVersion}");
-        if (!string.IsNullOrEmpty(jvm.VmName))
-            writer.WriteLine($"vm: {jvm.VmName} {jvm.VmVersion}");
-        if (!string.IsNullOrEmpty(jvm.Architecture))
-            writer.WriteLine($"arch: {jvm.Architecture}");
+        if (!string.IsNullOrEmpty(jvm.Executable.RuntimeName))
+            writer.WriteLine($"runtime: {jvm.Executable.RuntimeName} {jvm.Executable.RuntimeVersion}");
+        if (!string.IsNullOrEmpty(jvm.Executable.VmName))
+            writer.WriteLine($"vm: {jvm.Executable.VmName} {jvm.Executable.VmVersion}");
+        if (!string.IsNullOrEmpty(jvm.Executable.Architecture))
+            writer.WriteLine($"arch: {jvm.Executable.Architecture}");
 
         writer.WriteLine($"type: {(jvm.HasCompiler ? "jdk" : "jre")}");
         writer.WriteLine($"providers: {string.Join(", ", jvm.Providers)}");

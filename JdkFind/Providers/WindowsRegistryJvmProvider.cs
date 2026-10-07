@@ -1,4 +1,5 @@
 using System.Runtime.Versioning;
+using System.Security;
 using Microsoft.Win32;
 
 namespace JdkFind.Providers;
@@ -30,12 +31,16 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
     private readonly (string Path, int Depth)[] roots;
 
     /// <summary>Scans the vendor roots known to publish <c>JavaHome</c> values.</summary>
-    public WindowsRegistryJvmProvider() : this(DefaultRoots) { }
+    public WindowsRegistryJvmProvider() : this(DefaultRoots)
+    {
+    }
 
     /// <summary>Scans a single explicit registry root (relative to HKLM's 64-bit view)
     /// down to <paramref name="subKeyDepth" /> subkey levels.</summary>
     public WindowsRegistryJvmProvider(string rootPath, int subKeyDepth)
-        : this([(rootPath, subKeyDepth)]) { }
+        : this([(rootPath, subKeyDepth)])
+    {
+    }
 
     private WindowsRegistryJvmProvider((string Path, int Depth)[] roots) => this.roots = roots;
 
@@ -66,7 +71,7 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
             }
         }
         catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            exception is IOException or UnauthorizedAccessException or SecurityException)
         {
             // An unreadable registry counts as no results.
         }
@@ -104,7 +109,7 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
                     Collect(subKey, remainingDepth - 1, homes);
             }
             catch (Exception exception) when (
-                exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                exception is IOException or UnauthorizedAccessException or SecurityException)
             {
                 // Skip inaccessible keys.
             }

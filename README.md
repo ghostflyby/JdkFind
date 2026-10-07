@@ -56,10 +56,10 @@ removed.
 | `prerelease` | boolean | Early-access build (e.g. `25-ea`) |
 | `vendor` | string | Normalized upstream vendor (e.g. `Azul`) |
 | `distribution` | string | foojay-style distribution name (e.g. `Zulu`) |
-| `vendorRaw` | string \| null | Raw `IMPLEMENTOR` string |
+| `vendorRaw` | string \| null | The binary's reported vendor, falling back to the release `IMPLEMENTOR` |
 | `runtimeName` / `runtimeVersion` | string \| null | Probed `java.runtime.*` |
 | `vmName` / `vmVersion` | string \| null | Probed `java.vm.*` |
-| `architecture` / `osName` | string \| null | Release file or probe |
+| `architecture` / `osName` | string \| null | Probed, falling back to the release file |
 | `providers` | string[] | Detection sources that reported this home |
 
 Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled;
@@ -108,23 +108,27 @@ with `Providers` (the SOURCE column) faithfully listing every one of them.
 
 Discovery answers "what exists"; probing answers "does *this* binary run,
 and what does it say about itself?" — the pre-flight check before launching
-with a user-configured java:
+with a user-configured java. The two concepts live on separate types: a
+`JavaExecutable` is the runnable binary — the minimal JRE — and a `Jvm` is an
+installation directory whose `Executable` property carries its own java.
 
 ```csharp
-Jvm? jvm = JdkFinder.Default.FromExecutable(userConfiguredJavaPath);
-// or: JdkFinder.Default.FromHome(javaHomeDirectory);
-if (jvm is null)
+JavaExecutable? runtime = JdkFinder.Default.FromExecutable(userConfiguredJavaPath);
+// or: JdkFinder.Default.FromHome(javaHomeDirectory);  → Jvm?, with jvm.Executable
+if (runtime is null)
 {
     // The path does not yield a JVM at all.
 }
-else if (jvm.StartFailure is { } failure)
+else if (runtime.StartFailure is { } failure)
 {
     // The binary did not run to completion — `failure` carries the reason
     // (spawn error, exit code, or timeout) plus the output tail for display.
 }
 else
 {
-    // jvm.Version, jvm.Architecture, ... describe what the binary reported.
+    // runtime.Version, runtime.Architecture, ... describe what the binary
+    // reported; runtime.Home is the backing installation directory (null for a
+    // standalone binary) and runtime.Installation derives the full Jvm.
 }
 ```
 
@@ -138,7 +142,11 @@ variables (`_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`,
 `CLASSPATH`, `LD_PRELOAD`, `LD_LIBRARY_PATH`) removed, so the verdict
 describes the binary, not the launcher's shell. Values the binary reports
 take precedence over the home's release file, which only fills what the
-binary did not say.
+binary did not say. The platform specification guarantees the standard
+property set (vendor, os.name, os.arch, java.vm.name, java.vm.version), so
+their counterparts on `JavaExecutable` are non-nullable strings — empty only
+when no probe ran, the probe degraded, or an implementation broke that
+promise; the runtime-only `java.runtime.*` pair is null in those cases.
 
 ## Build and test
 

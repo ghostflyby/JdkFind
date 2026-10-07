@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security;
 using System.Text;
 
 namespace JdkFind;
@@ -9,7 +10,8 @@ namespace JdkFind;
 /// </summary>
 internal static class ReleaseFile
 {
-    internal static IReadOnlyDictionary<string, string> Parse(string releaseFilePath, CancellationToken cancellationToken = default)
+    internal static IReadOnlyDictionary<string, string> Parse(string releaseFilePath,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -29,6 +31,21 @@ internal static class ReleaseFile
         }
 
         return entries;
+    }
+
+    /// <summary>Parses the <c>release</c> file of a home directory, returning null
+    /// when it is missing or unreadable instead of throwing.</summary>
+    internal static IReadOnlyDictionary<string, string>? TryParse(string homePath)
+    {
+        try
+        {
+            return Parse(Path.Combine(homePath, "release"));
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or SecurityException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Extracts the feature version: <c>21.0.5</c> → 21, <c>1.8.0_402</c> → 8, <c>25-ea</c> → 25.</summary>

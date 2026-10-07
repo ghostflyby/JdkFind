@@ -24,27 +24,29 @@ internal sealed class Options
     /// <summary>Prose carried at the top of the generated help: usage lines,
     /// selection semantics, stream discipline and exit codes.</summary>
     private const string RootDescription = """
-        jdkfind [version] [tool] [options]    Print the selected home, or bin/<tool> path
-        jdkfind [version] -- <command>        Run <command> with JAVA_HOME and bin/ of the selection (exec on Unix, spawn on Windows)
-        jdkfind info [version] [options]      Print one installation's details
-        jdkfind list [options]                List all matching installations
+                                           jdkfind [version] [tool] [options]    Print the selected home, or bin/<tool> path
+                                           jdkfind [version] -- <command>        Run <command> with JAVA_HOME and bin/ of the selection (exec on Unix, spawn on Windows)
+                                           jdkfind info [version] [options]      Print one installation's details
+                                           jdkfind list [options]                List all matching installations
 
-        The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
-        newest version first, installations with a compiler preferred on ties.
+                                           The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
+                                           newest version first, installations with a compiler preferred on ties.
 
-        Streams: machine-readable output goes to stdout; the human-readable list and
-        details go to stderr.
+                                           Streams: machine-readable output goes to stdout; the human-readable list and
+                                           details go to stderr.
 
-        Exit codes: 0 = found, 1 = none found, 2 = usage error, 130 = cancelled;
-        run mode adds 126/127 when the command cannot be executed or is not found
-        """;
+                                           Exit codes: 0 = found, 1 = none found, 2 = usage error, 130 = cancelled;
+                                           run mode adds 126/127 when the command cannot be executed or is not found
+                                           """;
 
     private readonly ParseResult parseResult;
+    private readonly CommandTree tree;
     private readonly VersionOption versionOption;
 
-    private Options(ParseResult parseResult, VersionOption versionOption)
+    private Options(ParseResult parseResult, CommandTree tree, VersionOption versionOption)
     {
         this.parseResult = parseResult;
+        this.tree = tree;
         this.versionOption = versionOption;
     }
 
@@ -79,18 +81,52 @@ internal sealed class Options
 
     internal bool NoProbe { get; private set; }
 
-    /// <summary>Parses the arguments through System.CommandLine; the first parse
-    /// error surfaces as an ArgumentException.</summary>
-    internal static Options Parse(string[] args) => ParseInto(CreateTree(execute: null), args, out _);
+    /// <summary>Parses the arguments through System.CommandLine — the '--' tail
+    /// lands on <see cref="CommandArgs" /> — surfacing the first parse error as an
+    /// ArgumentException. The execution is bound later, by
+    /// <see cref="InvokeAsync" />.</summary>
+    internal static Options Parse(string[] args)
+    {
+        var tree = CreateTree();
 
-    /// <summary>
-    ///     Assembles the command tree. When <paramref name="execute" /> is given, the
-    ///     default command and both subcommands dispatch to it (Run's invocation path),
-    ///     receiving System.CommandLine's termination-signal cancellation token;
-    ///     parse-only trees only carry a placeholder root action, marking the default
-    ///     command callable.
-    /// </summary>
-    internal static CommandTree CreateTree(Func<Options, CancellationToken, Task<int>>? execute)
+        // Everything after '--' never reaches the parser: it is the verbatim
+        // command for run mode.
+        var separator = Array.IndexOf(args, "--");
+        var tail = separator < 0 ? null : args[(separator + 1)..];
+        var head = separator < 0 ? args : args[..separator];
+
+        var parseResult = tree.Root.Parse(head, new ParserConfiguration { EnablePosixBundling = false });
+        if (parseResult.Errors.Count > 0)
+            throw new ArgumentException(parseResult.Errors[0].Message);
+
+        // A help token clears subcommand-level parse errors, but unmatched tokens
+        // survive it; keep them a usage error (`list --bogus --help` must not print
+        // help with exit 0).
+        if (parseResult.UnmatchedTokens is { Count: > 0 })
+            throw new ArgumentException(parseResult.UnmatchedTokens[0].StartsWith('-')
+                ? $"Unknown option '{parseResult.UnmatchedTokens[0]}'."
+                : $"Unexpected argument '{parseResult.UnmatchedTokens[0]}'.");
+
+        var options = Map(parseResult, tree);
+
+        if (tail is not null)
+        {
+            if (options.Command != SubCommand.None)
+                throw new ArgumentException("'--' runs a command; it is not valid with 'info' or 'list'.");
+            if (options.Tool is not null)
+                throw new ArgumentException("'--' runs a command; the tool positional has no effect with it.");
+            if (tail.Length == 0)
+                throw new ArgumentException("No command given after '--'.");
+            options.CommandArgs = tail;
+        }
+
+        return options;
+    }
+
+    /// <summary>Assembles the parse-only command tree. A placeholder root action
+    /// marks the default command callable for bare `jdkfind`; the real execution
+    /// is bound by <see cref="InvokeAsync" /> after parsing.</summary>
+    internal static CommandTree CreateTree()
     {
         var operands = new Argument<string[]>("operands")
         {
@@ -100,31 +136,32 @@ internal sealed class Options
 
         var version = new Argument<string?>("version")
         {
-            Description = "Numeric version prefix (21, 21.0.5)",
-            Arity = ArgumentArity.ZeroOrOne,
+            Description = "Numeric version prefix (21, 21.0.5)", Arity = ArgumentArity.ZeroOrOne,
         };
 
         var json = new Option<bool>("--json", "-j")
         {
-            Description = "Write JSON to stdout (list: array; others: single object)",
-            Recursive = true,
+            Description = "Write JSON to stdout (list: array; others: single object)", Recursive = true,
         };
 
         var vendor = new Option<string>("--vendor")
         {
-            Description = "Filter by vendor substring; matches the normalized vendor and the raw string (case-insensitive)",
+            Description =
+                "Filter by vendor substring; matches the normalized vendor and the raw string (case-insensitive)",
             Recursive = true,
         };
 
         var distribution = new Option<string>("--distribution")
         {
-            Description = "Filter by distribution substring per the foojay API names (e.g. temurin, zulu, corretto)",
+            Description =
+                "Filter by distribution substring per the foojay API names (e.g. temurin, zulu, corretto)",
             Recursive = true,
         };
 
         var architecture = new Option<string>("--arch")
         {
-            Description = "Filter by architecture substring (case-insensitive); known aliases match too (x86_64/amd64/x64, aarch64/arm64)",
+            Description =
+                "Filter by architecture substring (case-insensitive); known aliases match too (x86_64/amd64/x64, aarch64/arm64)",
             Recursive = true,
         };
 
@@ -136,14 +173,12 @@ internal sealed class Options
 
         var jdkOnly = new Option<bool>("--jdk-only")
         {
-            Description = "Only installations that ship a compiler (skip runtimes)",
-            Recursive = true,
+            Description = "Only installations that ship a compiler (skip runtimes)", Recursive = true,
         };
 
         var noProbe = new Option<bool>("--no-probe")
         {
-            Description = "Skip executing each JVM for runtime properties",
-            Recursive = true,
+            Description = "Skip executing each JVM for runtime properties", Recursive = true,
         };
 
         var info = new Command("info")
@@ -156,14 +191,12 @@ internal sealed class Options
 
         var list = new Command("list")
         {
-            Description = "List all matching installations",
-            TreatUnmatchedTokensAsErrors = true,
+            Description = "List all matching installations", TreatUnmatchedTokensAsErrors = true,
         };
 
         var listVersion = new Argument<string?>("version")
         {
-            Description = "Numeric version prefix (21, 21.0.5)",
-            Arity = ArgumentArity.ZeroOrOne,
+            Description = "Numeric version prefix (21, 21.0.5)", Arity = ArgumentArity.ZeroOrOne,
         };
         list.Add(listVersion);
 
@@ -205,19 +238,10 @@ internal sealed class Options
             VersionOption = versionOption,
         };
 
-        if (execute is null)
-        {
-            // Parse-only tree: with subcommands present the framework would demand
-            // one of them; the placeholder just marks the root (the default command)
-            // callable for bare `jdkfind`.
-            root.SetAction(_ => 0);
-        }
-        else
-        {
-            root.SetAction((parseResult, cancellationToken) => execute(Map(parseResult, tree), cancellationToken));
-            info.SetAction((parseResult, cancellationToken) => execute(Map(parseResult, tree), cancellationToken));
-            list.SetAction((parseResult, cancellationToken) => execute(Map(parseResult, tree), cancellationToken));
-        }
+        // Parse-only tree: with subcommands present the framework would demand
+        // one of them; the placeholder just marks the root (the default command)
+        // callable for bare `jdkfind`. InvokeAsync binds the real execution.
+        root.SetAction(_ => 0);
 
         return tree;
     }
@@ -227,7 +251,7 @@ internal sealed class Options
     {
         var infoVersion = parseResult.GetValue(tree.Version);
         var listVersion = parseResult.GetValue(tree.ListVersion);
-        var options = new Options(parseResult, tree.VersionOption)
+        var options = new Options(parseResult, tree, tree.VersionOption)
         {
             VersionPrefix = infoVersion is not null ? ValidateVersionPrefix(infoVersion)
                 : listVersion is not null ? ValidateVersionPrefix(listVersion)
@@ -253,57 +277,27 @@ internal sealed class Options
         return options;
     }
 
-    /// <summary>
-    ///     The single parsing path for both the test seam and the wired invocation
-    ///     tree, so '--' handling cannot diverge between them: everything after '--'
-    ///     becomes <see cref="CommandArgs" /> verbatim (it never reaches the parser),
-    ///     and the first parse, grammar or unmatched-token error surfaces as an
-    ///     ArgumentException. The command is also assigned to
-    ///     <paramref name="commandArgs" /> for the invocation closure, because the
-    ///     wired action re-maps the parse result into a fresh Options instance.
-    /// </summary>
-    internal static Options ParseInto(CommandTree tree, string[] args, out string[]? commandArgs)
-    {
-        var separator = Array.IndexOf(args, "--");
-        var tail = separator < 0 ? null : args[(separator + 1)..];
-        var head = separator < 0 ? args : args[..separator];
-        commandArgs = tail;
-
-        var parseResult = tree.Root.Parse(head, new ParserConfiguration { EnablePosixBundling = false });
-        if (parseResult.Errors.Count > 0)
-            throw new ArgumentException(parseResult.Errors[0].Message);
-
-        // A help token clears subcommand-level parse errors, but unmatched tokens
-        // survive it; keep them a usage error (`list --bogus --help` must not print
-        // help with exit 0).
-        if (parseResult.UnmatchedTokens is { Count: > 0 })
-            throw new ArgumentException(parseResult.UnmatchedTokens[0].StartsWith('-')
-                ? $"Unknown option '{parseResult.UnmatchedTokens[0]}'."
-                : $"Unexpected argument '{parseResult.UnmatchedTokens[0]}'.");
-
-        var options = Map(parseResult, tree);
-
-        if (tail is not null)
-        {
-            if (options.Command != SubCommand.None)
-                throw new ArgumentException("'--' runs a command; it is not valid with 'info' or 'list'.");
-            if (options.Tool is not null)
-                throw new ArgumentException("'--' runs a command; the tool positional has no effect with it.");
-            if (tail.Length == 0)
-                throw new ArgumentException("No command given after '--'.");
-            options.CommandArgs = tail;
-        }
-
-        return options;
-    }
-
     /// <summary>Prints the framework-generated help or version output to stdout;
     /// only meaningful when ShowHelp or ShowVersion is true.</summary>
     internal int RenderFrameworkOutput() => parseResult.Invoke(new InvocationConfiguration());
 
-    /// <summary>Invokes the parsed command through the framework, dispatching the
-    /// wired run actions with the termination-signal cancellation token.</summary>
-    internal Task<int> InvokeAsync() => parseResult.InvokeAsync(new InvocationConfiguration());
+    /// <summary>
+    ///     Binds the run execution to the parsed commands — the framework's
+    ///     termination-signal cancellation token reaches it — and invokes.
+    ///     Binding happens after parsing, so the execution receives the fully
+    ///     parsed <see cref="Options" /> (including <see cref="CommandArgs" />)
+    ///     instead of closing over pre-parse state.
+    /// </summary>
+    internal Task<int> InvokeAsync(Func<CancellationToken, Task<int>> execute)
+    {
+        Task<int> Action(ParseResult _, CancellationToken cancellationToken) => execute(cancellationToken);
+
+        tree.Root.SetAction(Action);
+        tree.Info.SetAction(Action);
+        tree.List.SetAction(Action);
+
+        return parseResult.InvokeAsync(new InvocationConfiguration());
+    }
 
     private static void ParsePositional(Options options, string arg)
     {

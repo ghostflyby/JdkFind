@@ -91,7 +91,7 @@ public class ProviderTests : IDisposable
     [Fact]
     public void Flatpak_InactiveOutsideSandbox_YieldsNothing()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "usr", "lib", "sdk", "openjdk", "jvm", "21.0.5");
+        _ = TestJdk.Create(temp.FullPath, "21.0.5", "usr", "lib", "sdk", "openjdk", "jvm", "21.0.5");
         var provider = new FlatpakJvmProvider(Path.Combine(temp.FullPath, "usr", "lib", "sdk"), active: false);
 
         Assert.Empty(provider.GetHomes());
@@ -196,7 +196,8 @@ public class ProviderTests : IDisposable
     [Fact]
     public void Homebrew_ProbesKegLayout()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "opt", "openjdk", "libexec", "openjdk.jdk", "Contents", "Home");
+        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "opt", "openjdk", "libexec", "openjdk.jdk", "Contents",
+            "Home");
         var provider = new HomebrewJvmProvider([temp.FullPath]);
 
         Assert.Equal([jdk], provider.GetHomes());

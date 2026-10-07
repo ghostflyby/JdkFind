@@ -29,7 +29,7 @@ public class JdkFinderTests : IDisposable
         Assert.Equal(21, jvm.LanguageVersion);
         Assert.Equal(JvmVendor.Unknown, jvm.Vendor);
         Assert.Equal(JvmDistribution.Unknown, jvm.Distribution);
-        Assert.Equal("aarch64", jvm.Architecture);
+        Assert.Equal("aarch64", jvm.Executable.Architecture);
         Assert.Equal(jdk, jvm.Home.FullName);
     }
 
@@ -161,7 +161,8 @@ public class JdkFinderTests : IDisposable
         var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("stub", jdk)],
-            ProbeRuntimeProperties = false, // The fake java is not executable, so probing fails silently — this test only verifies the release side.
+            ProbeRuntimeProperties =
+                false, // The fake java is not executable, so probing fails silently — this test only verifies the release side.
         };
 
         var jvm = Assert.Single(finder.Locate().ToList());

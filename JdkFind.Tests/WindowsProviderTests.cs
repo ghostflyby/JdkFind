@@ -1,6 +1,6 @@
+using System.Security.Principal;
 using JdkFind.Providers;
 using Microsoft.Win32;
-using System.Security.Principal;
 
 namespace JdkFind.Tests;
 
@@ -44,7 +44,7 @@ public class WindowsProviderTests : IDisposable
         try
         {
             using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            using var root = baseKey.CreateSubKey(rootPath)!;
+            using var root = baseKey.CreateSubKey(rootPath);
             using (var valid = root.CreateSubKey("21"))
                 valid.SetValue("JavaHome", jdk);
             using (var removed = root.CreateSubKey("17"))

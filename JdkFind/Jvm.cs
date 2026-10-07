@@ -1,9 +1,10 @@
 namespace JdkFind;
 
 /// <summary>
-///     A located JVM installation. Core metadata comes from the JEP 223 <c>release</c>
-///     file; runtime properties (when probed) come from executing the installation's
-///     own java executable.
+///     A located JVM installation: a java home directory and what its release
+///     file says about it. Running a java program needs only the binary —
+///     <see cref="Executable" /> — while the installation owns the layout
+///     questions (the compiler, other executables via <see cref="Resolve" />).
 /// </summary>
 public sealed record Jvm
 {
@@ -12,6 +13,9 @@ public sealed record Jvm
 
     /// <summary>Identifiers of every provider that reported this home, in provider order.</summary>
     public required IReadOnlyList<string> Providers { get; init; }
+
+    /// <summary>The home's own java binary — probed when runtime probing ran.</summary>
+    public required JavaExecutable Executable { get; init; }
 
     /// <summary>The JDK version — a comparable value that also carries the raw <c>JAVA_VERSION</c> string.</summary>
     public required JvmVersion Version { get; init; }
@@ -47,26 +51,12 @@ public sealed record Jvm
     }
 
     /// <summary>
-    ///     Why the java executable could not be started — a spawn error, the
-    ///     probe timeout, or (on <see cref="JdkFinder.FromExecutable" /> /
-    ///     <see cref="JdkFinder.FromHome" />, which require a successful exit) a
-    ///     non-zero exit carrying the output tail — or null when it ran, reported
-    ///     nothing parseable, or no probe ran.
-    /// </summary>
-    public string? StartFailure { get; init; }
-
-    /// <summary>
     ///     True when the installation ships a compiler (<c>bin/javac</c>), i.e. it is a
     ///     JDK rather than a runtime-only image (standalone JREs, jlink runtimes).
     /// </summary>
     public bool HasCompiler { get; init; }
 
-    /// <summary>
-    ///     The raw vendor string. Discovery prefers the release file's
-    ///     <c>IMPLEMENTOR</c> with the probed <c>java.vendor</c> as fallback; the
-    ///     probe factories prefer the binary's word and let the release file fill
-    ///     the gap.
-    /// </summary>
+    /// <summary>The release file's raw <c>IMPLEMENTOR</c> string; null when absent.</summary>
     public string? VendorRaw { get; init; }
 
     /// <summary>The normalized upstream vendor the raw string matched, or <see cref="JvmVendor.Unknown" />.</summary>
@@ -75,28 +65,34 @@ public sealed record Jvm
     /// <summary>The distribution per the foojay API naming, or <see cref="JvmDistribution.Unknown" />.</summary>
     public JvmDistribution Distribution { get; init; }
 
-    /// <summary><c>java.runtime.name</c> from the runtime probe; null when no probe
-    /// ran or the binary did not report it.</summary>
-    public string? RuntimeName { get; init; }
-
-    /// <summary><c>java.runtime.version</c> from the runtime probe (includes build metadata).</summary>
-    public string? RuntimeVersion { get; init; }
-
-    /// <summary><c>java.vm.name</c> from the runtime probe.</summary>
-    public string? VmName { get; init; }
-
-    /// <summary><c>java.vm.version</c> from the runtime probe.</summary>
-    public string? VmVersion { get; init; }
-
-    /// <summary>Raw <c>OS_NAME</c> value, e.g. <c>Darwin</c>.</summary>
-    public string? OsName { get; init; }
-
-    /// <summary>Raw <c>OS_ARCH</c> value or the probed <c>os.arch</c>, by the same
-    /// precedence as <see cref="VendorRaw" /> (discovery prefers the release file;
-    /// probing prefers the binary).</summary>
-    public string? Architecture { get; init; }
-
     /// <summary>Summarizes the installation: language version, full version, distribution and home.</summary>
     public override string ToString() =>
         $"{LanguageVersion?.ToString() ?? "?"} ({Version}) {Distribution} — {Home.FullName}";
+
+    /// <summary>Builds the installation a release file describes, with
+    /// <paramref name="executable" /> as its own java binary.</summary>
+    internal static Jvm FromRelease(string homePath, JavaExecutable executable, IReadOnlyDictionary<string, string> release)
+    {
+        var version = JvmVersion.Parse(release.GetValueOrDefault("JAVA_VERSION"));
+        var vendorRaw = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR"));
+
+        return new Jvm
+        {
+            Home = new DirectoryInfo(homePath),
+            Providers = [],
+            Executable = executable,
+            Version = version,
+            LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
+            HasCompiler = File.Exists(Path.Combine(homePath, "bin", JavaHomeLayout.CompilerExecutableName)),
+            VendorRaw = vendorRaw,
+            Vendor = JvmIdentity.DetectVendor(vendorRaw),
+            Distribution = JvmIdentity.DetectDistribution(
+                NonEmpty(release.GetValueOrDefault("IMPLEMENTOR_VERSION")),
+                vendorRaw,
+                release.ContainsKey("GRAALVM_VERSION")),
+        };
+    }
+
+    private static string? NonEmpty(string? value) =>
+        string.IsNullOrEmpty(value) ? null : value;
 }

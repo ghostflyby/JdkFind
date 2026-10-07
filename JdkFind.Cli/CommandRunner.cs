@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -22,7 +23,8 @@ internal static partial class CommandRunner
 
         // jre/bin covers JDK 8 inner-JRE homes whose top-level bin has no java.
         var javaDirectories = new[] { bin, Path.Combine(home, "jre", "bin") };
-        var pathValue = string.Join(Path.PathSeparator, javaDirectories.Append(Environment.GetEnvironmentVariable("PATH") ?? string.Empty));
+        var pathValue = string.Join(Path.PathSeparator,
+            javaDirectories.Append(Environment.GetEnvironmentVariable("PATH") ?? string.Empty));
 
         if (OperatingSystem.IsWindows())
         {
@@ -34,13 +36,13 @@ internal static partial class CommandRunner
 
         // Environment.SetEnvironmentVariable does not reach the native environ that
         // execvp reads, so the child environment goes through libc directly.
-        setenv("JAVA_HOME", home, overwrite: 1);
-        setenv("PATH", pathValue, overwrite: 1);
+        _ = Setenv("JAVA_HOME", home, overwrite: 1);
+        _ = Setenv("PATH", pathValue, overwrite: 1);
         return Exec(commandArgs);
     }
 
-    [LibraryImport("libc", SetLastError = true, StringMarshalling = StringMarshalling.Utf8)]
-    private static partial int setenv(string name, string value, int overwrite);
+    [LibraryImport("libc", EntryPoint = "setenv", SetLastError = true, StringMarshalling = StringMarshalling.Utf8)]
+    private static partial int Setenv(string name, string value, int overwrite);
 
     /// <summary>Unix path: execvp replaces this process, so a successful call never
     /// returns; the remaining code only runs when the command could not be executed.</summary>
@@ -48,7 +50,7 @@ internal static partial class CommandRunner
     {
         // execvp(3) requires a NULL-terminated argv.
         var argv = commandArgs.Append(null).ToArray();
-        execvp(commandArgs[0], argv);
+        _ = Execvp(commandArgs[0], argv);
 
         var errno = Marshal.GetLastWin32Error();
         Console.Error.WriteLine(errno switch
@@ -60,8 +62,8 @@ internal static partial class CommandRunner
         return errno == 2 ? ExitCommandNotFound : ExitCannotExecute;
     }
 
-    [LibraryImport("libc", SetLastError = true, StringMarshalling = StringMarshalling.Utf8)]
-    private static partial int execvp(string file, string?[] argv);
+    [LibraryImport("libc", EntryPoint = "execvp", SetLastError = true, StringMarshalling = StringMarshalling.Utf8)]
+    private static partial int Execvp(string file, string?[] argv);
 
     [SupportedOSPlatform("windows")]
     private static int Spawn(IReadOnlyList<string> commandArgs)
@@ -100,7 +102,14 @@ internal static partial class CommandRunner
         // clean error instead of a stack trace.
         try
         {
-            using var process = Process.Start(startInfo)!;
+            using var process = new Process();
+            process.StartInfo = startInfo;
+            if (!process.Start())
+            {
+                Console.Error.WriteLine($"jdkfind: cannot execute '{commandArgs[0]}'.");
+                return ExitCannotExecute;
+            }
+
             process.WaitForExit();
             return process.ExitCode;
         }
@@ -109,7 +118,7 @@ internal static partial class CommandRunner
             Console.Error.WriteLine($"jdkfind: cannot execute '{commandArgs[0]}': {exception.Message}");
             return ExitCannotExecute;
         }
-        catch (System.ComponentModel.Win32Exception exception)
+        catch (Win32Exception exception)
         {
             // e.g. a PATHEXT entry that CreateProcess cannot execute (BAD_EXE_FORMAT).
             Console.Error.WriteLine($"jdkfind: cannot execute '{commandArgs[0]}': {exception.Message}");
@@ -125,10 +134,23 @@ internal static partial class CommandRunner
     {
         var extensions = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD")
             .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var directories = Path.IsPathRooted(command) || command.Contains('/') || command.Contains('\\')
-            ? [Path.GetDirectoryName(Path.GetFullPath(command))!]
-            : (Environment.GetEnvironmentVariable("PATH") ?? "")
+
+        string[] directories;
+        if (Path.IsPathRooted(command) || command.Contains('/') || command.Contains('\\'))
+        {
+            // A root path ("C:\") has no directory component and can never name an
+            // executable; report it like any other unresolved command.
+            var directory = Path.GetDirectoryName(Path.GetFullPath(command));
+            if (directory is null)
+                return null;
+
+            directories = [directory];
+        }
+        else
+        {
+            directories = (Environment.GetEnvironmentVariable("PATH") ?? "")
                 .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
 
         return directories
             .SelectMany(directory => extensions
