@@ -102,7 +102,13 @@ internal static partial class CommandRunner
         // clean error instead of a stack trace.
         try
         {
-            using var process = Process.Start(startInfo)!;
+            using var process = new Process { StartInfo = startInfo };
+            if (!process.Start())
+            {
+                Console.Error.WriteLine($"jdkfind: cannot execute '{commandArgs[0]}'.");
+                return ExitCannotExecute;
+            }
+
             process.WaitForExit();
             return process.ExitCode;
         }

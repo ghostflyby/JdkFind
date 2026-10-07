@@ -75,12 +75,11 @@ internal static class JvmRuntimeProbe
     internal static Outcome Run(string javaExecutablePath, TimeSpan timeout, bool requireExitSuccess,
         bool sanitizeEnvironment)
     {
-        var startInfo = CreateStartInfo(javaExecutablePath, sanitizeEnvironment);
-
-        Process process;
+        using var process = new Process { StartInfo = CreateStartInfo(javaExecutablePath, sanitizeEnvironment) };
         try
         {
-            process = Process.Start(startInfo)!;
+            if (!process.Start())
+                return new Outcome(null, "no process was started", null);
         }
         catch (Exception exception) when (
             exception is Win32Exception or IOException or UnauthorizedAccessException or SecurityException)
@@ -88,24 +87,21 @@ internal static class JvmRuntimeProbe
             return new Outcome(null, exception.Message, null);
         }
 
-        using (process)
+        var standardError = process.StandardError.ReadToEndAsync();
+        var standardOutput = process.StandardOutput.ReadToEndAsync();
+        if (!process.WaitForExit(timeout))
         {
-            var standardError = process.StandardError.ReadToEndAsync();
-            var standardOutput = process.StandardOutput.ReadToEndAsync();
-            if (!process.WaitForExit(timeout))
-            {
-                TryKill(process);
-                return new Outcome(null, TimeoutFailure(timeout), null);
-            }
-
-            var exitCode = process.ExitCode;
-            var error = standardError.GetAwaiter().GetResult();
-            var output = standardOutput.GetAwaiter().GetResult();
-            if (requireExitSuccess && exitCode != 0)
-                return new Outcome(exitCode, ExitFailure(exitCode, error, output), null);
-
-            return new Outcome(exitCode, null, ParseProperties(error));
+            TryKill(process);
+            return new Outcome(null, TimeoutFailure(timeout), null);
         }
+
+        var exitCode = process.ExitCode;
+        var error = standardError.GetAwaiter().GetResult();
+        var output = standardOutput.GetAwaiter().GetResult();
+        if (requireExitSuccess && exitCode != 0)
+            return new Outcome(exitCode, ExitFailure(exitCode, error, output), null);
+
+        return new Outcome(exitCode, null, ParseProperties(error));
     }
 
     /// <summary>
@@ -140,10 +136,11 @@ internal static class JvmRuntimeProbe
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        Process process;
+        using var process = new Process { StartInfo = CreateStartInfo(javaExecutablePath, sanitizeEnvironment) };
         try
         {
-            process = Process.Start(CreateStartInfo(javaExecutablePath, sanitizeEnvironment))!;
+            if (!process.Start())
+                return new Outcome(null, "no process was started", null);
         }
         catch (Exception exception) when (
             exception is Win32Exception or IOException or UnauthorizedAccessException or SecurityException)
@@ -151,44 +148,41 @@ internal static class JvmRuntimeProbe
             return new Outcome(null, exception.Message, null);
         }
 
-        using (process)
+        try
         {
+            var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
+
+            // The stdout stream carries nothing the probe parses; without the
+            // token it simply completes when the pipes close.
+            // ReSharper disable once MethodSupportsCancellation
+            var standardOutput = process.StandardOutput.ReadToEndAsync();
+
+            // The timeout feeds a linked source so a hung child degrades to a
+            // timeout failure; the caller's token distinguishes a user cancel.
+            using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutSource.CancelAfter(timeout);
             try
             {
-                var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
-
-                // The stdout stream carries nothing the probe parses; without the
-                // token it simply completes when the pipes close.
-                // ReSharper disable once MethodSupportsCancellation
-                var standardOutput = process.StandardOutput.ReadToEndAsync();
-
-                // The timeout feeds a linked source so a hung child degrades to a
-                // timeout failure; the caller's token distinguishes a user cancel.
-                using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeoutSource.CancelAfter(timeout);
-                try
-                {
-                    await process.WaitForExitAsync(timeoutSource.Token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-                {
-                    TryKill(process);
-                    return new Outcome(null, TimeoutFailure(timeout), null);
-                }
-
-                var exitCode = process.ExitCode;
-                var error = await standardError.ConfigureAwait(false);
-                var output = await standardOutput.ConfigureAwait(false);
-                if (requireExitSuccess && exitCode != 0)
-                    return new Outcome(exitCode, ExitFailure(exitCode, error, output), null);
-
-                return new Outcome(exitCode, null, ParseProperties(error));
+                await process.WaitForExitAsync(timeoutSource.Token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 TryKill(process);
-                throw;
+                return new Outcome(null, TimeoutFailure(timeout), null);
             }
+
+            var exitCode = process.ExitCode;
+            var error = await standardError.ConfigureAwait(false);
+            var output = await standardOutput.ConfigureAwait(false);
+            if (requireExitSuccess && exitCode != 0)
+                return new Outcome(exitCode, ExitFailure(exitCode, error, output), null);
+
+            return new Outcome(exitCode, null, ParseProperties(error));
+        }
+        catch (OperationCanceledException)
+        {
+            TryKill(process);
+            throw;
         }
     }
 
