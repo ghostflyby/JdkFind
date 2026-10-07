@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security;
 using System.Text;
 
 namespace JdkFind;
@@ -9,7 +10,8 @@ namespace JdkFind;
 /// </summary>
 internal static class ReleaseFile
 {
-    internal static IReadOnlyDictionary<string, string> Parse(string releaseFilePath, CancellationToken cancellationToken = default)
+    internal static IReadOnlyDictionary<string, string> Parse(string releaseFilePath,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -37,10 +39,10 @@ internal static class ReleaseFile
     {
         try
         {
-            return Parse(System.IO.Path.Combine(homePath, "release"));
+            return Parse(Path.Combine(homePath, "release"));
         }
         catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            exception is IOException or UnauthorizedAccessException or SecurityException)
         {
             return null;
         }

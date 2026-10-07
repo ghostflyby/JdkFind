@@ -27,7 +27,7 @@ public class CommandRunnerTests
         using var process = Process.Start(startInfo)!;
         var stdout = process.StandardOutput.ReadToEnd();
         // Drained so a chatty child can never fill the stderr pipe and deadlock.
-        var stderr = process.StandardError.ReadToEndAsync();
+        _ = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
 
         return (process.ExitCode, stdout);

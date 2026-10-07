@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Security;
 
 namespace JdkFind;
 
@@ -71,7 +72,8 @@ internal static class JvmRuntimeProbe
     /// parse. With <paramref name="requireExitSuccess" /> a non-zero exit counts as
     /// a failure; with <paramref name="sanitizeEnvironment" /> the JVM-domain
     /// environment variables are removed from the child.</summary>
-    internal static Outcome Run(string javaExecutablePath, TimeSpan timeout, bool requireExitSuccess, bool sanitizeEnvironment)
+    internal static Outcome Run(string javaExecutablePath, TimeSpan timeout, bool requireExitSuccess,
+        bool sanitizeEnvironment)
     {
         var startInfo = CreateStartInfo(javaExecutablePath, sanitizeEnvironment);
 
@@ -81,7 +83,7 @@ internal static class JvmRuntimeProbe
             process = Process.Start(startInfo)!;
         }
         catch (Exception exception) when (
-            exception is Win32Exception or IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            exception is Win32Exception or IOException or UnauthorizedAccessException or SecurityException)
         {
             return new Outcome(null, exception.Message, null);
         }
@@ -126,13 +128,15 @@ internal static class JvmRuntimeProbe
         if (!File.Exists(java))
             return new Outcome(null, null, null);
 
-        return await RunAsync(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false, cancellationToken).ConfigureAwait(false);
+        return await RunAsync(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Async twin of <see cref="Run" />; a user cancellation kills the child
     /// process and propagates.</summary>
     internal static async Task<Outcome> RunAsync(
-        string javaExecutablePath, TimeSpan timeout, bool requireExitSuccess, bool sanitizeEnvironment, CancellationToken cancellationToken)
+        string javaExecutablePath, TimeSpan timeout, bool requireExitSuccess, bool sanitizeEnvironment,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -142,7 +146,7 @@ internal static class JvmRuntimeProbe
             process = Process.Start(CreateStartInfo(javaExecutablePath, sanitizeEnvironment))!;
         }
         catch (Exception exception) when (
-            exception is Win32Exception or IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            exception is Win32Exception or IOException or UnauthorizedAccessException or SecurityException)
         {
             return new Outcome(null, exception.Message, null);
         }

@@ -1,3 +1,4 @@
+using System.Security;
 using JdkFind.Providers;
 
 namespace JdkFind;
@@ -59,14 +60,15 @@ public sealed record JdkFinder
             // One process per installation is the slow part: probe concurrently,
             // bounded like PLINQ's default, keeping the first-discovery order.
             await Parallel.ForEachAsync(
-                Enumerable.Range(0, order.Count),
-                new ParallelOptions
-                {
-                    MaxDegreeOfParallelism = Environment.ProcessorCount,
-                    CancellationToken = cancellationToken,
-                },
-                async (index, token) =>
-                    results[index] = await CreateJvmAsync(order[index], probeRuntime: true, token).ConfigureAwait(false))
+                    Enumerable.Range(0, order.Count),
+                    new ParallelOptions
+                    {
+                        MaxDegreeOfParallelism = Environment.ProcessorCount,
+                        CancellationToken = cancellationToken,
+                    },
+                    async (index, token) =>
+                        results[index] = await CreateJvmAsync(order[index], probeRuntime: true, token)
+                            .ConfigureAwait(false))
                 .ConfigureAwait(false);
         }
         else
@@ -74,7 +76,8 @@ public sealed record JdkFinder
             for (var index = 0; index < order.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                results[index] = await CreateJvmAsync(order[index], probeRuntime: false, cancellationToken).ConfigureAwait(false);
+                results[index] = await CreateJvmAsync(order[index], probeRuntime: false, cancellationToken)
+                    .ConfigureAwait(false);
             }
         }
 
@@ -103,13 +106,17 @@ public sealed record JdkFinder
         if (Path.GetDirectoryName(fullPath) is { } directory)
         {
             home = JavaHomeLayout.Probe(directory)
-                ?? (Path.GetDirectoryName(directory) is { } parentDirectory ? JavaHomeLayout.Probe(parentDirectory) : null);
+                   ?? (Path.GetDirectoryName(directory) is { } parentDirectory
+                       ? JavaHomeLayout.Probe(parentDirectory)
+                       : null);
         }
 
         var outcome = JvmRuntimeProbe.Run(
-            javaExecutablePath, timeout ?? JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true);
+            javaExecutablePath, timeout ?? JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true,
+            sanitizeEnvironment: true);
         var release = home is null ? null : ReleaseFile.TryParse(home);
-        if (outcome.Properties?.ContainsKey("java.version") is not true && release?.ContainsKey("JAVA_VERSION") is not true)
+        if (outcome.Properties?.ContainsKey("java.version") is not true &&
+            release?.ContainsKey("JAVA_VERSION") is not true)
             return null;
 
         return BuildExecutable(fullPath, home is null ? null : new DirectoryInfo(home), release, outcome);
@@ -119,7 +126,8 @@ public sealed record JdkFinder
     /// kills the child process and propagates. The child is still killed at the
     /// built-in 15-second cap — bound the wait yourself by passing a token
     /// cancelled earlier (e.g. via <c>CancellationTokenSource.CancelAfter</c>).</summary>
-    public async Task<JavaRuntime?> FromExecutableAsync(string javaExecutablePath, CancellationToken cancellationToken = default)
+    public async Task<JavaRuntime?> FromExecutableAsync(string javaExecutablePath,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(javaExecutablePath);
 
@@ -128,14 +136,18 @@ public sealed record JdkFinder
         if (Path.GetDirectoryName(fullPath) is { } directory)
         {
             home = JavaHomeLayout.Probe(directory)
-                ?? (Path.GetDirectoryName(directory) is { } parentDirectory ? JavaHomeLayout.Probe(parentDirectory) : null);
+                   ?? (Path.GetDirectoryName(directory) is { } parentDirectory
+                       ? JavaHomeLayout.Probe(parentDirectory)
+                       : null);
         }
 
         var outcome = await JvmRuntimeProbe.RunAsync(
-                javaExecutablePath, JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true, cancellationToken)
+                javaExecutablePath, JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true,
+                cancellationToken)
             .ConfigureAwait(false);
         var release = home is null ? null : ReleaseFile.TryParse(home);
-        if (outcome.Properties?.ContainsKey("java.version") is not true && release?.ContainsKey("JAVA_VERSION") is not true)
+        if (outcome.Properties?.ContainsKey("java.version") is not true &&
+            release?.ContainsKey("JAVA_VERSION") is not true)
             return null;
 
         return BuildExecutable(fullPath, home is null ? null : new DirectoryInfo(home), release, outcome);
@@ -275,7 +287,7 @@ public sealed record JdkFinder
             release = ReleaseFile.Parse(Path.Combine(homePath, "release"));
         }
         catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            exception is IOException or UnauthorizedAccessException or SecurityException)
         {
             // An unreadable release file (access denial, ...) counts as no JVM; one bad directory must not kill the scan.
             return null;
@@ -301,7 +313,7 @@ public sealed record JdkFinder
             release = ReleaseFile.Parse(Path.Combine(entry.HomePath, "release"), cancellationToken);
         }
         catch (Exception exception) when (
-            exception is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            exception is IOException or UnauthorizedAccessException or SecurityException)
         {
             // An unreadable release file (access denial, ...) counts as no JVM; one bad directory must not kill the scan.
             return null;
@@ -331,7 +343,8 @@ public sealed record JdkFinder
         {
             Home = new DirectoryInfo(homePath),
             Providers = providers,
-            Runtime = BuildExecutable(JavaHomeLayout.JavaExecutablePath(homePath), new DirectoryInfo(homePath), release, outcome),
+            Runtime = BuildExecutable(JavaHomeLayout.JavaExecutablePath(homePath), new DirectoryInfo(homePath), release,
+                outcome),
             Version = version,
             LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
             HasCompiler = File.Exists(Path.Combine(homePath, "bin", JavaHomeLayout.CompilerExecutableName)),
@@ -351,7 +364,8 @@ public sealed record JdkFinder
         if (release is null)
             return null;
 
-        var runtime = BuildExecutable(JavaHomeLayout.JavaExecutablePath(homePath), new DirectoryInfo(homePath), release, outcome);
+        var runtime = BuildExecutable(JavaHomeLayout.JavaExecutablePath(homePath), new DirectoryInfo(homePath), release,
+            outcome);
         return Jvm.FromRelease(homePath, runtime, release);
     }
 
@@ -360,11 +374,12 @@ public sealed record JdkFinder
     /// properties stay null when no probe ran or the binary did not report
     /// them.</summary>
     private static JavaRuntime BuildExecutable(
-        string javaExecutablePath, DirectoryInfo? home, IReadOnlyDictionary<string, string>? release, JvmRuntimeProbe.Outcome? outcome)
+        string javaExecutablePath, DirectoryInfo? home, IReadOnlyDictionary<string, string>? release,
+        JvmRuntimeProbe.Outcome? outcome)
     {
         var properties = outcome?.Properties;
         var vendorRaw = NonEmpty(properties?.GetValueOrDefault("java.vendor"))
-            ?? NonEmpty(release?.GetValueOrDefault("IMPLEMENTOR"));
+                        ?? NonEmpty(release?.GetValueOrDefault("IMPLEMENTOR"));
 
         return new JavaRuntime
         {
@@ -377,7 +392,7 @@ public sealed record JdkFinder
             Vendor = JvmIdentity.DetectVendor(vendorRaw),
             OsName = NonEmpty(properties?.GetValueOrDefault("os.name")) ?? release?.GetValueOrDefault("OS_NAME"),
             Architecture = NonEmpty(properties?.GetValueOrDefault("os.arch"))
-                ?? NonEmpty(release?.GetValueOrDefault("OS_ARCH")),
+                           ?? NonEmpty(release?.GetValueOrDefault("OS_ARCH")),
             RuntimeName = properties?.GetValueOrDefault("java.runtime.name"),
             RuntimeVersion = properties?.GetValueOrDefault("java.runtime.version"),
             VmName = properties?.GetValueOrDefault("java.vm.name"),
@@ -400,7 +415,7 @@ public sealed record JdkFinder
         {
             return ResolveSymlinks(Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)));
         }
-        catch (Exception exception) when (exception is IOException or System.Security.SecurityException
+        catch (Exception exception) when (exception is IOException or SecurityException
                                               or ArgumentException)
         {
             return path;
@@ -424,7 +439,7 @@ public sealed record JdkFinder
             {
                 target = new DirectoryInfo(resolved).LinkTarget;
             }
-            catch (Exception exception) when (exception is IOException or System.Security.SecurityException)
+            catch (Exception exception) when (exception is IOException or SecurityException)
             {
                 return fullPath;
             }
