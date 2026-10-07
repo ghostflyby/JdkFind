@@ -74,9 +74,10 @@ public class ProviderTests : IDisposable
     }
 
     [Fact]
-    public void Flatpak_ScansSharedExtensionJvms()
+    public void Flatpak_ScansSharedExtensionsAndAppJdk()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "usr", "lib", "sdk", "openjdk", "jvm", "21.0.5");
+        var extensionJdk = TestJdk.Create(temp.FullPath, "21.0.5", "usr", "lib", "sdk", "openjdk", "jvm", "21.0.5");
+        var appJdk = TestJdk.Create(temp.FullPath, "17.0.2", "app", "jdk");
         // A non-jvm sibling extension dir and a non-jvm child of the extension must
         // not appear.
         Directory.CreateDirectory(Path.Combine(temp.FullPath, "usr", "lib", "sdk", "docs"));
@@ -84,7 +85,7 @@ public class ProviderTests : IDisposable
         var provider = new FlatpakJvmProvider(Path.Combine(temp.FullPath, "usr", "lib", "sdk"), active: true);
 
         Assert.Equal("flatpak", provider.Name);
-        Assert.Equal([jdk], provider.GetHomes());
+        Assert.Equal([extensionJdk, appJdk], provider.GetHomes());
     }
 
     [Fact]

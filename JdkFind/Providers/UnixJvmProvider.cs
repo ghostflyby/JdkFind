@@ -3,7 +3,7 @@ namespace JdkFind.Providers;
 /// <summary>
 ///     Scans the fixed unix JVM directories: on Linux /usr/lib/jvm, the
 ///     distribution locations (/usr/java Oracle RPM, /usr/lib64/jvm,
-///     /usr/lib32/jvm, /opt/jdk, /opt/jdks, /opt/ibm, flatpak's /app/jdk,
+///     /usr/lib32/jvm, /opt/jdk, /opt/jdks, /opt/ibm,
 ///     Gentoo's installs under /usr/lib, /usr/lib64, /opt) and $SNAP mirrors; on
 ///     FreeBSD and OpenBSD /usr/local. Source name: unix.
 /// </summary>
@@ -50,7 +50,7 @@ public sealed class UnixJvmProvider : IJvmProvider
         foreach (var prefix in new[]
                  {
                      "/usr/lib/jvm", "/usr/java", "/usr/lib64/jvm", "/usr/lib32/jvm", "/opt/jdk", "/opt/jdks",
-                     "/opt/ibm", "/app/jdk", "/usr/lib", "/usr/lib64", "/opt"
+                     "/opt/ibm", "/usr/lib", "/usr/lib64", "/opt"
                  })
             yield return prefix;
 
