@@ -21,8 +21,10 @@ end_of_line = lf
 
 #### C# style ####
 
-# Usings: System directives first, outside the namespace.
+# Usings: System directives first, outside the namespace; unused usings are
+# flagged so dotnet format can remove them.
 [*.cs]
+dotnet_diagnostic.IDE0005.severity = suggestion
 dotnet_sort_system_directives_first = true:suggestion
 csharp_using_directive_placement = outside_namespace:suggestion
 csharp_style_namespace_declarations = file_scoped:suggestion
