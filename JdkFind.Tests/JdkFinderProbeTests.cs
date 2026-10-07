@@ -86,6 +86,54 @@ public class JdkFinderProbeTests : IDisposable
     }
 
     [Fact]
+    public void FromExecutable_PromotesTheOuterJdkOverTheReportedInnerJre()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The fake java executable is a POSIX shell script.
+
+        // JDK 8 layout: java.home reports the inner JRE; the outer JDK owns javac.
+        var outer = Path.Combine(temp.FullPath, "jdk1.8");
+        var jre = Path.Combine(outer, "jre");
+        Directory.CreateDirectory(Path.Combine(outer, "bin"));
+        Directory.CreateDirectory(Path.Combine(jre, "bin"));
+        File.WriteAllText(Path.Combine(outer, "release"), "JAVA_VERSION=\"1.8.0_402\"\n");
+        File.WriteAllText(Path.Combine(outer, "bin", JavaHomeLayout.JavaExecutableName), string.Empty);
+        File.WriteAllText(Path.Combine(outer, "bin", JavaHomeLayout.CompilerExecutableName), string.Empty);
+        File.WriteAllText(Path.Combine(jre, "release"), "JAVA_VERSION=\"1.8.0_402\"\n");
+        var java = Path.Combine(jre, "bin", JavaHomeLayout.JavaExecutableName);
+        File.WriteAllText(java,
+            $"#!/bin/sh\ncat >&2 <<'EOPROPE'\njava.version = 1.8.0_402\njava.home = {jre}\nEOPROPE\nexit 0\n");
+        File.SetUnixFileMode(java, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        var executable = new JdkFinder().FromExecutable(Path.Combine(jre, "bin", JavaHomeLayout.JavaExecutableName));
+
+        Assert.NotNull(executable);
+        Assert.Equal(outer, executable.Home?.FullName); // Promoted over the reported inner JRE.
+        Assert.Equal("1.8.0_402", executable.Version.Original);
+        var installation = executable.Installation;
+        Assert.NotNull(installation);
+        Assert.Equal(outer, installation.Home.FullName);
+        Assert.Equal(
+            Path.Combine(outer, "bin", JavaHomeLayout.CompilerExecutableName),
+            installation.Resolve("javac")?.FullName); // javac is reachable again.
+    }
+
+    [Fact]
+    public void FromExecutable_StandaloneJre_KeepsItsOwnHome()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The fake java executable is a POSIX shell script.
+
+        var home = CreateFakeHome(temp.FullPath, "17.0.5",
+            $"cat >&2 <<'EOPROPE'\njava.version = 17.0.5\njava.home = {Path.Combine(temp.FullPath, "fake-jdk")}\nEOPROPE\nexit 0\n");
+
+        var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
+
+        Assert.NotNull(executable);
+        Assert.Equal(home, executable.Home?.FullName); // The parent is not a home — no promotion.
+    }
+
+    [Fact]
     public void FromExecutable_StandaloneBinary_HasNoHome()
     {
         if (OperatingSystem.IsWindows())

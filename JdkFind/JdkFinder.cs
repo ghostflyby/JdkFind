@@ -141,12 +141,22 @@ public sealed record JdkFinder
     /// <summary>Derives the home of a probed executable: the binary's own
     /// <c>java.home</c> when it ran and named an existing directory —
     /// authoritative through symbolic links and wrapper scripts — otherwise the
-    /// layout probe walking up from the binary's location. Null when neither
-    /// yields a home.</summary>
+    /// layout probe walking up from the binary's location. A pre-9 JDK reports
+    /// its inner JRE; when the parent directory is itself a home, the outer JDK
+    /// is preferred so javac stays resolvable. Null when neither yields a
+    /// home.</summary>
     private static string? DeriveHome(string fullPath, JvmRuntimeProbe.Outcome outcome)
     {
         if (outcome.Properties?.GetValueOrDefault("java.home") is { } reported && Directory.Exists(reported))
+        {
+            // A pre-9 JDK reports the inner JRE; when that JRE is itself the
+            // inner image of an outer JDK, prefer the outer home so javac and
+            // the discovery-side Home stay consistent.
+            if (Path.GetDirectoryName(reported) is { } outer && JavaHomeLayout.Probe(outer) is not null)
+                return outer;
+
             return reported;
+        }
 
         if (Path.GetDirectoryName(fullPath) is { } directory)
         {
