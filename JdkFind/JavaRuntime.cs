@@ -22,23 +22,24 @@ public sealed record JavaRuntime
     public DirectoryInfo? Home { get; init; }
 
     /// <summary>
-    ///     Derives the installation this binary belongs to: the home is derived
-    ///     by walking up from <see cref="Path" /> and the release file supplies
-    ///     the installation facts, with <see cref="Jvm.Runtime" /> being this
-    ///     instance — no child process is spawned. Filesystem reads happen on
-    ///     every access, and discovery data such as <see cref="Jvm.Providers" />
-    ///     cannot be restored, so for a runtime obtained from a
-    ///     <see cref="Jvm" />, that instance remains the better handle — for a
-    ///     JDK 8 outer home whose binary lives in <c>jre/bin</c>, the derivation
-    ///     yields the inner JRE rather than the outer JDK. Null when no home is
-    ///     recognizable or its release file is unreadable.
+    ///     Derives the installation this binary belongs to: the backing
+    ///     <see cref="Home" /> when known — otherwise the home derived by walking
+    ///     up from <see cref="Path" /> (a JDK 8 outer home whose binary lives in
+    ///     <c>jre/bin</c> yields the inner JRE rather than the outer JDK) — and
+    ///     the release file found there supplies the installation facts, with
+    ///     <see cref="Jvm.Runtime" /> being this instance — no child process is
+    ///     spawned. Filesystem reads happen on every access, and discovery data
+    ///     such as <see cref="Jvm.Providers" /> cannot be restored, so for a
+    ///     runtime obtained from a <see cref="Jvm" />, that instance remains the
+    ///     better handle. Null when no home is recognizable or its release file
+    ///     is unreadable.
     /// </summary>
     public Jvm? Installation
     {
         get
         {
-            string? home = null;
-            if (System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(Path)) is { } directory)
+            string? home = Home?.FullName;
+            if (home is null && System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(Path)) is { } directory)
             {
                 home = JavaHomeLayout.Probe(directory)
                     ?? (System.IO.Path.GetDirectoryName(directory) is { } parentDirectory

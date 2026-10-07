@@ -88,32 +88,25 @@ public sealed record JdkFinder
     ///     Probes the java executable at <paramref name="javaExecutablePath" /> —
     ///     taken verbatim, with no name normalization and no layout requirement —
     ///     and returns the <see cref="JavaRuntime" /> it yields, or null when no
-    ///     JVM can be established. Where a home is derived by walking up from the
-    ///     binary (<c>bin</c>, <c>jre/bin</c> and macOS bundle layouts), its
-    ///     release file fills what the binary itself does not report — the values
-    ///     the binary reports take precedence. The probe runs the child with
-    ///     JVM-affecting environment variables removed, under the built-in
-    ///     15-second cap (overridable via <paramref name="timeout" />); a child
-    ///     that does not run to completion surfaces as
-    ///     <see cref="JavaRuntime.StartFailure" />.
+    ///     JVM can be established. The home is the binary's own reported
+    ///     <c>java.home</c> when the probe ran — authoritative through symbolic
+    ///     links and wrapper scripts — falling back to the layout probe walking up
+    ///     from the binary; a release file found there fills what the binary
+    ///     itself does not report — the values the binary reports take
+    ///     precedence. The probe runs the child with JVM-affecting environment
+    ///     variables removed, under the built-in 15-second cap (overridable via
+    ///     <paramref name="timeout" />); a child that does not run to completion
+    ///     surfaces as <see cref="JavaRuntime.StartFailure" />.
     /// </summary>
     public JavaRuntime? FromExecutable(string javaExecutablePath, TimeSpan? timeout = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(javaExecutablePath);
 
         var fullPath = Path.GetFullPath(javaExecutablePath);
-        string? home = null;
-        if (Path.GetDirectoryName(fullPath) is { } directory)
-        {
-            home = JavaHomeLayout.Probe(directory)
-                   ?? (Path.GetDirectoryName(directory) is { } parentDirectory
-                       ? JavaHomeLayout.Probe(parentDirectory)
-                       : null);
-        }
-
         var outcome = JvmRuntimeProbe.Run(
             javaExecutablePath, timeout ?? JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true,
             sanitizeEnvironment: true);
+        var home = DeriveHome(fullPath, outcome);
         var release = home is null ? null : ReleaseFile.TryParse(home);
         if (outcome.Properties?.ContainsKey("java.version") is not true &&
             release?.ContainsKey("JAVA_VERSION") is not true)
@@ -132,25 +125,38 @@ public sealed record JdkFinder
         ArgumentException.ThrowIfNullOrWhiteSpace(javaExecutablePath);
 
         var fullPath = Path.GetFullPath(javaExecutablePath);
-        string? home = null;
-        if (Path.GetDirectoryName(fullPath) is { } directory)
-        {
-            home = JavaHomeLayout.Probe(directory)
-                   ?? (Path.GetDirectoryName(directory) is { } parentDirectory
-                       ? JavaHomeLayout.Probe(parentDirectory)
-                       : null);
-        }
-
         var outcome = await JvmRuntimeProbe.RunAsync(
                 javaExecutablePath, JvmRuntimeProbe.DefaultTimeout, requireExitSuccess: true, sanitizeEnvironment: true,
                 cancellationToken)
             .ConfigureAwait(false);
+        var home = DeriveHome(fullPath, outcome);
         var release = home is null ? null : ReleaseFile.TryParse(home);
         if (outcome.Properties?.ContainsKey("java.version") is not true &&
             release?.ContainsKey("JAVA_VERSION") is not true)
             return null;
 
         return BuildExecutable(fullPath, home is null ? null : new DirectoryInfo(home), release, outcome);
+    }
+
+    /// <summary>Derives the home of a probed executable: the binary's own
+    /// <c>java.home</c> when it ran and named an existing directory —
+    /// authoritative through symbolic links and wrapper scripts — otherwise the
+    /// layout probe walking up from the binary's location. Null when neither
+    /// yields a home.</summary>
+    private static string? DeriveHome(string fullPath, JvmRuntimeProbe.Outcome outcome)
+    {
+        if (outcome.Properties?.GetValueOrDefault("java.home") is { } reported && Directory.Exists(reported))
+            return reported;
+
+        if (Path.GetDirectoryName(fullPath) is { } directory)
+        {
+            var home = JavaHomeLayout.Probe(directory)
+                ?? (Path.GetDirectoryName(directory) is { } parentDirectory ? JavaHomeLayout.Probe(parentDirectory) : null);
+            if (home is not null)
+                return home;
+        }
+
+        return null;
     }
 
     /// <summary>

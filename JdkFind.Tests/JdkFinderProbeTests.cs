@@ -47,6 +47,31 @@ public class JdkFinderProbeTests : IDisposable
     }
 
     [Fact]
+    public void FromExecutable_SymlinkedLauncher_ReportsTheRealHome()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // Symbolic link creation needs privileges.
+
+        // A launcher reached through a symlink cannot be resolved by walking up
+        // from its location — only its own reported java.home knows the home.
+        var home = Path.Combine(temp.FullPath, "fake-jdk");
+        var script = $"cat >&2 <<'EOPROPE'\njava.version = 21.0.5\njava.home = {home}\nEOPROPE\nexit 0\n";
+        Assert.Equal(home, CreateFakeHome(temp.FullPath, "21.0.5", script));
+
+        var link = Path.Combine(temp.FullPath, "linked-java");
+        File.CreateSymbolicLink(link, Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
+
+        var executable = new JdkFinder().FromExecutable(link);
+
+        Assert.NotNull(executable);
+        Assert.Equal("21.0.5", executable.Version.Original);
+        Assert.Equal(home, executable.Home?.FullName); // Geometric derivation cannot see through the link.
+        var installation = executable.Installation;
+        Assert.NotNull(installation);
+        Assert.Equal(home, installation.Home.FullName);
+    }
+
+    [Fact]
     public void FromExecutable_ExposesDerivedHome()
     {
         if (OperatingSystem.IsWindows())
