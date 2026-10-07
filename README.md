@@ -109,12 +109,12 @@ with `Providers` (the SOURCE column) faithfully listing every one of them.
 Discovery answers "what exists"; probing answers "does *this* binary run,
 and what does it say about itself?" — the pre-flight check before launching
 with a user-configured java. The two concepts live on separate types: a
-`JavaRuntime` is the runnable binary — the minimal JRE — and a `Jvm` is an
-installation directory whose `Runtime` property carries its own java.
+`JavaExecutable` is the runnable binary — the minimal JRE — and a `Jvm` is an
+installation directory whose `Executable` property carries its own java.
 
 ```csharp
-JavaRuntime? runtime = JdkFinder.Default.FromExecutable(userConfiguredJavaPath);
-// or: JdkFinder.Default.FromHome(javaHomeDirectory);  → Jvm?, with jvm.Runtime
+JavaExecutable? runtime = JdkFinder.Default.FromExecutable(userConfiguredJavaPath);
+// or: JdkFinder.Default.FromHome(javaHomeDirectory);  → Jvm?, with jvm.Executable
 if (runtime is null)
 {
     // The path does not yield a JVM at all.
@@ -144,7 +144,7 @@ describes the binary, not the launcher's shell. Values the binary reports
 take precedence over the home's release file, which only fills what the
 binary did not say. The platform specification guarantees the standard
 property set (vendor, os.name, os.arch, java.vm.name, java.vm.version), so
-their counterparts on `JavaRuntime` are non-nullable strings — empty only
+their counterparts on `JavaExecutable` are non-nullable strings — empty only
 when no probe ran, the probe degraded, or an implementation broke that
 promise; the runtime-only `java.runtime.*` pair is null in those cases.
 

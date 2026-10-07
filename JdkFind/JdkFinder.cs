@@ -310,7 +310,7 @@ public sealed record JdkFinder
         }
 
         // The runtime probe executes the installation's own java executable; its
-        // verdict and enrichment land on Runtime.
+        // verdict and enrichment land on Executable.
         var outcome = probeRuntime ? JvmRuntimeProbe.ProbeWithFailure(homePath) : null;
 
         return Build(homePath, providers, release, outcome);
@@ -336,7 +336,7 @@ public sealed record JdkFinder
         }
 
         // The runtime probe executes the installation's own java executable; its
-        // verdict and enrichment land on Runtime.
+        // verdict and enrichment land on Executable.
         var outcome = probeRuntime
             ? await JvmRuntimeProbe.ProbeWithFailureAsync(entry.HomePath, cancellationToken).ConfigureAwait(false)
             : null;

@@ -277,50 +277,6 @@ internal sealed class Options
         return options;
     }
 
-    /// <summary>
-    ///     The single parsing path for both the test seam and the wired invocation
-    ///     tree, so '--' handling cannot diverge between them: everything after '--'
-    ///     becomes <see cref="CommandArgs" /> verbatim (it never reaches the parser),
-    ///     and the first parse, grammar or unmatched-token error surfaces as an
-    ///     ArgumentException. The command is also assigned to
-    ///     <paramref name="commandArgs" /> for the invocation closure, because the
-    ///     wired action re-maps the parse result into a fresh Options instance.
-    /// </summary>
-    internal static Options ParseInto(CommandTree tree, string[] args, out string[]? commandArgs)
-    {
-        var separator = Array.IndexOf(args, "--");
-        var tail = separator < 0 ? null : args[(separator + 1)..];
-        var head = separator < 0 ? args : args[..separator];
-        commandArgs = tail;
-
-        var parseResult = tree.Root.Parse(head, new ParserConfiguration { EnablePosixBundling = false });
-        if (parseResult.Errors.Count > 0)
-            throw new ArgumentException(parseResult.Errors[0].Message);
-
-        // A help token clears subcommand-level parse errors, but unmatched tokens
-        // survive it; keep them a usage error (`list --bogus --help` must not print
-        // help with exit 0).
-        if (parseResult.UnmatchedTokens is { Count: > 0 })
-            throw new ArgumentException(parseResult.UnmatchedTokens[0].StartsWith('-')
-                ? $"Unknown option '{parseResult.UnmatchedTokens[0]}'."
-                : $"Unexpected argument '{parseResult.UnmatchedTokens[0]}'.");
-
-        var options = Map(parseResult, tree);
-
-        if (tail is not null)
-        {
-            if (options.Command != SubCommand.None)
-                throw new ArgumentException("'--' runs a command; it is not valid with 'info' or 'list'.");
-            if (options.Tool is not null)
-                throw new ArgumentException("'--' runs a command; the tool positional has no effect with it.");
-            if (tail.Length == 0)
-                throw new ArgumentException("No command given after '--'.");
-            options.CommandArgs = tail;
-        }
-
-        return options;
-    }
-
     /// <summary>Prints the framework-generated help or version output to stdout;
     /// only meaningful when ShowHelp or ShowVersion is true.</summary>
     internal int RenderFrameworkOutput() => parseResult.Invoke(new InvocationConfiguration());
