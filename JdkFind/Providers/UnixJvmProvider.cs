@@ -47,7 +47,11 @@ public sealed class UnixJvmProvider : IJvmProvider
         if (!OperatingSystem.IsLinux())
             yield break;
 
-        foreach (var prefix in new[] { "/usr/lib/jvm", "/usr/java", "/usr/lib64/jvm", "/usr/lib32/jvm", "/opt/jdk", "/opt/jdks", "/opt/ibm", "/app/jdk", "/usr/lib", "/usr/lib64", "/opt" })
+        foreach (var prefix in new[]
+                 {
+                     "/usr/lib/jvm", "/usr/java", "/usr/lib64/jvm", "/usr/lib32/jvm", "/opt/jdk", "/opt/jdks",
+                     "/opt/ibm", "/app/jdk", "/usr/lib", "/usr/lib64", "/opt"
+                 })
             yield return prefix;
 
         // Inside a snap, mirrored system directories live under the $SNAP mount.

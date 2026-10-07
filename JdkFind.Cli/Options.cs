@@ -24,20 +24,20 @@ internal sealed class Options
     /// <summary>Prose carried at the top of the generated help: usage lines,
     /// selection semantics, stream discipline and exit codes.</summary>
     private const string RootDescription = """
-        jdkfind [version] [tool] [options]    Print the selected home, or bin/<tool> path
-        jdkfind [version] -- <command>        Run <command> with JAVA_HOME and bin/ of the selection (exec on Unix, spawn on Windows)
-        jdkfind info [version] [options]      Print one installation's details
-        jdkfind list [options]                List all matching installations
+                                           jdkfind [version] [tool] [options]    Print the selected home, or bin/<tool> path
+                                           jdkfind [version] -- <command>        Run <command> with JAVA_HOME and bin/ of the selection (exec on Unix, spawn on Windows)
+                                           jdkfind info [version] [options]      Print one installation's details
+                                           jdkfind list [options]                List all matching installations
 
-        The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
-        newest version first, installations with a compiler preferred on ties.
+                                           The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
+                                           newest version first, installations with a compiler preferred on ties.
 
-        Streams: machine-readable output goes to stdout; the human-readable list and
-        details go to stderr.
+                                           Streams: machine-readable output goes to stdout; the human-readable list and
+                                           details go to stderr.
 
-        Exit codes: 0 = found, 1 = none found, 2 = usage error, 130 = cancelled;
-        run mode adds 126/127 when the command cannot be executed or is not found
-        """;
+                                           Exit codes: 0 = found, 1 = none found, 2 = usage error, 130 = cancelled;
+                                           run mode adds 126/127 when the command cannot be executed or is not found
+                                           """;
 
     private readonly ParseResult parseResult;
     private readonly CommandTree tree;
@@ -136,31 +136,32 @@ internal sealed class Options
 
         var version = new Argument<string?>("version")
         {
-            Description = "Numeric version prefix (21, 21.0.5)",
-            Arity = ArgumentArity.ZeroOrOne,
+            Description = "Numeric version prefix (21, 21.0.5)", Arity = ArgumentArity.ZeroOrOne,
         };
 
         var json = new Option<bool>("--json", "-j")
         {
-            Description = "Write JSON to stdout (list: array; others: single object)",
-            Recursive = true,
+            Description = "Write JSON to stdout (list: array; others: single object)", Recursive = true,
         };
 
         var vendor = new Option<string>("--vendor")
         {
-            Description = "Filter by vendor substring; matches the normalized vendor and the raw string (case-insensitive)",
+            Description =
+                "Filter by vendor substring; matches the normalized vendor and the raw string (case-insensitive)",
             Recursive = true,
         };
 
         var distribution = new Option<string>("--distribution")
         {
-            Description = "Filter by distribution substring per the foojay API names (e.g. temurin, zulu, corretto)",
+            Description =
+                "Filter by distribution substring per the foojay API names (e.g. temurin, zulu, corretto)",
             Recursive = true,
         };
 
         var architecture = new Option<string>("--arch")
         {
-            Description = "Filter by architecture substring (case-insensitive); known aliases match too (x86_64/amd64/x64, aarch64/arm64)",
+            Description =
+                "Filter by architecture substring (case-insensitive); known aliases match too (x86_64/amd64/x64, aarch64/arm64)",
             Recursive = true,
         };
 
@@ -172,14 +173,12 @@ internal sealed class Options
 
         var jdkOnly = new Option<bool>("--jdk-only")
         {
-            Description = "Only installations that ship a compiler (skip runtimes)",
-            Recursive = true,
+            Description = "Only installations that ship a compiler (skip runtimes)", Recursive = true,
         };
 
         var noProbe = new Option<bool>("--no-probe")
         {
-            Description = "Skip executing each JVM for runtime properties",
-            Recursive = true,
+            Description = "Skip executing each JVM for runtime properties", Recursive = true,
         };
 
         var info = new Command("info")
@@ -192,14 +191,12 @@ internal sealed class Options
 
         var list = new Command("list")
         {
-            Description = "List all matching installations",
-            TreatUnmatchedTokensAsErrors = true,
+            Description = "List all matching installations", TreatUnmatchedTokensAsErrors = true,
         };
 
         var listVersion = new Argument<string?>("version")
         {
-            Description = "Numeric version prefix (21, 21.0.5)",
-            Arity = ArgumentArity.ZeroOrOne,
+            Description = "Numeric version prefix (21, 21.0.5)", Arity = ArgumentArity.ZeroOrOne,
         };
         list.Add(listVersion);
 
@@ -337,11 +334,11 @@ internal sealed class Options
     /// </summary>
     internal Task<int> InvokeAsync(Func<CancellationToken, Task<int>> execute)
     {
-        Task<int> action(ParseResult _, CancellationToken cancellationToken) => execute(cancellationToken);
+        Task<int> Action(ParseResult _, CancellationToken cancellationToken) => execute(cancellationToken);
 
-        tree.Root.SetAction(action);
-        tree.Info.SetAction(action);
-        tree.List.SetAction(action);
+        tree.Root.SetAction(Action);
+        tree.Info.SetAction(Action);
+        tree.List.SetAction(Action);
 
         return parseResult.InvokeAsync(new InvocationConfiguration());
     }

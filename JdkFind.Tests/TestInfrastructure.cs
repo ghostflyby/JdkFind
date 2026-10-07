@@ -41,16 +41,17 @@ internal static class TestJdk
         var home = Create(root, javaVersion, segments);
         var java = Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName);
         File.WriteAllText(java, """
-            #!/bin/sh
-            sleep 1
-            echo "    java.version = 99.0" >&2
-            """);
+                                #!/bin/sh
+                                sleep 1
+                                echo "    java.version = 99.0" >&2
+                                """);
         File.SetUnixFileMode(java, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         return home;
     }
 
     /// <summary>Same as <see cref="Create" />, but controls the <c>IMPLEMENTOR</c> value.</summary>
-    internal static string CreateWithImplementor(string root, string javaVersion, string implementor, params string[] segments)
+    internal static string CreateWithImplementor(string root, string javaVersion, string implementor,
+        params string[] segments)
     {
         var home = Path.Combine([root, .. segments]);
         Directory.CreateDirectory(Path.Combine(home, "bin"));

@@ -161,7 +161,8 @@ public class JdkFinderTests : IDisposable
         var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("stub", jdk)],
-            ProbeRuntimeProperties = false, // The fake java is not executable, so probing fails silently — this test only verifies the release side.
+            ProbeRuntimeProperties =
+                false, // The fake java is not executable, so probing fails silently — this test only verifies the release side.
         };
 
         var jvm = Assert.Single(finder.Locate().ToList());

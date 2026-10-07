@@ -159,6 +159,7 @@ internal static class JvmRuntimeProbe
 
                 // The stdout stream carries nothing the probe parses; without the
                 // token it simply completes when the pipes close.
+                // ReSharper disable once MethodSupportsCancellation
                 var standardOutput = process.StandardOutput.ReadToEndAsync();
 
                 // The timeout feeds a linked source so a hung child degrades to a

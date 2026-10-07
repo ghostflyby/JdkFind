@@ -24,7 +24,8 @@ public class CommandRunnerTests
         };
         foreach (var argument in args)
             startInfo.ArgumentList.Add(argument);
-        using var process = Process.Start(startInfo)!;
+        using var process = Process.Start(startInfo);
+        Assert.NotNull(process);
         var stdout = process.StandardOutput.ReadToEnd();
         // Drained so a chatty child can never fill the stderr pipe and deadlock.
         _ = process.StandardError.ReadToEndAsync();

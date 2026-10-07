@@ -216,6 +216,7 @@ internal static class CommandLine
         if (string.IsNullOrEmpty(architecture))
             return false;
 
+        // ReSharper disable once VariableHidesOuterVariable
         return ArchAliases.FirstOrDefault(group => group.Contains(text, StringComparer.OrdinalIgnoreCase)) is { } group
             ? group.Any(alias => architecture.Contains(alias, StringComparison.OrdinalIgnoreCase))
             : architecture.Contains(text, StringComparison.OrdinalIgnoreCase);

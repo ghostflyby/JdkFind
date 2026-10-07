@@ -19,18 +19,18 @@ public class JdkFinderProbeTests : IDisposable
             return; // The fake java executable is a POSIX shell script.
 
         var home = CreateFakeHome(temp.FullPath, "21.0.5", """
-            cat >&2 <<'EOPROBE'
-            java.version = 17.0.9
-            java.vendor = Probe Vendor
-            java.runtime.name = Probe Runtime
-            java.runtime.version = 17.0.9+1
-            java.vm.name = Probe VM
-            java.vm.version = 17.0.9+1
-            os.arch = testarch
-            os.name = TestOS
-            EOPROBE
-            exit 0
-            """);
+                                                           cat >&2 <<'EOPROBE'
+                                                           java.version = 17.0.9
+                                                           java.vendor = Probe Vendor
+                                                           java.runtime.name = Probe Runtime
+                                                           java.runtime.version = 17.0.9+1
+                                                           java.vm.name = Probe VM
+                                                           java.vm.version = 17.0.9+1
+                                                           os.arch = testarch
+                                                           os.name = TestOS
+                                                           EOPROBE
+                                                           exit 0
+                                                           """);
 
         var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
@@ -109,7 +109,8 @@ public class JdkFinderProbeTests : IDisposable
 
         // An ancient runtime rejecting the option is a start failure, not a
         // compatibility case: the release metadata still stands in.
-        var home = CreateFakeHome(temp.FullPath, "21.0.5", "echo 'Unrecognized option: -XshowSettings:properties' >&2\nexit 1");
+        var home = CreateFakeHome(temp.FullPath, "21.0.5",
+            "echo 'Unrecognized option: -XshowSettings:properties' >&2\nexit 1");
 
         var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
@@ -125,7 +126,8 @@ public class JdkFinderProbeTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var home = CreateFakeHome(temp.FullPath, string.Empty, "echo 'total garbage' >&2\nexit 1", includeRelease: false);
+        var home = CreateFakeHome(temp.FullPath, string.Empty, "echo 'total garbage' >&2\nexit 1",
+            includeRelease: false);
 
         Assert.Null(new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName)));
     }
@@ -138,7 +140,8 @@ public class JdkFinderProbeTests : IDisposable
 
         var home = CreateFakeHome(temp.FullPath, "17.0.5", "sleep 30");
 
-        var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), TimeSpan.FromMilliseconds(200));
+        var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName),
+            TimeSpan.FromMilliseconds(200));
 
         Assert.NotNull(executable);
         Assert.Contains("timed out", executable.StartFailure);
@@ -147,13 +150,14 @@ public class JdkFinderProbeTests : IDisposable
     [Fact]
     public async Task FromExecutableAsync_PreCancelledToken_Throws()
     {
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => new JdkFinder().FromExecutableAsync(Path.Combine(temp.FullPath, "any"), new CancellationToken(true)));
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            new JdkFinder().FromExecutableAsync(Path.Combine(temp.FullPath, "any"), new CancellationToken(true)));
     }
 
     [Fact]
     public void FromExecutable_BlankPath_Throws()
     {
+        // ReSharper disable once NullableWarningSuppressionIsUsed
         Assert.Throws<ArgumentNullException>(() => new JdkFinder().FromExecutable(null!));
         Assert.Throws<ArgumentException>(() => new JdkFinder().FromExecutable(string.Empty));
         Assert.Throws<ArgumentException>(() => new JdkFinder().FromExecutable("  "));
@@ -185,7 +189,8 @@ public class JdkFinderProbeTests : IDisposable
     [Fact]
     public async Task FromHomeAsync_MissingDirectory_ReturnsNull()
     {
-        Assert.Null(await new JdkFinder().FromHomeAsync(Path.Combine(temp.FullPath, "missing"), TestContext.Current.CancellationToken));
+        Assert.Null(await new JdkFinder().FromHomeAsync(Path.Combine(temp.FullPath, "missing"),
+            TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -216,7 +221,8 @@ public class JdkFinderProbeTests : IDisposable
     /// <summary>Creates a home with a release file and a fake java executable that
     /// runs the given shell body. POSIX only.</summary>
     [UnsupportedOSPlatform("windows")]
-    private static string CreateFakeHome(string root, string releaseVersion, string scriptBody, bool includeRelease = true)
+    private static string CreateFakeHome(string root, string releaseVersion, string scriptBody,
+        bool includeRelease = true)
     {
         var home = Path.Combine(root, "fake-jdk");
         Directory.CreateDirectory(Path.Combine(home, "bin"));
@@ -227,9 +233,9 @@ public class JdkFinderProbeTests : IDisposable
             File.WriteAllText(
                 Path.Combine(home, "release"),
                 $"""
-                JAVA_VERSION="{releaseVersion}"
-                IMPLEMENTOR="Release Vendor"
-                """);
+                 JAVA_VERSION="{releaseVersion}"
+                 IMPLEMENTOR="Release Vendor"
+                 """);
         return home;
     }
 
