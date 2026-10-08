@@ -91,6 +91,10 @@ dotnet_diagnostic.IDE0005.severity = suggestion
 dotnet_sort_system_directives_first = true
 csharp_style_namespace_declarations = file_scoped:suggestion
 
+# C# files
+[*.cs]
+indent_size = 4
+
 # ReSharper properties
 resharper_apply_auto_detected_rules = false
 resharper_autodetect_indent_settings = true
