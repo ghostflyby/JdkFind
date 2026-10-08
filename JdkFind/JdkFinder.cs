@@ -161,7 +161,7 @@ public sealed record JdkFinder
         if (Path.GetDirectoryName(fullPath) is { } directory)
         {
             var home = JavaHomeLayout.Probe(directory)
-                ?? (Path.GetDirectoryName(directory) is { } parentDirectory ? JavaHomeLayout.Probe(parentDirectory) : null);
+                       ?? (Path.GetDirectoryName(directory) is { } parentDirectory ? JavaHomeLayout.Probe(parentDirectory) : null);
             if (home is not null)
                 return home;
         }

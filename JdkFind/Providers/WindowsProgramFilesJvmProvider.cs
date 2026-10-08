@@ -24,9 +24,7 @@ public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes)
     ];
 
     /// <summary>Scans the vendor directories under <c>%ProgramFiles%</c>.</summary>
-    public WindowsProgramFilesJvmProvider() : this(ResolveDefaultPrefixes())
-    {
-    }
+    public WindowsProgramFilesJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
     IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => prefixList;
 

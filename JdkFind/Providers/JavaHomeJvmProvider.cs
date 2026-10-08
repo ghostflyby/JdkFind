@@ -7,9 +7,7 @@ public sealed class JavaHomeJvmProvider(string? home) : IJvmProvider
     public string Name => "java-home";
 
     /// <summary>Reads <c>JAVA_HOME</c>.</summary>
-    public JavaHomeJvmProvider() : this(Environment.GetEnvironmentVariable("JAVA_HOME"))
-    {
-    }
+    public JavaHomeJvmProvider() : this(Environment.GetEnvironmentVariable("JAVA_HOME")) { }
 
     /// <inheritdoc />
     public IEnumerable<string> GetJavaHomes()

@@ -11,9 +11,7 @@ public sealed class JabbaJvmProvider(string? home) : ICommonPrefixesJvmProvider
     public string Name => "jabba";
 
     /// <summary>Scans the default Jabba home (or <c>JABBA_HOME</c>).</summary>
-    public JabbaJvmProvider() : this(ResolveDefaultHome())
-    {
-    }
+    public JabbaJvmProvider() : this(ResolveDefaultHome()) { }
 
     IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() =>
         home != null ? JvmScanning.EnumerateGuarded(Path.Combine(home, "jdk")) : [];

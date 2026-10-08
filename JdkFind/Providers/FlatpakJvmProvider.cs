@@ -17,9 +17,7 @@ public sealed class FlatpakJvmProvider : IJvmProvider
     private readonly bool active;
 
     /// <summary>Active only inside a flatpak sandbox.</summary>
-    public FlatpakJvmProvider() : this("/usr/lib/sdk", InFlatpakSandbox())
-    {
-    }
+    public FlatpakJvmProvider() : this("/usr/lib/sdk", InFlatpakSandbox()) { }
 
     /// <summary>Test seam: scans an explicit sdk root, bypassing the sandbox check.</summary>
     internal FlatpakJvmProvider(string sdkRoot, bool active)

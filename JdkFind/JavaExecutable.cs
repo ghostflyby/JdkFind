@@ -42,9 +42,9 @@ public sealed record JavaExecutable
             if (home is null && System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(Path)) is { } directory)
             {
                 home = JavaHomeLayout.Probe(directory)
-                    ?? (System.IO.Path.GetDirectoryName(directory) is { } parentDirectory
-                        ? JavaHomeLayout.Probe(parentDirectory)
-                        : null);
+                       ?? (System.IO.Path.GetDirectoryName(directory) is { } parentDirectory
+                           ? JavaHomeLayout.Probe(parentDirectory)
+                           : null);
             }
 
             if (home is null)

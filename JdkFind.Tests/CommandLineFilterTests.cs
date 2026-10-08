@@ -38,9 +38,9 @@ public class CommandLineFilterTests
     };
 
     [Theory]
-    [InlineData("azul")]          // normalized vendor hit
-    [InlineData("Azul Systems")]  // raw string hit
-    [InlineData("AZUL")]          // case-insensitive
+    [InlineData("azul")]         // normalized vendor hit
+    [InlineData("Azul Systems")] // raw string hit
+    [InlineData("AZUL")]         // case-insensitive
     public void MatchesVendorFilter_MatchesVendorAndRawString(string text) =>
         Assert.True(CommandLine.MatchesVendorFilter(AzulJvm, text));
 
@@ -65,18 +65,18 @@ public class CommandLineFilterTests
     }
 
     [Theory]
-    [InlineData("aarch64")]  // exact spelling
-    [InlineData("arm64")]    // group alias
-    [InlineData("ARM64")]    // case-insensitive alias
-    [InlineData("aarch")]    // non-member text falls through to the plain substring match
+    [InlineData("aarch64")] // exact spelling
+    [InlineData("arm64")]   // group alias
+    [InlineData("ARM64")]   // case-insensitive alias
+    [InlineData("aarch")]   // non-member text falls through to the plain substring match
     public void MatchesArchFilter_Arm64Spellings_MatchAarch64Installation(string text) =>
         Assert.True(CommandLine.MatchesArchFilter(Arm64Jvm, text));
 
     [Theory]
-    [InlineData("x86_64")]  // exact spelling
-    [InlineData("amd64")]   // group alias
-    [InlineData("x64")]     // group alias
-    [InlineData("x86")]     // non-member text falls through to the plain substring match
+    [InlineData("x86_64")] // exact spelling
+    [InlineData("amd64")]  // group alias
+    [InlineData("x64")]    // group alias
+    [InlineData("x86")]    // non-member text falls through to the plain substring match
     public void MatchesArchFilter_X64Spellings_MatchX86_64Installation(string text) =>
         Assert.True(CommandLine.MatchesArchFilter(X64Jvm, text));
 

@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="JdkFind/JdkFind.csproj" />
-  <Project Path="JdkFind.Cli/JdkFind.Cli.csproj" />
-  <Project Path="JdkFind.Tests/JdkFind.Tests.csproj" />
+  <Project Path="JdkFind/JdkFind.csproj"/>
+  <Project Path="JdkFind.Cli/JdkFind.Cli.csproj"/>
+  <Project Path="JdkFind.Tests/JdkFind.Tests.csproj"/>
 </Solution>
