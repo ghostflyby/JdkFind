@@ -99,12 +99,16 @@ csharp_style_namespace_declarations = file_scoped:suggestion
 # ReSharper properties
 resharper_apply_auto_detected_rules = false
 resharper_autodetect_indent_settings = true
+resharper_csharp_empty_block_style = together_same_line
+resharper_csharp_int_align_comments = true
 resharper_formatter_off_tag = @formatter:off
 resharper_formatter_on_tag = @formatter:on
 resharper_formatter_tags_enabled = true
+resharper_indent_nested_foreach_stmt = true
 resharper_use_indent_from_vs = false
 
 # ReSharper inspection severities
+resharper_arrange_namespace_body_highlighting = hint
 resharper_arrange_redundant_parentheses_highlighting = hint
 resharper_arrange_this_qualifier_highlighting = hint
 resharper_arrange_type_member_modifiers_highlighting = hint
