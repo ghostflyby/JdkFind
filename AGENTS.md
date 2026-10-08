@@ -47,8 +47,7 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
 
 - Providers return **validated** home paths: the `IJvmProvider` contract
   requires every path to pass the public `JavaHomeLayout.Probe`, and the
-  capability interfaces apply it by default through the `GetJavaHome` seam
-  (which may resolve a subpath — macOS bundle / Homebrew keg layouts). The
+  capability interfaces apply it by default through the `GetJavaHome` seam (which may resolve a subpath — macOS bundle / Homebrew keg layouts). The
   facade trusts the contract (no re-validation) and owns deduplication plus
   release-file parsing (internal `ReleaseFile`).
 - Deduplication merges candidates by canonical path (every symlink expanded per
@@ -103,8 +102,7 @@ actually has.
 - Commit messages: imperative mood, concise subject (e.g. `Add Scoop
   provider`).
 - `main` is protected: direct pushes are rejected, so land every change on a
-  feature branch and open a pull request; merge only with green CI. Tag pushes
-  (`v*.*.*`, the publish trigger) are not branch pushes and remain direct.
+  feature branch and open a pull request; merge only with green CI. Tag pushes (`v*.*.*`, the publish trigger) are not branch pushes and remain direct.
   Workflows are allowed to create and approve pull requests — the publish
   workflow's Shipped housekeeping PR relies on that setting.
 - Before handing off, `dotnet build JdkFind.slnx` and

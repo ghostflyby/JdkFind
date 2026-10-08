@@ -19,9 +19,7 @@ internal sealed class TempDirectory : IDisposable
         {
             // A cleanup failure is not a test failure.
         }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        catch (UnauthorizedAccessException) { }
     }
 }
 

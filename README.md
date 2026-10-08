@@ -47,20 +47,20 @@ is always present — unknown values are `null` — and within the same
 major version the shape is additive-only: keys are never renamed or
 removed.
 
-| Key | Type | Meaning |
-|---|---|---|
-| `home` | string | Installation home directory |
-| `version` | string | Raw `JAVA_VERSION` from the release file |
-| `languageVersion` | number \| null | Feature version (e.g. `21`) |
-| `hasCompiler` | boolean | Ships `javac` |
-| `prerelease` | boolean | Early-access build (e.g. `25-ea`) |
-| `vendor` | string | Normalized upstream vendor (e.g. `Azul`) |
-| `distribution` | string | foojay-style distribution name (e.g. `Zulu`) |
-| `vendorRaw` | string \| null | The binary's reported vendor, falling back to the release `IMPLEMENTOR` |
-| `runtimeName` / `runtimeVersion` | string \| null | Probed `java.runtime.*` |
-| `vmName` / `vmVersion` | string \| null | Probed `java.vm.*` |
-| `architecture` / `osName` | string \| null | Probed, falling back to the release file |
-| `providers` | string[] | Detection sources that reported this home |
+| Key                              | Type           | Meaning                                                                 |
+|----------------------------------|----------------|-------------------------------------------------------------------------|
+| `home`                           | string         | Installation home directory                                             |
+| `version`                        | string         | Raw `JAVA_VERSION` from the release file                                |
+| `languageVersion`                | number \| null | Feature version (e.g. `21`)                                             |
+| `hasCompiler`                    | boolean        | Ships `javac`                                                           |
+| `prerelease`                     | boolean        | Early-access build (e.g. `25-ea`)                                       |
+| `vendor`                         | string         | Normalized upstream vendor (e.g. `Azul`)                                |
+| `distribution`                   | string         | foojay-style distribution name (e.g. `Zulu`)                            |
+| `vendorRaw`                      | string \| null | The binary's reported vendor, falling back to the release `IMPLEMENTOR` |
+| `runtimeName` / `runtimeVersion` | string \| null | Probed `java.runtime.*`                                                 |
+| `vmName` / `vmVersion`           | string \| null | Probed `java.vm.*`                                                      |
+| `architecture` / `osName`        | string \| null | Probed, falling back to the release file                                |
+| `providers`                      | string[]       | Detection sources that reported this home                               |
 
 Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled;
 run mode (`--`) adds `126`/`127` when the command cannot be executed or is
@@ -86,17 +86,17 @@ IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
 
 ## Discovery sources
 
-| Source | Platforms |
-|---|---|
-| `JAVA_HOME`, `PATH` entries | all |
-| `/System/Library/Java/JavaVirtualMachines` (system), `/Library/Java/JavaVirtualMachines` (machine) and `~/Library/Java/JavaVirtualMachines` (per-user; also IntelliJ's download target) | macOS |
-| Homebrew OpenJDK kegs (`HOMEBREW_PREFIX`, `/opt/homebrew`, …) | macOS, Linux |
-| `/usr/lib/jvm`, `/usr/java`, `/usr/lib64/jvm`, `/usr/lib32/jvm`, `/opt/jdk`, `/opt/jdks`, `/opt/ibm`, Gentoo installs (`/usr/lib`, `/usr/lib64`, `/opt`), `$SNAP` mirrors | Linux |
-| `/usr/local` ports layout (`openjdk*`) | FreeBSD, OpenBSD |
-| Flatpak sandbox JVMs — shared runtime extensions (`/usr/lib/sdk`) and the app-bundled `/app/jdk` (inside a flatpak sandbox) | Linux (flatpak) |
-| `%ProgramFiles%`/`%ProgramFiles(x86)%` vendor directories (Java, Eclipse Adoptium, AdoptOpenJDK, Microsoft, Zulu, Amazon Corretto, BellSoft), Windows registry (JavaSoft, Adoptium, Microsoft, Azul, Corretto, AdoptOpenJDK, IBM Semeru, BellSoft — 64+32-bit views) | Windows |
-| `~/.jdks` (IntelliJ) | Windows, Linux |
-| SDKMAN! (`SDKMAN_DIR`), asdf (`ASDF_DATA_DIR`), Gradle (`GRADLE_USER_HOME`), Jabba (`JABBA_HOME`), Scoop (`SCOOP`/`SCOOP_GLOBAL`) | per tool |
+| Source                                                                                                                                                                                                                                                               | Platforms        |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|
+| `JAVA_HOME`, `PATH` entries                                                                                                                                                                                                                                          | all              |
+| `/System/Library/Java/JavaVirtualMachines` (system), `/Library/Java/JavaVirtualMachines` (machine) and `~/Library/Java/JavaVirtualMachines` (per-user; also IntelliJ's download target)                                                                              | macOS            |
+| Homebrew OpenJDK kegs (`HOMEBREW_PREFIX`, `/opt/homebrew`, …)                                                                                                                                                                                                        | macOS, Linux     |
+| `/usr/lib/jvm`, `/usr/java`, `/usr/lib64/jvm`, `/usr/lib32/jvm`, `/opt/jdk`, `/opt/jdks`, `/opt/ibm`, Gentoo installs (`/usr/lib`, `/usr/lib64`, `/opt`), `$SNAP` mirrors                                                                                            | Linux            |
+| `/usr/local` ports layout (`openjdk*`)                                                                                                                                                                                                                               | FreeBSD, OpenBSD |
+| Flatpak sandbox JVMs — shared runtime extensions (`/usr/lib/sdk`) and the app-bundled `/app/jdk` (inside a flatpak sandbox)                                                                                                                                          | Linux (flatpak)  |
+| `%ProgramFiles%`/`%ProgramFiles(x86)%` vendor directories (Java, Eclipse Adoptium, AdoptOpenJDK, Microsoft, Zulu, Amazon Corretto, BellSoft), Windows registry (JavaSoft, Adoptium, Microsoft, Azul, Corretto, AdoptOpenJDK, IBM Semeru, BellSoft — 64+32-bit views) | Windows          |
+| `~/.jdks` (IntelliJ)                                                                                                                                                                                                                                                 | Windows, Linux   |
+| SDKMAN! (`SDKMAN_DIR`), asdf (`ASDF_DATA_DIR`), Gradle (`GRADLE_USER_HOME`), Jabba (`JABBA_HOME`), Scoop (`SCOOP`/`SCOOP_GLOBAL`)                                                                                                                                    | per tool         |
 
 Environment variables always take precedence over the default locations.
 Missing or unreadable locations are skipped silently; results are

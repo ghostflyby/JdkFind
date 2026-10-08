@@ -12,9 +12,7 @@ public sealed class UnixJvmProvider : IJvmProvider
     private readonly string[]? injectedPrefixes;
 
     /// <summary>Scans the full platform list on the current unix-like platform.</summary>
-    public UnixJvmProvider()
-    {
-    }
+    public UnixJvmProvider() { }
 
     /// <summary>Test seam: scans exactly the given prefix directories.</summary>
     internal UnixJvmProvider(string[] prefixes) => injectedPrefixes = prefixes;

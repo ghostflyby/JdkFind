@@ -62,10 +62,10 @@ public class CommandLineTests
     };
 
     [Theory]
-    [InlineData("8", true)]     // the feature level finds legacy 1.8.0_x installs
+    [InlineData("8", true)] // the feature level finds legacy 1.8.0_x installs
     [InlineData("1.8", true)]
     [InlineData("1.8.0", true)]
-    [InlineData("1", false)]    // the legacy major alone is not a language level
+    [InlineData("1", false)] // the legacy major alone is not a language level
     [InlineData("9", false)]
     public void MatchesVersion_LegacyNaming_MatchesByFeatureLevel(string prefix, bool expected) =>
         Assert.Equal(expected, CommandLine.MatchesVersion(LegacyZulu8Jvm, prefix));

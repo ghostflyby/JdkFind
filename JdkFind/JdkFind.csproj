@@ -1,42 +1,42 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <IsAotCompatible>true</IsAotCompatible>
-        <!-- Shortest executable name, no dll name collisions. -->
-        <AssemblyName>JdkFind.Core</AssemblyName>
-        <!-- Every warning is a build error (same convention as dotnet-pty), so an
-             unclaimed public symbol (RS0016) or an unclaimed removal (RS0017)
-             fails the build instead of slipping past as a warning. -->
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-        <PackageId>JdkFind</PackageId>
-        <Version>0.4.0</Version>
-        <Authors>ghostflyby</Authors>
-        <Description>Locate installed JDKs across Windows, macOS and Linux.</Description>
-        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-        <PackageReadmeFile>README.md</PackageReadmeFile>
-        <RepositoryUrl>https://github.com/ghostflyby/JdkFind</RepositoryUrl>
-        <RepositoryType>git</RepositoryType>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <!-- Shortest executable name, no dll name collisions. -->
+    <AssemblyName>JdkFind.Core</AssemblyName>
+    <!-- Every warning is a build error (same convention as dotnet-pty), so an
+         unclaimed public symbol (RS0016) or an unclaimed removal (RS0017)
+         fails the build instead of slipping past as a warning. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <PackageId>JdkFind</PackageId>
+    <Version>0.4.0</Version>
+    <Authors>ghostflyby</Authors>
+    <Description>Locate installed JDKs across Windows, macOS and Linux.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/ghostflyby/JdkFind</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <None Include="..\README.md" Pack="true" PackagePath="\" />
-    </ItemGroup>
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
-    <ItemGroup>
-        <InternalsVisibleTo Include="JdkFind.Tests" />
-    </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="JdkFind.Tests"/>
+  </ItemGroup>
 
-    <!-- Public API contract: PublicApiAnalyzers fails the build whenever a public symbol
-         is missing from PublicAPI.Shipped.txt / PublicAPI.Unshipped.txt or the shipped
-         surface changes incompatibly. Claim new symbols in Unshipped; mark removals
-         with a *REMOVED* line. The publish workflow moves Unshipped entries into
-         Shipped at release time. PrivateAssets keeps the analyzer out of consumers. -->
-    <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" PrivateAssets="all" />
-    </ItemGroup>
+  <!-- Public API contract: PublicApiAnalyzers fails the build whenever a public symbol
+       is missing from PublicAPI.Shipped.txt / PublicAPI.Unshipped.txt or the shipped
+       surface changes incompatibly. Claim new symbols in Unshipped; mark removals
+       with a *REMOVED* line. The publish workflow moves Unshipped entries into
+       Shipped at release time. PrivateAssets keeps the analyzer out of consumers. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" PrivateAssets="all"/>
+  </ItemGroup>
 
 </Project>

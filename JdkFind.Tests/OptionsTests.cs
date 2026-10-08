@@ -123,7 +123,7 @@ public class OptionsTests
     }
 
     [Theory]
-    [InlineData("home", "javac")]     // the home subcommand was superseded by the default command
+    [InlineData("home", "javac")] // the home subcommand was superseded by the default command
     [InlineData("--path")]
     [InlineData("--latest")]
     [InlineData("-v", "21")]
@@ -132,7 +132,7 @@ public class OptionsTests
         Assert.Throws<ArgumentException>(() => Options.Parse(args));
 
     [Theory]
-    [InlineData("info", "java")]          // info takes no tool
+    [InlineData("info", "java")] // info takes no tool
     [InlineData("list", "java")]
     [InlineData("21", "17")]              // two version prefixes
     [InlineData("21.0.5", "21")]          // duplicate version
@@ -146,10 +146,10 @@ public class OptionsTests
         Assert.Throws<ArgumentException>(() => Options.Parse(args));
 
     [Theory]
-    [InlineData("21.0")]    // a release is a single language level, not a prefix
+    [InlineData("21.0")] // a release is a single language level, not a prefix
     [InlineData("21.x")]
     [InlineData("")]
-    [InlineData("99999999999")]    // an integer that overflows int is a usage error, not a crash
+    [InlineData("99999999999")] // an integer that overflows int is a usage error, not a crash
     public void Parse_RejectsNonIntegerRelease(string value) =>
         Assert.Throws<ArgumentException>(() => Options.Parse(["--release", value]));
 }

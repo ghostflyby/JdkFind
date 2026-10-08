@@ -1,30 +1,30 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <IsPackable>false</IsPackable>
-        <!-- xunit.v3 test projects are executables: the framework's source generator
-             emits the entry point that hosts its Microsoft.Testing.Platform runner,
-             which the .NET 10 SDK's dotnet test drives natively (the VSTest stack —
-             Microsoft.NET.Test.Sdk, xunit.runner.visualstudio — was removed with the
-             v3 migration). -->
-        <OutputType>Exe</OutputType>
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- xunit.v3 test projects are executables: the framework's source generator
+         emits the entry point that hosts its Microsoft.Testing.Platform runner,
+         which the .NET 10 SDK's dotnet test drives natively (the VSTest stack —
+         Microsoft.NET.Test.Sdk, xunit.runner.visualstudio — was removed with the
+         v3 migration). -->
+    <OutputType>Exe</OutputType>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="xunit.v3" Version="4.0.1" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="4.0.1"/>
+  </ItemGroup>
 
-    <ItemGroup>
-        <Using Include="Xunit" />
-    </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit"/>
+  </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\JdkFind\JdkFind.csproj" />
-        <ProjectReference Include="..\JdkFind.Cli\JdkFind.Cli.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\JdkFind\JdkFind.csproj"/>
+    <ProjectReference Include="..\JdkFind.Cli\JdkFind.Cli.csproj"/>
+  </ItemGroup>
 
 </Project>

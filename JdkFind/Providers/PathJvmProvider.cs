@@ -10,9 +10,7 @@ public sealed class PathJvmProvider(string? path) : IJvmProvider
     public string Name => "path";
 
     /// <summary>Scans <c>PATH</c>.</summary>
-    public PathJvmProvider() : this(Environment.GetEnvironmentVariable("PATH"))
-    {
-    }
+    public PathJvmProvider() : this(Environment.GetEnvironmentVariable("PATH")) { }
 
     /// <inheritdoc />
     public IEnumerable<string> GetJavaHomes()

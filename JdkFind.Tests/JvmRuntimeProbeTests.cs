@@ -14,15 +14,15 @@ public class JvmRuntimeProbeTests : IDisposable
         Directory.CreateDirectory(Path.Combine(home, "bin"));
         var java = Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName);
         File.WriteAllText(java, """
-            #!/bin/sh
-            echo "    java.vendor = Probe Vendor" >&2
-            echo "    java.version = 99.0" >&2
-            echo "    java.runtime.name = Probe Runtime" >&2
-            echo "    java.runtime.version = 99.0+1" >&2
-            echo "    java.vm.name = Probe VM" >&2
-            echo "    java.vm.version = 99.0+1" >&2
-            echo "    os.arch = test" >&2
-            """);
+                                #!/bin/sh
+                                echo "    java.vendor = Probe Vendor" >&2
+                                echo "    java.version = 99.0" >&2
+                                echo "    java.runtime.name = Probe Runtime" >&2
+                                echo "    java.runtime.version = 99.0+1" >&2
+                                echo "    java.vm.name = Probe VM" >&2
+                                echo "    java.vm.version = 99.0+1" >&2
+                                echo "    os.arch = test" >&2
+                                """);
         File.SetUnixFileMode(java, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 
         var info = JvmRuntimeProbe.Probe(home);

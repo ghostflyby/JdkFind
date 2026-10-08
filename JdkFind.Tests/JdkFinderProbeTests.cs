@@ -171,7 +171,7 @@ public class JdkFinderProbeTests : IDisposable
         Assert.Same(executable, installation.Executable); // The derivation reuses this instance — no spawn.
         Assert.Equal("17.0.5", installation.Version.Original);
         Assert.False(installation.HasCompiler); // No javac in the fixture.
-        Assert.Empty(installation.Providers); // Discovery data cannot be restored.
+        Assert.Empty(installation.Providers);   // Discovery data cannot be restored.
     }
 
     [Fact]
