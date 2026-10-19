@@ -18,8 +18,8 @@ internal static class JvmRuntimeProbe
 
     /// <summary>Environment variables removed from a sanitized probe child's
     /// environment: every JVM-domain variable that can distort what the binary
-    /// reports — injected options, a foreign libjvm through the dynamic loader.</summary>
-    internal static readonly string[] SanitizedVariables =
+    /// reports — injected options, a foreign <c>libjvm</c> through the dynamic loader.</summary>
+    private static readonly string[] SanitizedVariables =
     [
         "_JAVA_OPTIONS",
         "JDK_JAVA_OPTIONS",

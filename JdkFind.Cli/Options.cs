@@ -126,7 +126,7 @@ internal sealed class Options
     /// <summary>Assembles the parse-only command tree. A placeholder root action
     /// marks the default command callable for bare `jdkfind`; the real execution
     /// is bound by <see cref="InvokeAsync" /> after parsing.</summary>
-    internal static CommandTree CreateTree()
+    private static CommandTree CreateTree()
     {
         var operands = new Argument<string[]>("operands")
         {
@@ -247,7 +247,7 @@ internal sealed class Options
     }
 
     /// <summary>Maps a successful parse result onto an Options instance.</summary>
-    internal static Options Map(ParseResult parseResult, CommandTree tree)
+    private static Options Map(ParseResult parseResult, CommandTree tree)
     {
         var infoVersion = parseResult.GetValue(tree.Version);
         var listVersion = parseResult.GetValue(tree.ListVersion);

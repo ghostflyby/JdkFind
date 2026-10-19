@@ -38,7 +38,7 @@ public static class JavaHomeLayout
     internal static string JavaExecutablePath(string homeDirectory) =>
         FindExecutable(homeDirectory, JavaExecutableName) ?? JreJavaExecutablePath(homeDirectory);
 
-    internal static string JreJavaExecutablePath(string homeDirectory) =>
+    private static string JreJavaExecutablePath(string homeDirectory) =>
         Path.Combine(homeDirectory, "jre", "bin", JavaExecutableName);
 
     /// <summary>Searches a validated home for the named executable: <c>bin</c>
