@@ -208,10 +208,16 @@ jobs:
       # silently dropped — two different artifacts for the "same" version are
       # exactly the accident this must never paper over. The already-published
       # guard in the validation step catches the re-tag case before anything runs.
+      # The temporary key reaches the push through a step-level env mapping, not
+      # inline "${{ }}" interpolation: inside a pwsh script that syntax reads as a
+      # PowerShell variable and IDE formatting "simplifies" it to an empty string
+      # (this exact mangling 401'd the first v0.5.0 publish attempt).
       - name: Publish to nuget.org
         run: |
-          dotnet nuget push "pkg/JdkFind.$env:VERSION.nupkg" --source https://api.nuget.org/v3/index.json --api-key ""
-          dotnet nuget push "pkg/JdkFind.Cli.$env:VERSION.nupkg" --source https://api.nuget.org/v3/index.json --api-key ""
+          dotnet nuget push "pkg/JdkFind.$env:VERSION.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$env:NUGET_API_KEY"
+          dotnet nuget push "pkg/JdkFind.Cli.$env:VERSION.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$env:NUGET_API_KEY"
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
 
       - name: Create GitHub release
         run: |
