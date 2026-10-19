@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
 namespace JdkFind;
@@ -15,6 +16,8 @@ namespace JdkFind;
 ///     families first (the GraalVM community before Oracle, Mandrel before
 ///     Red Hat).
 /// </summary>
+[SuppressMessage("ReSharper", "StringLiteralTypo")]
+[SuppressMessage("ReSharper", "IdentifierTypo")]
 internal static partial class JvmIdentity
 {
     [GeneratedRegex("amazon|corretto", RegexOptions.IgnoreCase)]

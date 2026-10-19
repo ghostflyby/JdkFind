@@ -119,7 +119,7 @@ internal static class CommandLine
             return ExitSuccess;
         }
 
-        Console.Out.WriteLine(options.Tool is null
+        await Console.Out.WriteLineAsync(options.Tool is null
             ? chosen.Home.FullName
             : ToolPath(chosen, options.Tool));
         return ExitSuccess;

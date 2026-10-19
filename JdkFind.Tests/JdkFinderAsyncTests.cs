@@ -62,11 +62,9 @@ public class JdkFinderAsyncTests : IDisposable
 
         var home = Path.Combine(temp.FullPath, "scripted");
         Directory.CreateDirectory(Path.Combine(home, "bin"));
-        File.WriteAllText(Path.Combine(home, "release"), "JAVA_VERSION=\"21.0.5\"\n");
+        await File.WriteAllTextAsync(Path.Combine(home, "release"), "JAVA_VERSION=\"21.0.5\"\n", TestContext.Current.CancellationToken);
         var java = Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName);
-        File.WriteAllText(
-            java,
-            "#!/bin/sh\necho 'java.version = 21.0.5' >&2\necho 'java.runtime.name = ScriptedRuntime' >&2\n");
+        await File.WriteAllTextAsync(java, "#!/bin/sh\necho 'java.version = 21.0.5' >&2\necho 'java.runtime.name = ScriptedRuntime' >&2\n", TestContext.Current.CancellationToken);
         File.SetUnixFileMode(
             java,
             UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
