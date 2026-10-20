@@ -9,18 +9,18 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class UnixJvmProvider : IJvmProvider
 {
-    private readonly string[]? injectedPrefixes;
+    private readonly string[]? _injectedPrefixes;
 
     /// <summary>Scans the full platform list on the current unix-like platform.</summary>
     public UnixJvmProvider() { }
 
     /// <summary>Test seam: scans exactly the given prefix directories.</summary>
-    internal UnixJvmProvider(string[] prefixes) => injectedPrefixes = prefixes;
+    internal UnixJvmProvider(string[] prefixes) => _injectedPrefixes = prefixes;
 
     /// <summary>Scans exactly one prefix directory — the injection seam for callers
     /// (and tests) that control the candidate location themselves. A null prefix
     /// means nothing to scan.</summary>
-    public UnixJvmProvider(string? commonPrefix) => injectedPrefixes = commonPrefix is null ? [] : [commonPrefix];
+    public UnixJvmProvider(string? commonPrefix) => _injectedPrefixes = commonPrefix is null ? [] : [commonPrefix];
 
     /// <inheritdoc />
     public string Name => "unix";
@@ -28,7 +28,7 @@ public sealed class UnixJvmProvider : IJvmProvider
     /// <inheritdoc />
     public IEnumerable<string> GetJavaHomes()
     {
-        foreach (var prefix in injectedPrefixes ?? ResolvePrefixes())
+        foreach (var prefix in _injectedPrefixes ?? ResolvePrefixes())
             foreach (var candidate in JvmScanning.EnumerateGuarded(prefix))
                 if (JavaHomeLayout.Probe(candidate) is { } home)
                     yield return home;

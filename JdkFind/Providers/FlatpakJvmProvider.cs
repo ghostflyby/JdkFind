@@ -13,8 +13,8 @@ namespace JdkFind.Providers;
 /// </summary>
 public sealed class FlatpakJvmProvider : IJvmProvider
 {
-    private readonly string sdkRoot;
-    private readonly bool active;
+    private readonly string _sdkRoot;
+    private readonly bool _active;
 
     /// <summary>Active only inside a flatpak sandbox.</summary>
     public FlatpakJvmProvider() : this("/usr/lib/sdk", InFlatpakSandbox()) { }
@@ -22,8 +22,8 @@ public sealed class FlatpakJvmProvider : IJvmProvider
     /// <summary>Test seam: scans an explicit sdk root, bypassing the sandbox check.</summary>
     internal FlatpakJvmProvider(string sdkRoot, bool active)
     {
-        this.sdkRoot = sdkRoot;
-        this.active = active;
+        _sdkRoot = sdkRoot;
+        _active = active;
     }
 
     /// <inheritdoc />
@@ -32,17 +32,17 @@ public sealed class FlatpakJvmProvider : IJvmProvider
     /// <inheritdoc />
     public IEnumerable<string> GetJavaHomes()
     {
-        if (!active)
+        if (!_active)
             yield break;
 
-        foreach (var extension in JvmScanning.EnumerateGuarded(sdkRoot))
+        foreach (var extension in JvmScanning.EnumerateGuarded(_sdkRoot))
             foreach (var candidate in JvmScanning.EnumerateGuarded(Path.Combine(extension, "jvm")))
                 if (JavaHomeLayout.Probe(candidate) is { } home)
                     yield return home;
 
         // /app is the flatpak app directory; its bundled jdk is part of the
         // flatpak result for this run.
-        foreach (var candidate in JvmScanning.EnumerateGuarded(AppDirectory(sdkRoot)))
+        foreach (var candidate in JvmScanning.EnumerateGuarded(AppDirectory(_sdkRoot)))
             if (JavaHomeLayout.Probe(candidate) is { } home)
                 yield return home;
     }

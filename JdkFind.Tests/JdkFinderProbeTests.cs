@@ -4,12 +4,12 @@ namespace JdkFind.Tests;
 
 public class JdkFinderProbeTests : IDisposable
 {
-    private readonly TempDirectory temp = new();
+    private readonly TempDirectory _temp = new();
 
     [Fact]
     public void FromExecutable_MissingPath_ReturnsNull()
     {
-        Assert.Null(new JdkFinder().FromExecutable(Path.Combine(temp.FullPath, "nowhere", "java")));
+        Assert.Null(new JdkFinder().FromExecutable(Path.Combine(_temp.FullPath, "nowhere", "java")));
     }
 
     [Fact]
@@ -18,7 +18,7 @@ public class JdkFinderProbeTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var home = CreateFakeHome(temp.FullPath, "21.0.5", """
+        var home = CreateFakeHome(_temp.FullPath, "21.0.5", """
                                                            cat >&2 <<'EOPROBE'
                                                            java.version = 17.0.9
                                                            java.vendor = Probe Vendor
@@ -54,11 +54,11 @@ public class JdkFinderProbeTests : IDisposable
 
         // A launcher reached through a symlink cannot be resolved by walking up
         // from its location — only its own reported java.home knows the home.
-        var home = Path.Combine(temp.FullPath, "fake-jdk");
+        var home = Path.Combine(_temp.FullPath, "fake-jdk");
         var script = $"cat >&2 <<'EOPROPE'\njava.version = 21.0.5\njava.home = {home}\nEOPROPE\nexit 0\n";
-        Assert.Equal(home, CreateFakeHome(temp.FullPath, "21.0.5", script));
+        Assert.Equal(home, CreateFakeHome(_temp.FullPath, "21.0.5", script));
 
-        var link = Path.Combine(temp.FullPath, "linked-java");
+        var link = Path.Combine(_temp.FullPath, "linked-java");
         File.CreateSymbolicLink(link, Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
         var executable = new JdkFinder().FromExecutable(link);
@@ -77,7 +77,7 @@ public class JdkFinderProbeTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var home = CreateFakeHome(temp.FullPath, "21.0.5", "exit 0");
+        var home = CreateFakeHome(_temp.FullPath, "21.0.5", "exit 0");
 
         var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
@@ -92,7 +92,7 @@ public class JdkFinderProbeTests : IDisposable
             return; // The fake java executable is a POSIX shell script.
 
         // JDK 8 layout: java.home reports the inner JRE; the outer JDK owns javac.
-        var outer = Path.Combine(temp.FullPath, "jdk1.8");
+        var outer = Path.Combine(_temp.FullPath, "jdk1.8");
         var jre = Path.Combine(outer, "jre");
         Directory.CreateDirectory(Path.Combine(outer, "bin"));
         Directory.CreateDirectory(Path.Combine(jre, "bin"));
@@ -124,8 +124,8 @@ public class JdkFinderProbeTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var home = CreateFakeHome(temp.FullPath, "17.0.5",
-            $"cat >&2 <<'EOPROPE'\njava.version = 17.0.5\njava.home = {Path.Combine(temp.FullPath, "fake-jdk")}\nEOPROPE\nexit 0\n");
+        var home = CreateFakeHome(_temp.FullPath, "17.0.5",
+            $"cat >&2 <<'EOPROPE'\njava.version = 17.0.5\njava.home = {Path.Combine(_temp.FullPath, "fake-jdk")}\nEOPROPE\nexit 0\n");
 
         var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
@@ -139,7 +139,7 @@ public class JdkFinderProbeTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var directory = Path.Combine(temp.FullPath, "standalone");
+        var directory = Path.Combine(_temp.FullPath, "standalone");
         Directory.CreateDirectory(directory);
         var java = Path.Combine(directory, JavaHomeLayout.JavaExecutableName);
         File.WriteAllText(java, "#!/bin/sh\ncat >&2 <<'EOPROBE'\njava.version = 21.0.5\nEOPROBE\nexit 0\n");
@@ -159,7 +159,7 @@ public class JdkFinderProbeTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var home = CreateFakeHome(temp.FullPath, "17.0.5", "exit 0");
+        var home = CreateFakeHome(_temp.FullPath, "17.0.5", "exit 0");
 
         var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
         Assert.NotNull(executable);
@@ -182,7 +182,7 @@ public class JdkFinderProbeTests : IDisposable
 
         // An ancient runtime rejecting the option is a start failure, not a
         // compatibility case: the release metadata still stands in.
-        var home = CreateFakeHome(temp.FullPath, "21.0.5",
+        var home = CreateFakeHome(_temp.FullPath, "21.0.5",
             "echo 'Unrecognized option: -XshowSettings:properties' >&2\nexit 1");
 
         var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
@@ -199,7 +199,7 @@ public class JdkFinderProbeTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var home = CreateFakeHome(temp.FullPath, string.Empty, "echo 'total garbage' >&2\nexit 1",
+        var home = CreateFakeHome(_temp.FullPath, string.Empty, "echo 'total garbage' >&2\nexit 1",
             includeRelease: false);
 
         Assert.Null(new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName)));
@@ -211,7 +211,7 @@ public class JdkFinderProbeTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var home = CreateFakeHome(temp.FullPath, "17.0.5", "sleep 30");
+        var home = CreateFakeHome(_temp.FullPath, "17.0.5", "sleep 30");
 
         var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName),
             TimeSpan.FromMilliseconds(200));
@@ -224,7 +224,7 @@ public class JdkFinderProbeTests : IDisposable
     public async Task FromExecutableAsync_PreCancelledToken_Throws()
     {
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            new JdkFinder().FromExecutableAsync(Path.Combine(temp.FullPath, "any"), new CancellationToken(true)));
+            new JdkFinder().FromExecutableAsync(Path.Combine(_temp.FullPath, "any"), new CancellationToken(true)));
     }
 
     [Fact]
@@ -244,7 +244,7 @@ public class JdkFinderProbeTests : IDisposable
             return; // The fake java executable is a POSIX shell script.
 
         // A JDK 8 inner-JRE directory is itself a home; the factory keeps it.
-        var jre = Path.Combine(temp.FullPath, "bundled-jdk", "jre");
+        var jre = Path.Combine(_temp.FullPath, "bundled-jdk", "jre");
         Directory.CreateDirectory(Path.Combine(jre, "bin"));
         var java = Path.Combine(jre, "bin", JavaHomeLayout.JavaExecutableName);
         File.WriteAllText(java, "#!/bin/sh\nexit 0\n"); // Runs but reports nothing: degrade, not fail.
@@ -262,14 +262,14 @@ public class JdkFinderProbeTests : IDisposable
     [Fact]
     public async Task FromHomeAsync_MissingDirectory_ReturnsNull()
     {
-        Assert.Null(await new JdkFinder().FromHomeAsync(Path.Combine(temp.FullPath, "missing"),
+        Assert.Null(await new JdkFinder().FromHomeAsync(Path.Combine(_temp.FullPath, "missing"),
             TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public void FromHome_MissingDirectory_ReturnsNull()
     {
-        Assert.Null(new JdkFinder().FromHome(Path.Combine(temp.FullPath, "missing")));
+        Assert.Null(new JdkFinder().FromHome(Path.Combine(_temp.FullPath, "missing")));
     }
 
     [Fact]
@@ -312,5 +312,5 @@ public class JdkFinderProbeTests : IDisposable
         return home;
     }
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose() => _temp.Dispose();
 }

@@ -2,12 +2,12 @@ namespace JdkFind.Tests;
 
 public class JavaHomeLayoutTests : IDisposable
 {
-    private readonly TempDirectory temp = new();
+    private readonly TempDirectory _temp = new();
 
     [Fact]
     public void Probe_AcceptsPlainLayout()
     {
-        var home = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
 
         Assert.Equal(home, JavaHomeLayout.Probe(home));
     }
@@ -15,8 +15,8 @@ public class JavaHomeLayoutTests : IDisposable
     [Fact]
     public void Probe_AcceptsMacosBundleLayout()
     {
-        var home = TestJdk.Create(temp.FullPath, "21.0.5", "bundle.jdk", "Contents", "Home");
-        var bundle = Path.Combine(temp.FullPath, "bundle.jdk");
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "bundle.jdk", "Contents", "Home");
+        var bundle = Path.Combine(_temp.FullPath, "bundle.jdk");
 
         Assert.Equal(home, JavaHomeLayout.Probe(bundle));
     }
@@ -24,8 +24,8 @@ public class JavaHomeLayoutTests : IDisposable
     [Fact]
     public void Probe_AcceptsHomebrewKegLayout()
     {
-        var home = TestJdk.Create(temp.FullPath, "21.0.5", "keg", "libexec", "openjdk.jdk", "Contents", "Home");
-        var keg = Path.Combine(temp.FullPath, "keg");
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "keg", "libexec", "openjdk.jdk", "Contents", "Home");
+        var keg = Path.Combine(_temp.FullPath, "keg");
 
         Assert.Equal(home, JavaHomeLayout.Probe(keg));
     }
@@ -33,7 +33,7 @@ public class JavaHomeLayoutTests : IDisposable
     [Fact]
     public void Probe_RejectsIncompleteHomes()
     {
-        var root = temp.FullPath;
+        var root = _temp.FullPath;
 
         var javaOnly = Path.Combine(root, "java-only");
         Directory.CreateDirectory(Path.Combine(javaOnly, "bin"));
@@ -53,5 +53,5 @@ public class JavaHomeLayoutTests : IDisposable
         Assert.Null(JavaHomeLayout.Probe(string.Empty));
     }
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose() => _temp.Dispose();
 }

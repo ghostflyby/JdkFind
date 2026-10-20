@@ -2,12 +2,12 @@ namespace JdkFind.Tests;
 
 public class JvmResolveTests : IDisposable
 {
-    private readonly TempDirectory temp = new();
+    private readonly TempDirectory _temp = new();
 
     [Fact]
     public void Resolve_FindsBinExecutablesByName()
     {
-        var home = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         File.WriteAllText(Path.Combine(home, "bin", JavaHomeLayout.CompilerExecutableName), string.Empty);
         // A JDK 8 inner JRE must not shadow the top-level bin executable.
         Directory.CreateDirectory(Path.Combine(home, "jre", "bin"));
@@ -27,7 +27,7 @@ public class JvmResolveTests : IDisposable
     [Fact]
     public void Resolve_UnknownName_ReturnsNull()
     {
-        var jvm = TestJvm(TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21"));
+        var jvm = TestJvm(TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21"));
 
         Assert.Null(jvm.Resolve("keytool"));
     }
@@ -35,7 +35,7 @@ public class JvmResolveTests : IDisposable
     [Fact]
     public void Resolve_Jdk8InnerJreLayout_FallsBackToJreBin()
     {
-        var home = Path.Combine(temp.FullPath, "jdk-8");
+        var home = Path.Combine(_temp.FullPath, "jdk-8");
         Directory.CreateDirectory(Path.Combine(home, "jre", "bin"));
         File.WriteAllText(Path.Combine(home, "release"), "JAVA_VERSION=\"1.8.0_402\"");
         File.WriteAllText(Path.Combine(home, "jre", "bin", JavaHomeLayout.JavaExecutableName), string.Empty);
@@ -51,7 +51,7 @@ public class JvmResolveTests : IDisposable
     [Fact]
     public void Resolve_NonFileName_Throws()
     {
-        var home = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         var jvm = TestJvm(home);
 
         // ThrowIfNullOrWhiteSpace: null is ArgumentNullException, the rest ArgumentException.
@@ -76,5 +76,5 @@ public class JvmResolveTests : IDisposable
         Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"),
     };
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose() => _temp.Dispose();
 }

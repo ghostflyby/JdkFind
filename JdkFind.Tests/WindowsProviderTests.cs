@@ -11,7 +11,7 @@ namespace JdkFind.Tests;
 /// </summary>
 public class WindowsProviderTests : IDisposable
 {
-    private readonly TempDirectory temp = new();
+    private readonly TempDirectory _temp = new();
 
     [Fact]
     public void ProgramFiles_ScansVendorSubdirectories()
@@ -19,9 +19,9 @@ public class WindowsProviderTests : IDisposable
         if (!OperatingSystem.IsWindows())
             return;
 
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         // GetJavaHomes is a default interface member, reachable only through the SPI.
-        IJvmProvider source = new WindowsProgramFilesJvmProvider([temp.FullPath]);
+        IJvmProvider source = new WindowsProgramFilesJvmProvider([_temp.FullPath]);
 
         var home = Assert.Single(source.GetJavaHomes().ToList());
 
@@ -37,8 +37,8 @@ public class WindowsProviderTests : IDisposable
         if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
             return; // Writing HKLM keys requires elevation; GitHub Windows runners are elevated.
 
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "registry-jdk");
-        var stale = Path.Combine(temp.FullPath, "uninstalled");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "registry-jdk");
+        var stale = Path.Combine(_temp.FullPath, "uninstalled");
         var rootPath = $@"SOFTWARE\JdkFindTests\{Guid.NewGuid():N}";
 
         try
@@ -63,5 +63,5 @@ public class WindowsProviderTests : IDisposable
         }
     }
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose() => _temp.Dispose();
 }

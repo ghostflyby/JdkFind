@@ -2,7 +2,7 @@ namespace JdkFind.Tests;
 
 public class JvmRuntimeProbeTests : IDisposable
 {
-    private readonly TempDirectory temp = new();
+    private readonly TempDirectory _temp = new();
 
     [Fact]
     public void Probe_ReadsPropertiesFromTheJavaExecutable()
@@ -10,7 +10,7 @@ public class JvmRuntimeProbeTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var home = Path.Combine(temp.FullPath, "fake-jdk");
+        var home = Path.Combine(_temp.FullPath, "fake-jdk");
         Directory.CreateDirectory(Path.Combine(home, "bin"));
         var java = Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName);
         File.WriteAllText(java, """
@@ -40,8 +40,8 @@ public class JvmRuntimeProbeTests : IDisposable
     [Fact]
     public void Probe_MissingJava_ReturnsNull()
     {
-        Assert.Null(JvmRuntimeProbe.Probe(Path.Combine(temp.FullPath, "empty")));
+        Assert.Null(JvmRuntimeProbe.Probe(Path.Combine(_temp.FullPath, "empty")));
     }
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose() => _temp.Dispose();
 }

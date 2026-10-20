@@ -2,7 +2,7 @@ namespace JdkFind.Tests;
 
 public class ReleaseFileTests : IDisposable
 {
-    private readonly TempDirectory temp = new();
+    private readonly TempDirectory _temp = new();
 
     [Theory]
     [InlineData("21.0.5", 21)]
@@ -22,7 +22,7 @@ public class ReleaseFileTests : IDisposable
     [Fact]
     public void Parse_ReadsQuotedEntriesAndSkipsNoise()
     {
-        var releasePath = Path.Combine(temp.FullPath, "release");
+        var releasePath = Path.Combine(_temp.FullPath, "release");
         File.WriteAllLines(releasePath,
         [
             "# a comment",
@@ -41,5 +41,5 @@ public class ReleaseFileTests : IDisposable
         Assert.False(release.ContainsKey("malformed-line"));
     }
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose() => _temp.Dispose();
 }

@@ -28,7 +28,7 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
         (@"SOFTWARE\BellSoft", 3),
     ];
 
-    private readonly (string Path, int Depth)[] roots;
+    private readonly (string Path, int Depth)[] _roots;
 
     /// <summary>Scans the vendor roots known to publish <c>JavaHome</c> values.</summary>
     public WindowsRegistryJvmProvider() : this(DefaultRoots) { }
@@ -38,7 +38,7 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
     public WindowsRegistryJvmProvider(string rootPath, int subKeyDepth)
         : this([(rootPath, subKeyDepth)]) { }
 
-    private WindowsRegistryJvmProvider((string Path, int Depth)[] roots) => this.roots = roots;
+    private WindowsRegistryJvmProvider((string Path, int Depth)[] roots) => _roots = roots;
 
     /// <inheritdoc />
     public string Name => "windows-registry";
@@ -58,7 +58,7 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
             foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
             {
                 using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view);
-                foreach (var (rootPath, depth) in roots)
+                foreach (var (rootPath, depth) in _roots)
                 {
                     using var root = baseKey.OpenSubKey(rootPath);
                     if (root is not null)

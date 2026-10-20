@@ -5,7 +5,7 @@ namespace JdkFind.Tests;
 
 public class JdkFinderTests : IDisposable
 {
-    private readonly TempDirectory temp = new();
+    private readonly TempDirectory _temp = new();
 
     private sealed class StubJvmProvider(string name, params string[] homes) : IJvmProvider
     {
@@ -17,7 +17,7 @@ public class JdkFinderTests : IDisposable
     [Fact]
     public void Locate_EnrichesMetadataFromReleaseFile()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         var finder = new JdkFinder { Providers = [new StubJvmProvider("stub", jdk)] };
 
         var jvms = finder.Locate().ToList();
@@ -36,7 +36,7 @@ public class JdkFinderTests : IDisposable
     [Fact]
     public void Locate_DeduplicatesAndMergesAllSources()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("first", jdk), new StubJvmProvider("second", jdk)],
@@ -51,7 +51,7 @@ public class JdkFinderTests : IDisposable
     [Fact]
     public void Locate_RepeatedCandidatesFromOneSource_RecordTheNameOnce()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         var finder = new JdkFinder { Providers = [new StubJvmProvider("dup", jdk, jdk)] };
 
         var jvms = finder.Locate().ToList();
@@ -63,7 +63,7 @@ public class JdkFinderTests : IDisposable
     [Fact]
     public void Locate_CanDisableDeduplication()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("first", jdk), new StubJvmProvider("second", jdk)],
@@ -81,9 +81,9 @@ public class JdkFinderTests : IDisposable
     [Fact]
     public void Locate_PreservesFirstDiscoveryOrderAcrossProviders()
     {
-        var a = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "a");
-        var b = TestJdk.Create(temp.FullPath, "17.0.2", "jdks", "b");
-        var c = TestJdk.Create(temp.FullPath, "11", "jdks", "c");
+        var a = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "a");
+        var b = TestJdk.Create(_temp.FullPath, "17.0.2", "jdks", "b");
+        var c = TestJdk.Create(_temp.FullPath, "11", "jdks", "c");
         var finder = new JdkFinder
         {
             // Interleaved and repeated candidates: p1=[a,b,a], p2=[b,c], p3=[a].
@@ -106,7 +106,7 @@ public class JdkFinderTests : IDisposable
     [Fact]
     public void Locate_SameNameAcrossProviderInstances_RecordsTheNameOnce()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdk-21");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("x", jdk), new StubJvmProvider("x", jdk), new StubJvmProvider("y", jdk)],
@@ -124,7 +124,7 @@ public class JdkFinderTests : IDisposable
         if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsWindows())
             return;
 
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "Jdk-21");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "Jdk-21");
         var upper = jdk.ToUpperInvariant();
         if (upper == jdk)
             return;
@@ -141,8 +141,8 @@ public class JdkFinderTests : IDisposable
     public void Locate_UnparseableVersion_SortsAsUnknownWithoutLosingTheJvm()
     {
         // An exotic JAVA_VERSION must not lose the JVM — it just sorts as unknown.
-        var exotic = TestJdk.Create(temp.FullPath, "unknown", "jdks", "exotic");
-        var jdk21 = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
+        var exotic = TestJdk.Create(_temp.FullPath, "unknown", "jdks", "exotic");
+        var jdk21 = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk21");
         var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("stub", exotic, jdk21)],
@@ -157,7 +157,7 @@ public class JdkFinderTests : IDisposable
     [Fact]
     public void Locate_ComputesVendorAndDistribution()
     {
-        var jdk = TestJdk.CreateWithImplementor(temp.FullPath, "21.0.5", "Eclipse Adoptium", "jdks", "adoptium");
+        var jdk = TestJdk.CreateWithImplementor(_temp.FullPath, "21.0.5", "Eclipse Adoptium", "jdks", "adoptium");
         var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("stub", jdk)],
@@ -178,8 +178,8 @@ public class JdkFinderTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var slow1 = TestJdk.CreateSlowProbe(temp.FullPath, "21.0.5", "jdks", "slow1");
-        var slow2 = TestJdk.CreateSlowProbe(temp.FullPath, "17.0.2", "jdks", "slow2");
+        var slow1 = TestJdk.CreateSlowProbe(_temp.FullPath, "21.0.5", "jdks", "slow1");
+        var slow2 = TestJdk.CreateSlowProbe(_temp.FullPath, "17.0.2", "jdks", "slow2");
         var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("stub", slow1, slow2)],
@@ -198,9 +198,9 @@ public class JdkFinderTests : IDisposable
     [Fact]
     public void Locate_FlagsCompilerInstallations()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
         File.WriteAllText(Path.Combine(jdk, "bin", JavaHomeLayout.CompilerExecutableName), string.Empty);
-        var runtime = TestJdk.Create(temp.FullPath, "1.8.0_402", "jdks", "jre");
+        var runtime = TestJdk.Create(_temp.FullPath, "1.8.0_402", "jdks", "jre");
         var finder = new JdkFinder
         {
             Providers = [new StubJvmProvider("stub", jdk, runtime)],
@@ -217,7 +217,7 @@ public class JdkFinderTests : IDisposable
     [Fact]
     public void Locate_MissingReleaseFile_IsSkipped()
     {
-        var broken = Path.Combine(temp.FullPath, "broken");
+        var broken = Path.Combine(_temp.FullPath, "broken");
         Directory.CreateDirectory(Path.Combine(broken, "bin"));
         File.WriteAllText(Path.Combine(broken, "bin", JavaHomeLayout.JavaExecutableName), string.Empty);
         var finder = new JdkFinder { Providers = [new StubJvmProvider("stub", broken)] };
@@ -231,7 +231,7 @@ public class JdkFinderTests : IDisposable
         if (OperatingSystem.IsWindows() || Environment.UserName == "root")
             return; // Unix permission semantics; chmod has no effect when running as root.
 
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "locked-jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "locked-jdk");
         File.SetUnixFileMode(Path.Combine(jdk, "release"), UnixFileMode.None);
         var finder = new JdkFinder { Providers = [new StubJvmProvider("stub", jdk)] };
 
@@ -245,8 +245,8 @@ public class JdkFinderTests : IDisposable
         if (OperatingSystem.IsWindows() || Environment.UserName == "root")
             return;
 
-        TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "good");
-        var locked = Path.Combine(temp.FullPath, "locked-prefix");
+        TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "good");
+        var locked = Path.Combine(_temp.FullPath, "locked-prefix");
         Directory.CreateDirectory(locked);
         File.SetUnixFileMode(locked, UnixFileMode.None);
         try
@@ -273,5 +273,5 @@ public class JdkFinderTests : IDisposable
         Assert.Equal(expected, JdkFinder.Default.Providers.Select(p => p.Name).ToArray());
     }
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose() => _temp.Dispose();
 }
