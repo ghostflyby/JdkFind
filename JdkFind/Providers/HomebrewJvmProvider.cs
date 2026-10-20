@@ -11,7 +11,7 @@ public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : ICommonP
     /// <inheritdoc />
     public string Name => "homebrew";
 
-    private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
+    private readonly string[] _prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
     /// <summary>Scans the conventional Homebrew prefixes and <c>HOMEBREW_PREFIX</c>.</summary>
     public HomebrewJvmProvider() : this(ResolveDefaultPrefixes()) { }
@@ -19,7 +19,7 @@ public sealed class HomebrewJvmProvider(IEnumerable<string> prefixes) : ICommonP
     string ICommonPrefixesJvmProvider.SearchPattern => "openjdk*";
 
     IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() =>
-        prefixList.Select(prefix => Path.Combine(prefix, "opt"));
+        _prefixList.Select(prefix => Path.Combine(prefix, "opt"));
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {

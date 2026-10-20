@@ -11,13 +11,13 @@ public sealed class ScoopJvmProvider(IEnumerable<string> prefixes) : ICommonPref
     /// <inheritdoc />
     public string Name => "scoop";
 
-    private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
+    private readonly string[] _prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
     /// <summary>Scans the <c>SCOOP</c>/<c>SCOOP_GLOBAL</c> locations, or the default per-user install.</summary>
     public ScoopJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
     IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() =>
-        prefixList.SelectMany(prefix => JvmScanning.EnumerateGuarded(Path.Combine(prefix, "apps")));
+        _prefixList.SelectMany(prefix => JvmScanning.EnumerateGuarded(Path.Combine(prefix, "apps")));
 
     string? ICommonPrefixesJvmProvider.GetJavaHome(string subDirectory) =>
         string.Equals(Path.GetFileName(subDirectory), "current", StringComparison.OrdinalIgnoreCase)

@@ -10,7 +10,7 @@ public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes)
     /// <inheritdoc />
     public string Name => "windows-programs";
 
-    private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
+    private readonly string[] _prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
     private static readonly string[] SourceArray =
     [
@@ -26,7 +26,7 @@ public sealed class WindowsProgramFilesJvmProvider(IEnumerable<string> prefixes)
     /// <summary>Scans the vendor directories under <c>%ProgramFiles%</c>.</summary>
     public WindowsProgramFilesJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
-    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => prefixList;
+    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => _prefixList;
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {

@@ -9,7 +9,7 @@ namespace JdkFind.Tests;
 /// </summary>
 public class CommandLineIntegrationTests : IDisposable
 {
-    private readonly TempDirectory temp = new();
+    private readonly TempDirectory _temp = new();
 
     private sealed class StubJvmProvider(string name, params string[] homes) : IJvmProvider
     {
@@ -44,7 +44,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void DefaultCommand_PrintsSelectedHomeOnStdout()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         var (exitCode, stdout, stderr) = RunCli([], StubFinder(jdk));
 
@@ -56,8 +56,8 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void VersionPositional_SelectsTheMatchingInstallation()
     {
-        var jdk21 = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk21");
-        var jdk17 = TestJdk.Create(temp.FullPath, "17.0.2", "jdks", "jdk17");
+        var jdk21 = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk21");
+        var jdk17 = TestJdk.Create(_temp.FullPath, "17.0.2", "jdks", "jdk17");
 
         var (_, stdout, _) = RunCli(["21"], StubFinder(jdk21, jdk17));
 
@@ -67,7 +67,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void ToolPositional_PrintsTheBinExecutablePath()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         var (_, stdout, _) = RunCli(["21", "java"], StubFinder(jdk));
 
@@ -77,7 +77,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void InfoCommand_WritesDetailsToStderr_KeepsStdoutEmpty()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         var (exitCode, stdout, stderr) = RunCli(["info"], StubFinder(jdk));
 
@@ -91,7 +91,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void ListCommand_WritesTableToStderr_KeepsStdoutEmpty()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         var (exitCode, stdout, stderr) = RunCli(["list"], StubFinder(jdk));
 
@@ -104,7 +104,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void JsonCommand_WritesSingleObjectToStdout()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         var (exitCode, stdout, stderr) = RunCli(["--json"], StubFinder(jdk));
 
@@ -117,7 +117,7 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void ListJson_WritesAnArrayToStdout()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         var (_, stdout, _) = RunCli(["list", "--json"], StubFinder(jdk));
 
@@ -192,9 +192,9 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void JdkOnly_DropsRuntimeOnlyInstallations()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
         File.WriteAllText(Path.Combine(jdk, "bin", JavaHomeLayout.CompilerExecutableName), string.Empty);
-        var runtime = TestJdk.Create(temp.FullPath, "17.0.2", "jdks", "jre");
+        var runtime = TestJdk.Create(_temp.FullPath, "17.0.2", "jdks", "jre");
         var finder = StubFinder(jdk, runtime);
 
         var jdkOnly = RunCli(["--jdk-only"], finder);
@@ -214,12 +214,12 @@ public class CommandLineIntegrationTests : IDisposable
     [Fact]
     public void VendorFilter_HitsDisplayAndRawSurfaces()
     {
-        var jdk = TestJdk.CreateWithImplementor(temp.FullPath, "21.0.5", "Azul Systems, Inc.", "jdks", "azul");
+        var jdk = TestJdk.CreateWithImplementor(_temp.FullPath, "21.0.5", "Azul Systems, Inc.", "jdks", "azul");
         var finder = StubFinder(jdk);
 
         Assert.Equal(0, RunCli(["--vendor", "azul"], finder).ExitCode);
         Assert.Equal(1, RunCli(["--vendor", "nomatch"], finder).ExitCode);
     }
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose() => _temp.Dispose();
 }

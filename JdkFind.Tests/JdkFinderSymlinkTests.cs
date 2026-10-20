@@ -2,7 +2,7 @@ namespace JdkFind.Tests;
 
 public class JdkFinderSymlinkTests : IDisposable
 {
-    private readonly TempDirectory temp = new();
+    private readonly TempDirectory _temp = new();
 
     private sealed class StubJvmProvider(string name, params string[] homes) : IJvmProvider
     {
@@ -17,9 +17,9 @@ public class JdkFinderSymlinkTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // Creating symbolic links requires privileges on Windows; POSIX only.
 
-        var real = TestJdk.Create(temp.FullPath, "21.0.5", "real-jdk");
-        var link = Path.Combine(temp.FullPath, "link-jdk");
-        Directory.CreateSymbolicLink(link, Path.GetRelativePath(temp.FullPath, real));
+        var real = TestJdk.Create(_temp.FullPath, "21.0.5", "real-jdk");
+        var link = Path.Combine(_temp.FullPath, "link-jdk");
+        Directory.CreateSymbolicLink(link, Path.GetRelativePath(_temp.FullPath, real));
 
         Assert.Equal(JdkFinder.ResolveSymlinks(real), JdkFinder.ResolveSymlinks(link));
     }
@@ -30,8 +30,8 @@ public class JdkFinderSymlinkTests : IDisposable
         if (OperatingSystem.IsWindows())
             return;
 
-        var real = TestJdk.Create(temp.FullPath, "21.0.5", "real-jdk");
-        var link = Path.Combine(temp.FullPath, "link-jdk");
+        var real = TestJdk.Create(_temp.FullPath, "21.0.5", "real-jdk");
+        var link = Path.Combine(_temp.FullPath, "link-jdk");
         Directory.CreateSymbolicLink(link, real);
 
         var finder = new JdkFinder
@@ -49,8 +49,8 @@ public class JdkFinderSymlinkTests : IDisposable
         if (OperatingSystem.IsWindows())
             return;
 
-        var a = Path.Combine(temp.FullPath, "loop-a");
-        var b = Path.Combine(temp.FullPath, "loop-b");
+        var a = Path.Combine(_temp.FullPath, "loop-a");
+        var b = Path.Combine(_temp.FullPath, "loop-b");
         Directory.CreateSymbolicLink(a, b);
         Directory.CreateSymbolicLink(b, a);
 
@@ -64,8 +64,8 @@ public class JdkFinderSymlinkTests : IDisposable
         if (OperatingSystem.IsWindows())
             return;
 
-        var link = Path.Combine(temp.FullPath, "dangling");
-        Directory.CreateSymbolicLink(link, Path.Combine(temp.FullPath, "missing"));
+        var link = Path.Combine(_temp.FullPath, "dangling");
+        Directory.CreateSymbolicLink(link, Path.Combine(_temp.FullPath, "missing"));
 
         Assert.NotEmpty(JdkFinder.ResolveSymlinks(link));
     }
@@ -73,11 +73,11 @@ public class JdkFinderSymlinkTests : IDisposable
     [Fact]
     public void ResolveSymlinks_CanonicalizesNonExistentPathsToo()
     {
-        var missing = Path.Combine(temp.FullPath, "not-there", "jdk");
+        var missing = Path.Combine(_temp.FullPath, "not-there", "jdk");
 
         // Prefix symlinks like macOS /var -> /private/var still expand; assert the tail is unchanged.
         Assert.EndsWith(Path.Combine("not-there", "jdk"), JdkFinder.ResolveSymlinks(missing));
     }
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose() => _temp.Dispose();
 }

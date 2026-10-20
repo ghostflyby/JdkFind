@@ -22,7 +22,8 @@ public sealed class SdkmanJvmProvider(string? commonPrefix) : ICommonPrefixJvmPr
             return Path.Combine(candidates, "java");
 
         var sdkmanDir = Environment.GetEnvironmentVariable("SDKMAN_DIR");
-        if (!string.IsNullOrWhiteSpace(sdkmanDir)) return Path.Combine(sdkmanDir, "candidates", "java");
+        if (!string.IsNullOrWhiteSpace(sdkmanDir))
+            return Path.Combine(sdkmanDir, "candidates", "java");
         var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (string.IsNullOrEmpty(profile))
             return null;

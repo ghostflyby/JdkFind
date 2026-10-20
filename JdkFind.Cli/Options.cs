@@ -39,22 +39,22 @@ internal sealed class Options
                                            run mode adds 126/127 when the command cannot be executed or is not found
                                            """;
 
-    private readonly ParseResult parseResult;
-    private readonly CommandTree tree;
-    private readonly VersionOption versionOption;
+    private readonly ParseResult _parseResult;
+    private readonly CommandTree _tree;
+    private readonly VersionOption _versionOption;
 
     private Options(ParseResult parseResult, CommandTree tree, VersionOption versionOption)
     {
-        this.parseResult = parseResult;
-        this.tree = tree;
-        this.versionOption = versionOption;
+        _parseResult = parseResult;
+        _tree = tree;
+        _versionOption = versionOption;
     }
 
     /// <summary>True when the framework's help action was requested (-h/--help).</summary>
-    internal bool ShowHelp => parseResult.Action is HelpAction;
+    internal bool ShowHelp => _parseResult.Action is HelpAction;
 
     /// <summary>True when the framework's version action was requested (--version).</summary>
-    internal bool ShowVersion => parseResult.GetResult(versionOption) is not null;
+    internal bool ShowVersion => _parseResult.GetResult(_versionOption) is not null;
 
     internal SubCommand Command { get; private set; }
 
@@ -279,7 +279,7 @@ internal sealed class Options
 
     /// <summary>Prints the framework-generated help or version output to stdout;
     /// only meaningful when ShowHelp or ShowVersion is true.</summary>
-    internal int RenderFrameworkOutput() => parseResult.Invoke(new InvocationConfiguration());
+    internal int RenderFrameworkOutput() => _parseResult.Invoke(new InvocationConfiguration());
 
     /// <summary>
     ///     Binds the run execution to the parsed commands — the framework's
@@ -292,11 +292,11 @@ internal sealed class Options
     {
         Task<int> Action(ParseResult _, CancellationToken cancellationToken) => execute(cancellationToken);
 
-        tree.Root.SetAction(Action);
-        tree.Info.SetAction(Action);
-        tree.List.SetAction(Action);
+        _tree.Root.SetAction(Action);
+        _tree.Info.SetAction(Action);
+        _tree.List.SetAction(Action);
 
-        return parseResult.InvokeAsync(new InvocationConfiguration());
+        return _parseResult.InvokeAsync(new InvocationConfiguration());
     }
 
     private static void ParsePositional(Options options, string arg)

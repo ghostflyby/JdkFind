@@ -7,7 +7,7 @@ namespace JdkFind.Tests;
 /// </summary>
 public class JdkFinderAsyncTests : IDisposable
 {
-    private readonly TempDirectory temp = new();
+    private readonly TempDirectory _temp = new();
 
     private sealed class StubJvmProvider(string name, params string[] homes) : IJvmProvider
     {
@@ -24,7 +24,7 @@ public class JdkFinderAsyncTests : IDisposable
     [Fact]
     public async Task LocateAsync_MatchesTheSyncPipeline()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
         var finder = StubFinder(jdk);
 
         var located = await finder.LocateAsync(TestContext.Current.CancellationToken);
@@ -46,7 +46,7 @@ public class JdkFinderAsyncTests : IDisposable
     [Fact]
     public async Task ProbeAsync_PreCancelledToken_Throws()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => JvmRuntimeProbe.ProbeAsync(jdk, Cancelled));
     }
@@ -60,7 +60,7 @@ public class JdkFinderAsyncTests : IDisposable
         if (OperatingSystem.IsWindows())
             return;
 
-        var home = Path.Combine(temp.FullPath, "scripted");
+        var home = Path.Combine(_temp.FullPath, "scripted");
         Directory.CreateDirectory(Path.Combine(home, "bin"));
         await File.WriteAllTextAsync(Path.Combine(home, "release"), "JAVA_VERSION=\"21.0.5\"\n", TestContext.Current.CancellationToken);
         var java = Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName);
@@ -87,7 +87,7 @@ public class JdkFinderAsyncTests : IDisposable
     {
         // The fixture's bin/java is a text file: spawning it fails and the probe
         // degrades silently, with and without a live cancellation token.
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         Assert.Null(await JvmRuntimeProbe.ProbeAsync(jdk, CancellationToken.None));
     }
@@ -95,11 +95,11 @@ public class JdkFinderAsyncTests : IDisposable
     [Fact]
     public async Task ReleaseFileParse_PreCancelledToken_Throws()
     {
-        var jdk = TestJdk.Create(temp.FullPath, "21.0.5", "jdks", "jdk");
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
             Task.Run(() => ReleaseFile.Parse(Path.Combine(jdk, "release"), Cancelled)));
     }
 
-    public void Dispose() => temp.Dispose();
+    public void Dispose() => _temp.Dispose();
 }

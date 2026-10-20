@@ -11,12 +11,12 @@ public sealed class MacOsJvmProvider(IEnumerable<string> prefixes) : ICommonPref
     /// <inheritdoc />
     public string Name => "macos";
 
-    private readonly string[] prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
+    private readonly string[] _prefixList = [.. prefixes.Where(p => !string.IsNullOrWhiteSpace(p))];
 
     /// <summary>Scans the system-wide and per-user macOS JVM directories.</summary>
     public MacOsJvmProvider() : this(ResolveDefaultPrefixes()) { }
 
-    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => prefixList;
+    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() => _prefixList;
 
     private static IEnumerable<string> ResolveDefaultPrefixes()
     {
