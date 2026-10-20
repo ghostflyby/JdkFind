@@ -36,7 +36,9 @@ public sealed class WindowsRegistryJvmProvider : IJvmProvider
     /// <summary>Scans a single explicit registry root (relative to HKLM's 64-bit view)
     /// down to <paramref name="subKeyDepth" /> subkey levels.</summary>
     public WindowsRegistryJvmProvider(string rootPath, int subKeyDepth)
-        : this([(rootPath, subKeyDepth)]) { }
+        : this([(rootPath, subKeyDepth)])
+    {
+    }
 
     private WindowsRegistryJvmProvider((string Path, int Depth)[] roots) => _roots = roots;
 
