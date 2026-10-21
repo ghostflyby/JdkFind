@@ -4,21 +4,24 @@ using System.Text;
 namespace JdkFind;
 
 /// <summary>
-///     A parsed <c>JAVA_VERSION</c> value that compares the way JDK releases do:
-///     numeric components first (up to four; missing components are zero), then a
-///     release beats a pre-release build of the same number, then the remaining
-///     build number and optional tag compare in natural order, so <c>21.0.5+10</c>
-///     outranks <c>21.0.5+9-LTS</c>. Unparseable values sort before every parsed
-///     version and compare naturally among themselves. Note this is not SemVer —
-///     real JDK versions like <c>21.0.12.1</c> and <c>1.8.0_402</c> are outside the
-///     SemVer grammar.
+///     A parsed <c>JAVA_VERSION</c> value that orders JDK installations the way
+///     releases do: numeric components first (missing ones zero), then a release
+///     beats a pre-release build of the same number, then the remaining components
+///     and the build/tag tail decide. That tail compares naturally — digit runs as
+///     numbers, text case-insensitively — rather than by the JDK's own ordinal rule,
+///     so <c>21.0.5+10</c> outranks <c>21.0.5+9-LTS</c>. Unparseable values sort
+///     before every parsed version and compare naturally among themselves. Note this
+///     is not SemVer — real JDK versions like <c>21.0.12.1</c> and <c>1.8.0_402</c>
+///     are outside the SemVer grammar.
 /// </summary>
 public readonly record struct JvmVersion : IComparable<JvmVersion>,
     IComparisonOperators<JvmVersion, JvmVersion, bool>
 {
-    /// <summary>The normalized numeric version: four components, missing ones zero,
-    /// so <c>17.0.2</c> and <c>17.0.2.0</c> are the same version. A default-constructed
-    /// or unparseable value reports the zero version.</summary>
+    /// <summary>The first four numeric components, missing ones zero, so <c>17.0.2</c>
+    /// and <c>17.0.2.0</c> are the same version. A fifth and further component — as
+    /// GraalVM writes, <c>25.0.4.1.1</c> — has no place in a <see cref="Version" /> and
+    /// keeps counting inside the comparison tail. A default-constructed or
+    /// unparseable value reports the zero version.</summary>
     public Version Core => _core ?? Zero;
 
     /// <summary>True when the value carried a pre-release tag before its build number
@@ -27,13 +30,17 @@ public readonly record struct JvmVersion : IComparable<JvmVersion>,
     /// build markers (<c>1.8.0_402-b10</c>).</summary>
     public bool IsPreRelease { get; }
 
-    /// <summary>The raw <c>JAVA_VERSION</c> string as found in the release file.</summary>
-    public string Original { get; }
+    /// <summary>The raw <c>JAVA_VERSION</c> string as found in the release file;
+    /// empty for a default-constructed or unparseable value.</summary>
+    public string Original => _original ?? string.Empty;
 
     private readonly Version? _core;
 
-    /// <summary>The canonical comparison tail: the text from the first <c>-</c> or
-    /// <c>+</c> onwards, or the canonical raw string for an unparseable value.</summary>
+    private readonly string? _original;
+
+    /// <summary>The canonical comparison tail: the numeric components past the fourth
+    /// followed by the text from the first <c>-</c> or <c>+</c> onwards, or the
+    /// canonical raw string for an unparseable value.</summary>
     private readonly string _suffix;
 
     private readonly bool _unparsed;
@@ -46,7 +53,7 @@ public readonly record struct JvmVersion : IComparable<JvmVersion>,
         IsPreRelease = isPreRelease;
         _suffix = Normalize(suffix);
         _unparsed = unparsed;
-        Original = original;
+        _original = original;
     }
 
     /// <summary>The comparison tail; empty when the value carries none.</summary>
@@ -57,27 +64,53 @@ public readonly record struct JvmVersion : IComparable<JvmVersion>,
     private bool IsUnparsed => _unparsed || _core is null;
 
     /// <summary>Parses a raw <c>JAVA_VERSION</c> value (<c>21.0.5</c>, <c>1.8.0_402</c>,
-    /// <c>25-ea</c>, <c>21.0.5+9-LTS</c>, <c>27</c>, ...).</summary>
+    /// <c>25-ea</c>, <c>21.0.5+9-LTS</c>, <c>25.0.4.1.1</c>, <c>27</c>, ...).</summary>
     public static bool TryParse(string? javaVersion, out JvmVersion version)
     {
         version = default;
         if (string.IsNullOrWhiteSpace(javaVersion))
             return false;
 
-        // JEP 223: $VNUM(-$PRE)?(+$BUILD(-$OPT)?)? — the numeric core ends at the
+        // JEP 223: $VNUM(-$PRE)?(+$BUILD(-$OPT)?)? — the numeric part ends at the
         // first '-' or '+' (a -1 index means that separator is absent); the rest is
         // the comparison tail.
         var dash = javaVersion.IndexOf('-');
         var plus = javaVersion.IndexOf('+');
         var separator = dash < 0 || plus < 0 ? Math.Max(dash, plus) : Math.Min(dash, plus);
-        var head = (separator < 0 ? javaVersion : javaVersion[..separator]).Replace('_', '.');
+        var numeric = (separator < 0 ? javaVersion : javaVersion[..separator]).Replace('_', '.');
         var suffix = separator < 0 ? string.Empty : javaVersion[separator..];
 
-        // System.Version requires at least two segments; pad "27" to "27.0".
-        if (!head.Contains('.'))
-            head += ".0";
+        // $VNUM may carry any number of components, but System.Version holds four;
+        // components past the fourth keep counting in the comparison tail, so
+        // GraalVM's 25.0.4.1.1 stays a parsed, ordered version.
+        var segments = numeric.Split('.');
+        if (segments.Length > 4)
+        {
+            var extra = new StringBuilder();
+            var last = segments.Length - 1;
 
-        if (!Version.TryParse(head, out var parsed))
+            // Zero components past the fourth are the zero-fill of missing ones:
+            // 25.0.4.1.0 is 25.0.4.1.
+            while (last >= 4 && IsZeroComponent(segments[last]))
+                last--;
+
+            for (var index = 4; index <= last; index++)
+            {
+                if (!IsDigits(segments[index]))
+                    return false;
+
+                extra.Append('.').Append(segments[index]);
+            }
+
+            numeric = string.Join('.', segments, 0, 4);
+            suffix = extra + suffix;
+        }
+
+        // System.Version requires at least two segments; pad "27" to "27.0".
+        if (!numeric.Contains('.'))
+            numeric += ".0";
+
+        if (!Version.TryParse(numeric, out var parsed))
             return false;
 
         // Missing components are zero: System.Version's -1 for an absent build or
@@ -98,7 +131,8 @@ public readonly record struct JvmVersion : IComparable<JvmVersion>,
         TryParse(javaVersion, out var version) ? version : Unknown(javaVersion ?? string.Empty);
 
     /// <summary>A placeholder for unparseable values; it sorts before every parsed
-    /// version and compares naturally against other placeholders by its raw string.</summary>
+    /// version and compares naturally against other placeholders by its canonicalized
+    /// string.</summary>
     public static JvmVersion Unknown(string original = "") => new(Zero, false, original, unparsed: true, original);
 
     /// <summary>Compares by numeric core, then by release stage, then by the build
@@ -144,9 +178,10 @@ public readonly record struct JvmVersion : IComparable<JvmVersion>,
     public override string ToString() => Original;
 
     /// <summary>Indicates whether two values describe the same version: same numeric
-    /// core, same release stage and the same build/tag tail — so <c>17.0.2</c> equals
-    /// <c>17.0.2.0</c> and <c>21.0.5+9-LTS</c> equals <c>21.0.5+9-lts</c>. Unparseable
-    /// values are equal when their raw strings match.</summary>
+    /// core, same release stage and the same canonicalized build/tag tail — so
+    /// <c>17.0.2</c> equals <c>17.0.2.0</c> and <c>21.0.5+9-LTS</c> equals
+    /// <c>21.0.5+9-lts</c>. Unparseable values are equal when their canonicalized
+    /// strings match.</summary>
     public bool Equals(JvmVersion other) =>
         IsUnparsed == other.IsUnparsed &&
         IsPreRelease == other.IsPreRelease &&
@@ -172,6 +207,34 @@ public readonly record struct JvmVersion : IComparable<JvmVersion>,
         for (var index = start + 1; index < end; index++)
         {
             if (!char.IsAsciiDigit(value[index]))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsDigits(string segment)
+    {
+        if (segment.Length == 0)
+            return false;
+
+        foreach (var character in segment)
+        {
+            if (!char.IsAsciiDigit(character))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsZeroComponent(string segment)
+    {
+        if (segment.Length == 0)
+            return false;
+
+        foreach (var character in segment)
+        {
+            if (character != '0')
                 return false;
         }
 

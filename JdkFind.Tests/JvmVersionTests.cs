@@ -11,6 +11,10 @@ public class JvmVersionTests
     [InlineData("21.0.5+9-LTS", "21.0.5.0")]
     [InlineData("25-ea", "25.0.0.0")]
     [InlineData("27", "27.0.0.0")]
+    // GraalVM writes five components; the fifth has no place in System.Version and
+    // keeps counting in the comparison tail.
+    [InlineData("25.0.4.1.1", "25.0.4.1")]
+    [InlineData("25.0.4.1.1+1-jvmci-25.4-b23", "25.0.4.1")]
     public void TryParse_ParsesCoreVersion(string javaVersion, string expectedCore)
     {
         Assert.True(JvmVersion.TryParse(javaVersion, out var version));
@@ -130,6 +134,42 @@ public class JvmVersionTests
     public void Compare_OrdersDottedBuildSuffixesNaturally() =>
         Assert.True(Parse("21.0.2+13.1") < Parse("21.0.2+13.2"));
 
+    // GraalVM's five-component versions must stay parsed and ordered, not degrade
+    // to Unknown. The fifth component outranks the build number, as in the JDK.
+    [Fact]
+    public void Compare_OrdersFifthComponentAboveBuildNumber() =>
+        Assert.True(Parse("25.0.4.1.1") > Parse("25.0.4.1+1"));
+
+    [Fact]
+    public void Compare_OrdersFifthComponentAboveItsFourComponentPrefix() =>
+        Assert.True(Parse("25.0.4.1.1") > Parse("25.0.4.1"));
+
+    [Fact]
+    public void Compare_OrdersFifthComponentBelowNextFourthComponent() =>
+        Assert.True(Parse("25.0.4.1.1") < Parse("25.0.4.2"));
+
+    [Fact]
+    public void Compare_OrdersFifthComponentsNaturally() =>
+        Assert.True(Parse("25.0.4.1.2") > Parse("25.0.4.1.1"));
+
+    [Fact]
+    public void Compare_TreatsTrailingZeroComponentsAsAbsent() =>
+        Assert.Equal(0, Parse("25.0.4.1.0").CompareTo(Parse("25.0.4.1")));
+
+    [Fact]
+    public void Compare_OrdersGraalVmAboveEveryFourComponentRival() =>
+        Assert.True(Parse("25.0.4.1.1") > Parse("21.0.12.1"));
+
+    [Fact]
+    public void TryParse_FiveComponentWithBuildAndTag_KeepsThemOrdered()
+    {
+        var version = Parse("25.0.4.1.1+1-jvmci-25.4-b23");
+
+        Assert.False(version.IsPreRelease);
+        Assert.True(version > Parse("25.0.4.1.1"));
+        Assert.True(version < Parse("25.0.4.1.2"));
+    }
+
     // Same build number, one form carries a tag: the plain form orders first.
     [Fact]
     public void Compare_OrdersPlainBuildBeforeItsTaggedForm() =>
@@ -163,6 +203,75 @@ public class JvmVersionTests
     [Fact]
     public void Equals_FoldsTheSuffixCase() =>
         Assert.Equal(Parse("21.0.5+9-LTS"), Parse("21.0.5+9-lts"));
+
+    [Fact]
+    public void Equals_UnparseableValuesFoldTheSameWay()
+    {
+        Assert.Equal(JvmVersion.Unknown("B10"), JvmVersion.Unknown("b10"));
+        Assert.Equal(JvmVersion.Unknown("b010"), JvmVersion.Unknown("b10"));
+        Assert.NotEqual(JvmVersion.Unknown("b10"), JvmVersion.Unknown("b11"));
+    }
+
+    // CompareTo == 0 must imply equal hash codes, or the type breaks as a
+    // dictionary or set key.
+    [Fact]
+    public void GetHashCode_AgreesWithEquality()
+    {
+        foreach (var (left, right) in new[]
+                 {
+                     ("17.0.2", "17.0.2.0"),
+                     ("21.0.5+9-LTS", "21.0.5+9-lts"),
+                     ("21.0.5+09", "21.0.5+9"),
+                 })
+        {
+            var x = Parse(left);
+            var y = Parse(right);
+
+            Assert.Equal(0, x.CompareTo(y));
+            Assert.Equal(x.GetHashCode(), y.GetHashCode());
+        }
+
+        Assert.Equal(JvmVersion.Unknown("B10").GetHashCode(), JvmVersion.Unknown("b10").GetHashCode());
+    }
+
+    [Fact]
+    public void Core_UnparsedAndDefaultValues_ReportTheZeroVersion()
+    {
+        var zero = new Version(0, 0, 0, 0);
+
+        Assert.Equal(zero, JvmVersion.Unknown("x").Core);
+        Assert.Equal(zero, JvmVersion.Parse("not-a-version").Core);
+        Assert.Equal(zero, default(JvmVersion).Core);
+    }
+
+    // A default value must not hand null out of its non-nullable members.
+    [Fact]
+    public void DefaultValue_ReportsEmptyStringMembers()
+    {
+        var version = default(JvmVersion);
+
+        Assert.Equal(string.Empty, version.Original);
+        Assert.Equal(string.Empty, version.ToString());
+        Assert.False(version.IsPreRelease);
+        Assert.Equal(0, version.CompareTo(JvmVersion.Unknown("")));
+    }
+
+    [Fact]
+    public void ToString_ReturnsTheOriginalString()
+    {
+        Assert.Equal("21.0.5+9-LTS", Parse("21.0.5+9-LTS").ToString());
+        Assert.Equal("25.0.4.1.1", Parse("25.0.4.1.1").ToString());
+    }
+
+    // The -b<digits> carve-out must not swallow the real JDK 8 early-access shape.
+    [Fact]
+    public void TryParse_LegacyEarlyAccess_StaysPreRelease()
+    {
+        var version = Parse("1.8.0_202-ea");
+
+        Assert.True(version.IsPreRelease);
+        Assert.True(version < Parse("1.8.0_202"));
+    }
 
     [Fact]
     public void Parse_UnparseableInput_DegradesToUnknown()

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using JdkFind.Cli;
 
 namespace JdkFind.Tests;
@@ -244,7 +245,10 @@ public class CommandLineIntegrationTests : IDisposable
 
         var (_, stdout, _) = RunCli(["--json"], StubFinder(lts));
 
-        Assert.Contains("\"prerelease\": false", stdout);
+        using var doc = JsonDocument.Parse(stdout);
+        var root = doc.RootElement;
+        Assert.Equal("21.0.5+9-LTS", root.GetProperty("version").GetString());
+        Assert.False(root.GetProperty("prerelease").GetBoolean());
     }
 
     [Fact]
