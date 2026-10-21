@@ -8,8 +8,8 @@ public class CommandLineFilterTests
     {
         Home = new DirectoryInfo("/jvm/zulu"),
         Providers = ["stub"],
-        Executable = new JavaExecutable { Path = "/jvm/zulu/bin/java", Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1") },
-        Version = new JvmVersion(new Version(21, 0, 12, 1), false, "21.0.12.1"),
+        Executable = new JavaExecutable { Path = "/jvm/zulu/bin/java", Version = JvmVersion.Parse("21.0.12.1") },
+        Version = JvmVersion.Parse("21.0.12.1"),
         Vendor = JvmVendor.Azul,
         Distribution = JvmDistribution.Zulu,
         VendorRaw = "Azul Systems, Inc.",
@@ -19,8 +19,8 @@ public class CommandLineFilterTests
     {
         Home = new DirectoryInfo("/jvm/temurin"),
         Providers = ["stub"],
-        Executable = new JavaExecutable { Path = "/jvm/temurin/bin/java", Version = new JvmVersion(new Version(21, 0, 5, 9), false, "21.0.5+9"), Architecture = "aarch64" },
-        Version = new JvmVersion(new Version(21, 0, 5, 9), false, "21.0.5+9"),
+        Executable = new JavaExecutable { Path = "/jvm/temurin/bin/java", Version = JvmVersion.Parse("21.0.5+9"), Architecture = "aarch64" },
+        Version = JvmVersion.Parse("21.0.5+9"),
         Vendor = JvmVendor.Adoptium,
         Distribution = JvmDistribution.Temurin,
         VendorRaw = "Eclipse Adoptium",
@@ -30,8 +30,8 @@ public class CommandLineFilterTests
     {
         Home = new DirectoryInfo("/jvm/corretto"),
         Providers = ["stub"],
-        Executable = new JavaExecutable { Path = "/jvm/corretto/bin/java", Version = new JvmVersion(new Version(17, 0, 9, 1), false, "17.0.9.1"), Architecture = "x86_64" },
-        Version = new JvmVersion(new Version(17, 0, 9, 1), false, "17.0.9.1"),
+        Executable = new JavaExecutable { Path = "/jvm/corretto/bin/java", Version = JvmVersion.Parse("17.0.9.1"), Architecture = "x86_64" },
+        Version = JvmVersion.Parse("17.0.9.1"),
         Vendor = JvmVendor.Amazon,
         Distribution = JvmDistribution.Corretto,
         VendorRaw = "Amazon Corretto",
@@ -114,8 +114,8 @@ public class CommandLineFilterTests
         {
             Home = new DirectoryInfo("/jvm/empty"),
             Providers = ["stub"],
-            Executable = new JavaExecutable { Path = "/jvm/empty/bin/java", Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21") },
-            Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"),
+            Executable = new JavaExecutable { Path = "/jvm/empty/bin/java", Version = JvmVersion.Parse("21") },
+            Version = JvmVersion.Parse("21"),
         };
         Assert.False(CommandLine.MatchesArchFilter(empty, "aarch64"));
         Assert.False(CommandLine.MatchesArchFilter(empty, "riscv64"));
@@ -128,8 +128,8 @@ public class CommandLineFilterTests
         {
             Home = new DirectoryInfo("/jvm/upper"),
             Providers = ["stub"],
-            Executable = new JavaExecutable { Path = "/jvm/upper/bin/java", Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"), Architecture = "AARCH64" },
-            Version = new JvmVersion(new Version(21, 0, 0, 0), false, "21"),
+            Executable = new JavaExecutable { Path = "/jvm/upper/bin/java", Version = JvmVersion.Parse("21"), Architecture = "AARCH64" },
+            Version = JvmVersion.Parse("21"),
         };
         Assert.True(CommandLine.MatchesArchFilter(upper, "arm64"));
         Assert.False(CommandLine.MatchesArchFilter(upper, "amd64"));
