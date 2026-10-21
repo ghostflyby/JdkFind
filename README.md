@@ -53,7 +53,7 @@ removed.
 | `version`                        | string         | Raw `JAVA_VERSION` from the release file                                |
 | `languageVersion`                | number \| null | Feature version (e.g. `21`)                                             |
 | `hasCompiler`                    | boolean        | Ships `javac`                                                           |
-| `prerelease`                     | boolean        | Early-access build (e.g. `25-ea`)                                       |
+| `prerelease`                     | boolean        | Pre-release build (`25-ea`, `24.0.1-ea+5`)                              |
 | `vendor`                         | string         | Normalized upstream vendor (e.g. `Azul`)                                |
 | `distribution`                   | string         | foojay-style distribution name (e.g. `Zulu`)                            |
 | `vendorRaw`                      | string \| null | The binary's reported vendor, falling back to the release `IMPLEMENTOR` |

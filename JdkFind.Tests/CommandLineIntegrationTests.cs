@@ -1,3 +1,4 @@
+using System.Text.Json;
 using JdkFind.Cli;
 
 namespace JdkFind.Tests;
@@ -219,6 +220,50 @@ public class CommandLineIntegrationTests : IDisposable
 
         Assert.Equal(0, RunCli(["--vendor", "azul"], finder).ExitCode);
         Assert.Equal(1, RunCli(["--vendor", "nomatch"], finder).ExitCode);
+    }
+
+    [Fact]
+    public void DefaultCommand_GaLtsBuild_OutranksBareReleaseOfSameNumber()
+    {
+        // "+9-LTS" is a GA build; it must win over the bare release and over an
+        // earlier build of the same release instead of sinking below them.
+        var lts = TestJdk.Create(_temp.FullPath, "21.0.5+9-LTS", "jdks", "lts");
+        var bare = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "bare");
+        var earlier = TestJdk.Create(_temp.FullPath, "21.0.5+8", "jdks", "earlier");
+
+        // Discovery order puts the losers first, so ordering decides the selection.
+        var (exitCode, stdout, _) = RunCli([], StubFinder(bare, earlier, lts));
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(lts + Environment.NewLine, stdout);
+    }
+
+    [Fact]
+    public void JsonCommand_GaLtsBuild_IsNotPrerelease()
+    {
+        var lts = TestJdk.Create(_temp.FullPath, "21.0.5+9-LTS", "jdks", "lts");
+
+        var (_, stdout, _) = RunCli(["--json"], StubFinder(lts));
+
+        using var doc = JsonDocument.Parse(stdout);
+        var root = doc.RootElement;
+        Assert.Equal("21.0.5+9-LTS", root.GetProperty("version").GetString());
+        Assert.False(root.GetProperty("prerelease").GetBoolean());
+    }
+
+    [Fact]
+    public void DefaultCommand_ZeroFilledComponents_AreTheSameVersion()
+    {
+        // 17.0.2 and 17.0.2.0 are the same version: neither outranks the other,
+        // so the first-discovered installation stays the selection.
+        var plain = TestJdk.Create(_temp.FullPath, "17.0.2", "jdks", "plain");
+        var padded = TestJdk.Create(_temp.FullPath, "17.0.2.0", "jdks", "padded");
+        var finder = StubFinder(plain, padded);
+
+        var (exitCode, stdout, _) = RunCli([], finder);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(plain + Environment.NewLine, stdout);
     }
 
     public void Dispose() => _temp.Dispose();

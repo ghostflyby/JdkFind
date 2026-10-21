@@ -25,7 +25,7 @@ public class JdkFinderTests : IDisposable
         var jvm = Assert.Single(jvms);
         Assert.Equal(["stub"], jvm.Providers);
         Assert.Equal("21.0.5", jvm.Version.Original);
-        Assert.Equal(new Version(21, 0, 5), jvm.Version.Core);
+        Assert.Equal(new Version(21, 0, 5, 0), jvm.Version.Core);
         Assert.Equal(21, jvm.LanguageVersion);
         Assert.Equal(JvmVendor.Unknown, jvm.Vendor);
         Assert.Equal(JvmDistribution.Unknown, jvm.Distribution);
