@@ -38,8 +38,11 @@ public interface ICommonPrefixesJvmProvider : IJvmProvider
             .OfType<string>();
 
     /// <summary>
-    ///     Optional search pattern applied when enumerating a prefix's children
-    ///     (e.g. Homebrew's <c>openjdk*</c>); null enumerates all children.
+    ///     Optional search pattern applied when enumerating a prefix's children;
+    ///     null enumerates all children. Providers with a fixed set of candidate
+    ///     names are better served by rejecting unknown names in
+    ///     <see cref="GetJavaHome" /> — the pattern can only express a single
+    ///     wildcard, while the names themselves may need several rules.
     /// </summary>
     protected string? SearchPattern => null;
 
