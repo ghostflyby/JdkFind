@@ -5,11 +5,12 @@ namespace JdkFind;
 ///     a plain home (<c>bin/java</c> + <c>release</c>, with the JDK 8 inner JRE
 ///     variant <c>jre/bin/java</c> accepted), the macOS bundle layout
 ///     (<c>&lt;name&gt;.jdk/Contents/Home</c>) and the Homebrew keg layouts — the
-///     macOS <c>libexec/&lt;name&gt;.jdk/Contents/Home</c> bundle and the Linux image
-///     installed straight into <c>libexec</c>. This is the shared validation
-///     contract behind <see cref="IJvmProvider" /> — providers return paths that
-///     pass <see cref="Probe" />, and custom implementations should validate the
-///     same way.
+///     macOS <c>libexec/&lt;name&gt;.jdk/Contents/Home</c> bundle that the JDK formulae
+///     install (<c>openjdk.jdk</c>, <c>graalvm.jdk</c>) and the Linux image placed
+///     straight into <c>libexec</c>. This is the shared validation contract behind
+///     <see cref="IJvmProvider" /> — providers return paths that pass
+///     <see cref="Probe" />, and custom implementations should validate the same
+///     way.
 /// </summary>
 public static class JavaHomeLayout
 {
@@ -71,18 +72,25 @@ public static class JavaHomeLayout
         (File.Exists(Path.Combine(homeDirectory, "bin", JavaExecutableName)) ||
          File.Exists(JreJavaExecutablePath(homeDirectory)));
 
+    /// <summary>The bundle directory names the known JDK formulae install inside a
+    /// Homebrew keg's <c>libexec</c>.</summary>
+    private static readonly string[] KegBundleNames = ["openjdk.jdk", "graalvm.jdk"];
+
+    /// <summary>
+    ///     The layouts a candidate directory may hold, in probe order. Everything is
+    ///     a fixed path — the bundle names come from the list above rather than a
+    ///     directory listing — because <see cref="Probe" /> runs for every candidate
+    ///     a provider reports, so it must not enumerate the file system to decide.
+    /// </summary>
     private static IEnumerable<string> CandidateLayouts(string candidateDirectory)
     {
         yield return candidateDirectory;
         yield return Path.Combine(candidateDirectory, "Contents", "Home");
-        yield return Path.Combine(candidateDirectory, "libexec");
 
-        // A Homebrew keg bundles the image as libexec/<name>.jdk/Contents/Home on
-        // macOS, and the bundle name is not fixed — GraalVM's is graalvm.jdk — so
-        // every child of libexec is tried as a bundle root. On Linux the formula
-        // installs the image straight into libexec, which the entry above covers.
-        var libexec = Path.Combine(candidateDirectory, "libexec");
-        foreach (var bundle in JvmScanning.EnumerateGuarded(libexec).Order(StringComparer.Ordinal))
-            yield return Path.Combine(bundle, "Contents", "Home");
+        // Homebrew keg: the image sits in libexec, directly (Linux formulae) or
+        // inside the formula's .jdk bundle (macOS).
+        yield return Path.Combine(candidateDirectory, "libexec");
+        foreach (var bundle in KegBundleNames)
+            yield return Path.Combine(candidateDirectory, "libexec", bundle, "Contents", "Home");
     }
 }

@@ -50,17 +50,28 @@ public class JavaHomeLayoutTests : IDisposable
     }
 
     [Fact]
-    public void Probe_KegWithSeveralBundles_PicksDeterministically()
+    public void Probe_KegWithSeveralKnownBundles_PicksDeterministically()
     {
-        // Real kegs hold a single bundle; if one ever holds more, the choice must
-        // not depend on filesystem enumeration order, or the same machine state
-        // would select differently between runs.
-        var first = TestJdk.Create(_temp.FullPath, "21.0.5", "keg", "libexec", "aaa.jdk", "Contents", "Home");
+        // Real kegs hold a single bundle; if one ever holds both known names, the
+        // pick must come from the fixed probe order, not filesystem enumeration.
+        var openjdk = TestJdk.Create(_temp.FullPath, "21.0.5", "keg", "libexec", "openjdk.jdk", "Contents", "Home");
         TestJdk.Create(_temp.FullPath, "25.0.4.1.1", "keg", "libexec", "graalvm.jdk", "Contents", "Home");
         var keg = Path.Combine(_temp.FullPath, "keg");
 
-        Assert.Equal(first, JavaHomeLayout.Probe(keg));
-        Assert.Equal(first, JavaHomeLayout.Probe(keg));
+        Assert.Equal(openjdk, JavaHomeLayout.Probe(keg));
+        Assert.Equal(openjdk, JavaHomeLayout.Probe(keg));
+    }
+
+    [Fact]
+    public void Probe_KegBundleUnderAnUnknownName_IsNotRecognized()
+    {
+        // The keg bundle names are a fixed list, so probing does not enumerate
+        // libexec. A JDK bundled under some other name — a third-party tap's
+        // formula — is out of scope by design.
+        TestJdk.Create(_temp.FullPath, "21.0.5", "keg", "libexec", "unlisted.jdk", "Contents", "Home");
+        var keg = Path.Combine(_temp.FullPath, "keg");
+
+        Assert.Null(JavaHomeLayout.Probe(keg));
     }
 
     [Fact]

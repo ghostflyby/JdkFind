@@ -226,13 +226,29 @@ public class ProviderTests : IDisposable
     }
 
     [Fact]
-    public void Homebrew_ScansEveryKeg_AndSkipsNonJdkOnes()
+    public void Homebrew_ProbesJavaAliasKeg()
+    {
+        // Homebrew publishes the java alias for openjdk; both names appear in opt
+        // and lead to the same keg.
+        var jdk = TestJdk.Create(_temp.FullPath, "27", "opt", "java", "libexec", "openjdk.jdk", "Contents", "Home");
+        var provider = new HomebrewJvmProvider([_temp.FullPath]);
+
+        Assert.Equal([jdk], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Homebrew_SkipsKegsOutsideTheKnownJdkNames()
     {
         var openjdk = TestJdk.Create(_temp.FullPath, "27", "opt", "openjdk", "libexec", "openjdk.jdk", "Contents", "Home");
         var graalvm = TestJdk.Create(_temp.FullPath, "25.0.4.1.1", "opt", "graalvm", "libexec", "graalvm.jdk", "Contents",
             "Home");
 
-        // A keg that is not a JDK must not contribute anything.
+        // Only the known JDK formulae are probed. A keg holding a perfectly valid
+        // JDK under another name is not scanned — the name list is what keeps the
+        // scan from walking every keg's libexec on the machine.
+        TestJdk.Create(_temp.FullPath, "21.0.5", "opt", "unlisted-jdk", "libexec", "openjdk.jdk", "Contents", "Home");
+
+        // A keg that is not a JDK at all must not contribute either.
         var plain = Path.Combine(_temp.FullPath, "opt", "wget", "bin");
         Directory.CreateDirectory(plain);
         File.WriteAllText(Path.Combine(plain, "wget"), string.Empty);
