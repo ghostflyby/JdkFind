@@ -31,6 +31,39 @@ public class JavaHomeLayoutTests : IDisposable
     }
 
     [Fact]
+    public void Probe_AcceptsHomebrewKegLayout_UnderAnyBundleName()
+    {
+        // GraalVM's keg bundles the image as graalvm.jdk, not openjdk.jdk.
+        var home = TestJdk.Create(_temp.FullPath, "25.0.4.1.1", "keg", "libexec", "graalvm.jdk", "Contents", "Home");
+        var keg = Path.Combine(_temp.FullPath, "keg");
+
+        Assert.Equal(home, JavaHomeLayout.Probe(keg));
+    }
+
+    [Fact]
+    public void Probe_AcceptsLinuxHomebrewKegLayout()
+    {
+        // Linux formulae install the image straight into libexec.
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "keg", "libexec");
+
+        Assert.Equal(home, JavaHomeLayout.Probe(Path.Combine(_temp.FullPath, "keg")));
+    }
+
+    [Fact]
+    public void Probe_KegWithSeveralBundles_PicksDeterministically()
+    {
+        // Real kegs hold a single bundle; if one ever holds more, the choice must
+        // not depend on filesystem enumeration order, or the same machine state
+        // would select differently between runs.
+        var first = TestJdk.Create(_temp.FullPath, "21.0.5", "keg", "libexec", "aaa.jdk", "Contents", "Home");
+        TestJdk.Create(_temp.FullPath, "25.0.4.1.1", "keg", "libexec", "graalvm.jdk", "Contents", "Home");
+        var keg = Path.Combine(_temp.FullPath, "keg");
+
+        Assert.Equal(first, JavaHomeLayout.Probe(keg));
+        Assert.Equal(first, JavaHomeLayout.Probe(keg));
+    }
+
+    [Fact]
     public void Probe_RejectsIncompleteHomes()
     {
         var root = _temp.FullPath;

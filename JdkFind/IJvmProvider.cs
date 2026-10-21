@@ -39,7 +39,8 @@ public interface ICommonPrefixesJvmProvider : IJvmProvider
 
     /// <summary>
     ///     Optional search pattern applied when enumerating a prefix's children
-    ///     (e.g. Homebrew's <c>openjdk*</c>); null enumerates all children.
+    ///     (e.g. <c>jdk*</c> where a prefix also holds non-JDK directories); null
+    ///     enumerates all children.
     /// </summary>
     protected string? SearchPattern => null;
 

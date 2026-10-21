@@ -4,8 +4,9 @@ namespace JdkFind;
 ///     Recognizes Java home directories across the layouts found in the wild:
 ///     a plain home (<c>bin/java</c> + <c>release</c>, with the JDK 8 inner JRE
 ///     variant <c>jre/bin/java</c> accepted), the macOS bundle layout
-///     (<c>&lt;name&gt;.jdk/Contents/Home</c>) and the Homebrew keg layout
-///     (<c>libexec/openjdk.jdk/Contents/Home</c>). This is the shared validation
+///     (<c>&lt;name&gt;.jdk/Contents/Home</c>) and the Homebrew keg layouts — the
+///     macOS <c>libexec/&lt;name&gt;.jdk/Contents/Home</c> bundle and the Linux image
+///     installed straight into <c>libexec</c>. This is the shared validation
 ///     contract behind <see cref="IJvmProvider" /> — providers return paths that
 ///     pass <see cref="Probe" />, and custom implementations should validate the
 ///     same way.
@@ -70,10 +71,18 @@ public static class JavaHomeLayout
         (File.Exists(Path.Combine(homeDirectory, "bin", JavaExecutableName)) ||
          File.Exists(JreJavaExecutablePath(homeDirectory)));
 
-    private static string[] CandidateLayouts(string candidateDirectory) =>
-    [
-        candidateDirectory,
-        Path.Combine(candidateDirectory, "Contents", "Home"),
-        Path.Combine(candidateDirectory, "libexec", "openjdk.jdk", "Contents", "Home"),
-    ];
+    private static IEnumerable<string> CandidateLayouts(string candidateDirectory)
+    {
+        yield return candidateDirectory;
+        yield return Path.Combine(candidateDirectory, "Contents", "Home");
+        yield return Path.Combine(candidateDirectory, "libexec");
+
+        // A Homebrew keg bundles the image as libexec/<name>.jdk/Contents/Home on
+        // macOS, and the bundle name is not fixed — GraalVM's is graalvm.jdk — so
+        // every child of libexec is tried as a bundle root. On Linux the formula
+        // installs the image straight into libexec, which the entry above covers.
+        var libexec = Path.Combine(candidateDirectory, "libexec");
+        foreach (var bundle in JvmScanning.EnumerateGuarded(libexec).Order(StringComparer.Ordinal))
+            yield return Path.Combine(bundle, "Contents", "Home");
+    }
 }

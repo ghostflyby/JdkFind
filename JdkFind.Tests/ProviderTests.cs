@@ -203,5 +203,58 @@ public class ProviderTests : IDisposable
         Assert.Equal([jdk], provider.GetHomes());
     }
 
+    [Fact]
+    public void Homebrew_ProbesGraalVmKegLayout()
+    {
+        // The macOS bundle inside a keg is named after the formula: graalvm.jdk,
+        // not openjdk.jdk.
+        var jdk = TestJdk.Create(_temp.FullPath, "25.0.4.1.1", "opt", "graalvm", "libexec", "graalvm.jdk", "Contents",
+            "Home");
+        var provider = new HomebrewJvmProvider([_temp.FullPath]);
+
+        Assert.Equal([jdk], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Homebrew_ProbesLinuxKegLayout()
+    {
+        // Linux formulae install the image straight into libexec, with no bundle.
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "opt", "openjdk@21", "libexec");
+        var provider = new HomebrewJvmProvider([_temp.FullPath]);
+
+        Assert.Equal([jdk], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Homebrew_ScansEveryKeg_AndSkipsNonJdkOnes()
+    {
+        var openjdk = TestJdk.Create(_temp.FullPath, "27", "opt", "openjdk", "libexec", "openjdk.jdk", "Contents", "Home");
+        var graalvm = TestJdk.Create(_temp.FullPath, "25.0.4.1.1", "opt", "graalvm", "libexec", "graalvm.jdk", "Contents",
+            "Home");
+
+        // A keg that is not a JDK must not contribute anything.
+        var plain = Path.Combine(_temp.FullPath, "opt", "wget", "bin");
+        Directory.CreateDirectory(plain);
+        File.WriteAllText(Path.Combine(plain, "wget"), string.Empty);
+
+        var provider = new HomebrewJvmProvider([_temp.FullPath]);
+
+        Assert.Equal([graalvm, openjdk], provider.GetHomes().Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Homebrew_ProbesEveryPrefixInOrder()
+    {
+        var first = TestJdk.Create(_temp.FullPath, "21.0.5", "prefix-a", "opt", "openjdk", "libexec");
+        var second = TestJdk.Create(_temp.FullPath, "17.0.2", "prefix-b", "opt", "graalvm", "libexec", "graalvm.jdk",
+            "Contents", "Home");
+        var provider = new HomebrewJvmProvider([
+            Path.Combine(_temp.FullPath, "prefix-a"),
+            Path.Combine(_temp.FullPath, "prefix-b"),
+        ]);
+
+        Assert.Equal([first, second], provider.GetHomes());
+    }
+
     public void Dispose() => _temp.Dispose();
 }
