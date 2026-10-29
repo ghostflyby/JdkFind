@@ -39,4 +39,28 @@
     <InternalsVisibleTo Include="JdkFind.Tests"/>
   </ItemGroup>
 
+  <!-- NativeAOT links the runtime pack's zlib/brotli/zstd libraries even when
+       System.IO.Compression is unused. The CLI never compresses anything, so
+       drop them from the link: the static pack archives (libz.a, libbrotli*.a),
+       the Windows zlibstatic variant, or any -l system fallback a pack without
+       statics would add. -->
+  <Target Name="RemoveNativeLibraries"
+          AfterTargets="SetupOSSpecificProps">
+
+    <ItemGroup>
+      <LinkerArg Remove="@(LinkerArg)"
+        Condition="$([System.String]::Copy('%(LinkerArg.Identity)').Contains('brotli'))" />
+
+      <LinkerArg Remove="@(LinkerArg)"
+        Condition="$([System.String]::Copy('%(LinkerArg.Identity)').Contains('zstd'))" />
+
+      <LinkerArg Remove="@(LinkerArg)"
+        Condition="$([System.String]::Copy('%(LinkerArg.Identity)').Contains('libz.a'))" />
+
+      <LinkerArg Remove="@(LinkerArg)"
+        Condition="$([System.String]::Copy('%(LinkerArg.Identity)').Contains('zlibstatic'))" />
+    </ItemGroup>
+
+  </Target>
+
 </Project>
