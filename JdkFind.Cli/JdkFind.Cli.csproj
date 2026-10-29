@@ -11,6 +11,9 @@
     <!-- Shortest executable name, no dll name collisions. -->
     <AssemblyName>jdkfind</AssemblyName>
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- No culture-sensitive surface: version input is integer segments and
+         output echoes release-file strings, so drop the ICU link and dlopen. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>jdkfind</ToolCommandName>
     <PackageId>JdkFind.Cli</PackageId>
