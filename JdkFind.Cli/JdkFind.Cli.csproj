@@ -11,6 +11,9 @@
     <!-- Shortest executable name, no dll name collisions. -->
     <AssemblyName>jdkfind</AssemblyName>
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- No culture-sensitive surface: version input is integer segments and
+         output echoes release-file strings, so drop the ICU link and dlopen. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>jdkfind</ToolCommandName>
     <PackageId>JdkFind.Cli</PackageId>
@@ -38,5 +41,25 @@
   <ItemGroup>
     <InternalsVisibleTo Include="JdkFind.Tests"/>
   </ItemGroup>
+
+  <!-- jdkfind uses no TLS or compression at runtime. Some NativeAOT runtime
+       pack variants (e.g. the SDK-bundled one in Homebrew's dotnet) lack the
+       static libz/libbrotli archives and carry nonportable.txt, which makes
+       Microsoft.NETCore.Native.Unix.targets pass -lssl -lcrypto -lz
+       -lbrotli{enc,dec,common} to the linker. Nothing references symbols from
+       those libraries after dead-stripping, so drop the load commands. Remove
+       on absent items is a no-op on toolchains that never add them. -->
+  <Target Name="RemoveUnusedNativeLibraries"
+          Condition="'$(PublishAot)' == 'true'"
+          BeforeTargets="LinkNative">
+    <ItemGroup>
+      <LinkerArg Remove="-lssl" />
+      <LinkerArg Remove="-lcrypto" />
+      <LinkerArg Remove="-lz" />
+      <LinkerArg Remove="-lbrotlienc" />
+      <LinkerArg Remove="-lbrotlidec" />
+      <LinkerArg Remove="-lbrotlicommon" />
+    </ItemGroup>
+  </Target>
 
 </Project>
