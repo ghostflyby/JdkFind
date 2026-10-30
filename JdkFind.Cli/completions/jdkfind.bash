@@ -78,7 +78,7 @@ _jdkfind_complete_values() {
 }
 
 _jdkfind() {
-    local cur prev i w verword='' subcmd='' sub=0 ver=0 tool=0 dd=0 after_dd=0 skip=0 shellgiven=0
+    local cur prev i w verword='' subcmd='' sub=0 ver=0 tool=0 dd=0 ddidx=0 skip=0 shellgiven=0
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD - 1]}"
@@ -107,10 +107,10 @@ _jdkfind() {
         fi
         if [[ $w == -- ]]; then
             dd=1
+            ddidx=$i
             continue
         fi
         if ((dd)); then
-            after_dd=$((after_dd + 1))
             continue
         fi
         case $w in
@@ -129,13 +129,28 @@ _jdkfind() {
         esac
     done
 
-    # Run mode: the word right after '--' is the child command; its arguments
-    # complete as file names (readline does not fall back on its own).
+    # Run mode, after fish's java_home --exec completion: the word being
+    # completed after '--' is a standalone command line for the resolved
+    # installation. Its first word offers the executables of the selection's
+    # bin/; once the first word stands, the remaining words are handed to that
+    # command's own bash completion when one is registered (files otherwise).
     if ((dd)); then
-        if ((after_dd == 0)); then
+        if ((COMP_CWORD == ddidx + 1)); then
             while IFS= read -r w; do
+                [[ $w == "$cur"* ]] || continue
                 COMPREPLY+=("$w")
-            done < <(compgen -c -- "$cur")
+            done < <(_jdkfind_bin_tools "$verword")
+            return 0
+        fi
+
+        local run_cmd="${COMP_WORDS[ddidx + 1]}" spec func
+        spec="$(complete -p "$run_cmd" 2>/dev/null)" || spec=
+        if [[ $spec == *" -F "* ]] && [[ $spec =~ \ -F\ ([^ ]+) ]] &&
+            declare -F "${BASH_REMATCH[1]}" >/dev/null; then
+            func="${BASH_REMATCH[1]}"
+            COMP_WORDS=("${COMP_WORDS[@]:ddidx+1}")
+            COMP_CWORD=$((COMP_CWORD - ddidx - 1))
+            "$func"
         else
             while IFS= read -r w; do
                 COMPREPLY+=("$w")

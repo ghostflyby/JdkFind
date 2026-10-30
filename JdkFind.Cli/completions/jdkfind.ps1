@@ -109,13 +109,27 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
         $Tool = $true
     }
 
-    # Run mode: the word right after '--' is the child command itself, and
-    # its arguments belong to that command, not to jdkfind.
+    # Run mode, after fish's java_home --exec completion: the words after '--'
+    # are a standalone command line for the resolved installation. The command
+    # word offers the executables of the selection's bin/; once it stands, the
+    # rest of the line is completed on the command's own terms — a nested
+    # TabExpansion2 dispatches to that command's registered completer (files
+    # as the fallback for commands without one). Note that PowerShell never
+    # calls a -Native completer for a dash-prefixed word, so `jdkfind -- java
+    # -ver` cannot delegate any more than bare `java -ver` completes — the
+    # engine, not this script, decides that.
     if ($PastDd) {
         if ($AfterDd -eq 0) {
-            return [System.Management.Automation.CompletionCompleters]::CompleteCommand($wordToComplete)
+            foreach ($tool in (Get-JdkFindBinTools)) {
+                AddResult $tool 'ParameterValue' 'Executable of the selection'
+            }
+            return $results
         }
-        return [System.Management.Automation.CompletionCompleters]::CompleteFilename($wordToComplete)
+        $run = @($Tokens | Select-Object -Last $AfterDd)
+        $quoted = @($run | ForEach-Object { if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ } })
+        $line = ($quoted + $wordToComplete) -join ' '
+        $nested = TabExpansion2 -inputScript $line -cursorColumn $line.Length
+        return @($nested.CompletionMatches)
     }
 
     # An option value: either the word after the option or inline after '='.

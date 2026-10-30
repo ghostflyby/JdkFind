@@ -70,9 +70,9 @@ _jdkfind_option_values() {
 
 # Completes the positional words: the subcommands, version prefixes of the
 # installed JVMs, and bin tools of the current selection. After '--' the
-# child command itself is completed (its arguments as file names).
+# child command's own line is completed (see the run-mode block below).
 _jdkfind_operand() {
-    local -i i skip=0 sub=0 ver=0 tool=0 dd=0 after_dd=0 shellgiven=0
+    local -i i skip=0 sub=0 ver=0 tool=0 dd=0 ddidx=0 shellgiven=0
     local w verword= subcmd=
 
     for ((i = 2; i < CURRENT; i++)); do
@@ -83,10 +83,10 @@ _jdkfind_operand() {
         fi
         if [[ $w == -- ]]; then
             dd=1
+            ddidx=$i
             continue
         fi
         if ((dd)); then
-            after_dd=$((after_dd + 1))
             continue
         fi
         case $w in
@@ -105,12 +105,22 @@ _jdkfind_operand() {
         esac
     done
 
+    # Run mode, after fish's java_home --exec completion: the words after '--'
+    # are a standalone command line for the resolved installation. The command
+    # word offers the executables of the selection's bin/; once it stands, the
+    # words are re-anchored on it and _normal dispatches into that command's
+    # own completion (sudo-style).
     if ((dd)); then
-        if ((after_dd == 0)); then
-            _command_names -e
-        else
-            _files
+        if ((CURRENT == ddidx + 1)); then
+            local -a bins
+            bins=(${(f)"$(_jdkfind_bin_tools "$verword")"})
+            integer ret=1
+            (($#bins)) && _describe -t run-bin 'executable of the selection' bins && ret=0
+            return ret
         fi
+        words=("${(@)words[ddidx+1,-1]}")
+        CURRENT=$((CURRENT - ddidx))
+        _normal
         return
     fi
 

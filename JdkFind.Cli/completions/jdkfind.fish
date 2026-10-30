@@ -157,6 +157,28 @@ complete -c jdkfind -n 'not __jdkfind_past_dd; and not __jdkfind_seen_completion
 complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_tool' -a '(__jdkfind_tools)' -d 'Bin tool of the selection'
 complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_shell' -a '(command jdkfind completions 2>/dev/null)' -d 'Shell this build carries'
 
-# Run mode: --no-files above silences fish's own file completion, so bring it
-# back for the child command's arguments (-F re-enables it per condition).
-complete -c jdkfind -n __jdkfind_past_dd -F
+# Run mode, after fish's java_home --exec completion: the words after '--'
+# are a standalone command line for the resolved installation. While the
+# command word is still being typed, suggest the executables of the
+# selection's bin/; once the command stands, delegate to that command's own
+# completion via complete -C (files for commands fish does not know).
+function __jdkfind_run_candidates
+    set -l tokens (commandline -opc)
+    set -l tail
+    set -l past 0
+    for token in $tokens
+        if test $past -eq 1
+            set -a tail $token
+        else if test "$token" = --
+            set past 1
+        end
+    end
+    if test (count $tail) -eq 0
+        __jdkfind_tools
+        return
+    end
+    set -l line (string join ' ' -- (string escape -- $tail) (string escape -- (commandline -ct)))
+    complete -C "$line"
+end
+
+complete -c jdkfind -n __jdkfind_past_dd -f -a '(__jdkfind_run_candidates)'

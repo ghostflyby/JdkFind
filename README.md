@@ -48,9 +48,11 @@ carries. The scripts complete the subcommands, option names and option values
 (vendors, distributions, architectures, release levels), version prefixes of
 the installations actually present, and the bin tools of the current
 selection. Dynamic values come from a `jdkfind list --json --no-probe` scan,
-so completion never launches a runtime probe. After `--` the line belongs to
-the child command: its first word completes as a command name and the rest
-as file names (fish offers file names only).
+so completion never launches a runtime probe. After `--` the words form the
+child command's own line, in the fashion of fish's `java_home --exec`
+completion: the command word completes from the resolved installation's
+`bin/`, and later words delegate to that command's own completion where the
+shell provides one (file names as the fallback).
 
 - **bash** — `jdkfind completions bash > ~/.local/share/bash-completion/completions/jdkfind`
 - **zsh** — `jdkfind completions zsh > ~/.zfunc/_jdkfind` (a `$fpath`
