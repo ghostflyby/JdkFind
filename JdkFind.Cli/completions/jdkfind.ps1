@@ -57,10 +57,14 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
     }
 
     # Lists the executables in bin/ of the current selection, so
-    # 'jdkfind 21 jav<TAB>' completes against that exact installation.
+    # 'jdkfind 21 jav<TAB>' completes against that exact installation. The
+    # selection filters typed before '--' are forwarded, so the listing is the
+    # installation the command will actually use, not merely the newest match
+    # for the version prefix.
     function Get-JdkFindBinTools {
         if (-not (Get-Command jdkfind -ErrorAction Ignore)) { return @() }
         $homeArgs = @()
+        $homeArgs += $SelectionArgs
         if ($Version) { $homeArgs += $Version }
         $homeArgs += '--no-probe'
         # $HOME is a read-only automatic variable; do not reuse the name.
@@ -83,8 +87,12 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
         $results.Add([System.Management.Automation.CompletionResult]::new($completionText, $Text, $Type, $ToolTip))
     }
 
-    # Grammar state from the completed words.
+    # Grammar state from the completed words. SelectionArgs mirrors the
+    # filters the user typed before '--', so the bin/ listing resolves the
+    # same installation the run mode will.
     $ValueOptions = '--vendor', '--distribution', '--arch', '--release'
+    $SelectionFlags = '--jdk-only', '--no-probe'
+    $SelectionArgs = [System.Collections.Generic.List[string]]::new()
     $Sub = $false
     $SubName = ''
     $ShellGiven = $false
@@ -93,11 +101,25 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
     $PastDd = $false
     $AfterDd = 0
     $Skip = $false
+    $Pending = ''
     foreach ($token in $Tokens) {
-        if ($Skip) { $Skip = $false; continue }
+        if ($Skip) {
+            $Skip = $false
+            $SelectionArgs.Add($Pending)
+            $SelectionArgs.Add($token)
+            continue
+        }
         if ($token -eq '--') { $PastDd = $true; continue }
         if ($PastDd) { $AfterDd++; continue }
-        if ($ValueOptions -contains $token) { $Skip = $true; continue }
+        if ($ValueOptions -contains $token) {
+            $Skip = $true
+            $Pending = $token
+            continue
+        }
+        if ($token -match '^--(vendor|distribution|arch|release)=' -or $SelectionFlags -contains $token) {
+            $SelectionArgs.Add($token)
+            continue
+        }
         if ($token.StartsWith('-')) { continue }
         if ($token -eq 'info' -or $token -eq 'list' -or $token -eq 'completions') {
             $Sub = $true
@@ -109,13 +131,36 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
         $Tool = $true
     }
 
-    # Run mode: the word right after '--' is the child command itself, and
-    # its arguments belong to that command, not to jdkfind.
+    # Run mode, after fish's java_home --exec completion: the words after '--'
+    # are a standalone command line for the resolved installation. The command
+    # word offers the executables of the selection's bin/; once it stands, the
+    # rest of the line is completed on the command's own terms — a nested
+    # TabExpansion2 dispatches to that command's registered completer (files
+    # as the fallback for commands without one).
+    #
+    # The nested call receives the original text from just after '--', so the
+    # user's quoting survives untouched. PowerShell dispatches a -Native
+    # completer for a dash-prefixed word only in the first argument position:
+    # that is why the command word delegates `-x` (as after `dummy -x`) while
+    # a later one cannot (no `jdkfind -- java -ver` flag completion).
     if ($PastDd) {
         if ($AfterDd -eq 0) {
-            return [System.Management.Automation.CompletionCompleters]::CompleteCommand($wordToComplete)
+            foreach ($tool in (Get-JdkFindBinTools)) {
+                AddResult $tool 'ParameterValue' 'Executable of the selection'
+            }
+            return $results
         }
-        return [System.Management.Automation.CompletionCompleters]::CompleteFilename($wordToComplete)
+        $ddEnd = $null
+        foreach ($element in $Elements) {
+            if ($element.Extent.Text -eq '--') {
+                $ddEnd = $element.Extent.EndOffset
+                break
+            }
+        }
+        $start = $commandAst.Extent.StartOffset
+        $tail = $commandAst.Extent.Text.Substring($ddEnd - $start)
+        $nested = TabExpansion2 -inputScript $tail -cursorColumn ($cursorPosition - $ddEnd)
+        return @($nested.CompletionMatches)
     }
 
     # An option value: either the word after the option or inline after '='.

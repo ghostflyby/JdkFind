@@ -47,14 +47,18 @@ _jdkfind_version_values() {
 }
 
 # Lists the extensionless executables in bin/ of the current selection, so
-# 'jdkfind 21 jav<TAB>' completes against that exact installation.
+# 'jdkfind 21 jav<TAB>' completes against that exact installation. Any further
+# arguments are selection filters forwarded to the CLI, so the listing is the
+# installation the command will actually use.
 _jdkfind_bin_tools() {
-    local home verword=${1:-}
-    if [[ -n $verword ]]; then
-        home=$(command jdkfind "$verword" --no-probe 2>/dev/null)
-    else
-        home=$(command jdkfind --no-probe 2>/dev/null)
+    local home
+    local -a cmd=(command jdkfind)
+    if (($#)); then
+        [[ -n $1 ]] && cmd+=("$1")
+        shift
     fi
+    cmd+=(--no-probe "${@}")
+    home=$("${cmd[@]}" 2>/dev/null)
     [[ -n $home && -d $home/bin ]] || return 0
     local -a bins=("$home"/bin/*(N:t))
     printf '%s\n' ${bins:#*.*}
@@ -70,28 +74,38 @@ _jdkfind_option_values() {
 
 # Completes the positional words: the subcommands, version prefixes of the
 # installed JVMs, and bin tools of the current selection. After '--' the
-# child command itself is completed (its arguments as file names).
+# child command's own line is completed (see the run-mode block below).
 _jdkfind_operand() {
-    local -i i skip=0 sub=0 ver=0 tool=0 dd=0 after_dd=0 shellgiven=0
-    local w verword= subcmd=
+    local -i i skip=0 sub=0 ver=0 tool=0 dd=0 ddidx=0 shellgiven=0
+    local w verword= subcmd= pending=
+    local -a sel
 
     for ((i = 2; i < CURRENT; i++)); do
         w=${words[i]}
         if ((skip)); then
             skip=0
+            sel+=("$pending" "$w")
             continue
         fi
         if [[ $w == -- ]]; then
             dd=1
+            ddidx=$i
             continue
         fi
         if ((dd)); then
-            after_dd=$((after_dd + 1))
             continue
         fi
         case $w in
-        --vendor=* | --distribution=* | --arch=* | --release=*) ;;
-        --vendor | --distribution | --arch | --release) skip=1 ;;
+        --vendor=* | --distribution=* | --arch=* | --release=*)
+            sel+=("$w")
+            ;;
+        --vendor | --distribution | --arch | --release)
+            skip=1
+            pending=$w
+            ;;
+        --jdk-only | --no-probe)
+            sel+=("$w")
+            ;;
         -*) ;;
         info | list | completions)
             sub=1
@@ -105,12 +119,22 @@ _jdkfind_operand() {
         esac
     done
 
+    # Run mode, after fish's java_home --exec completion: the words after '--'
+    # are a standalone command line for the resolved installation. The command
+    # word offers the executables of the selection's bin/; once it stands, the
+    # words are re-anchored on it and _normal dispatches into that command's
+    # own completion (sudo-style).
     if ((dd)); then
-        if ((after_dd == 0)); then
-            _command_names -e
-        else
-            _files
+        if ((CURRENT == ddidx + 1)); then
+            local -a bins
+            bins=(${(f)"$(_jdkfind_bin_tools "$verword" "${sel[@]}")"})
+            integer ret=1
+            (($#bins)) && _describe -t run-bin 'executable of the selection' bins && ret=0
+            return ret
         fi
+        words=("${(@)words[ddidx+1,-1]}")
+        CURRENT=$((CURRENT - ddidx))
+        _normal
         return
     fi
 
@@ -138,7 +162,7 @@ _jdkfind_operand() {
         fi
         if ((! tool && ! sub)); then
             local -a bins
-            bins=(${(f)"$(_jdkfind_bin_tools "$verword")"})
+            bins=(${(f)"$(_jdkfind_bin_tools "$verword" "${sel[@]}")"})
             (($#bins)) && _describe -t bin-tools 'bin tool' bins && ret=0
         fi
     fi
