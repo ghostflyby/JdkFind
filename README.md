@@ -27,6 +27,7 @@ $ jdkfind list                                   # human-readable table (stderr)
 $ jdkfind list --json                            # all installations as JSON (stdout)
 $ jdkfind list --distribution corretto           # filter by foojay distribution name
 $ jdkfind list --arch x64                        # filter by architecture substring
+$ jdkfind completions bash                       # print a completion script (bash, zsh, fish, powershell)
 ```
 
 `--arch` is a case-insensitive substring match against the raw
@@ -38,6 +39,32 @@ By default `jdkfind` executes each installation's own java executable
 once to enrich the metadata with runtime properties (runtime and VM
 name/version — the Gradle approach); failures degrade silently to the
 release-file metadata.
+
+## Shell completions
+
+`jdkfind completions <shell>` prints a completion script to stdout — `bash`,
+`zsh`, `fish` or `powershell`; run it without a shell to list what this build
+carries. The scripts complete the subcommands, option names and option values
+(vendors, distributions, architectures, release levels), version prefixes of
+the installations actually present, and the bin tools of the current
+selection. Dynamic values come from a `jdkfind list --json --no-probe` scan,
+so completion never launches a runtime probe; everything after `--` falls
+back to normal command and file completion.
+
+- **bash** — `jdkfind completions bash > ~/.local/share/bash-completion/completions/jdkfind`
+- **zsh** — `jdkfind completions zsh > ~/.zfunc/_jdkfind` (a `$fpath`
+  directory; the `#compdef` header registers it), or
+  `eval "$(jdkfind completions zsh)"` in `~/.zshrc` after `compinit`.
+- **fish** — `jdkfind completions fish > ~/.config/fish/completions/jdkfind.fish`
+- **PowerShell** — `Invoke-Expression (jdkfind completions powershell)` in
+  `$PROFILE`.
+
+The scripts live in [`JdkFind.Cli/completions`](JdkFind.Cli/completions) and
+are embedded into the tool as manifest resources. A packaging build can leave
+shells out — for a channel that installs completion files itself — with the
+`JdkFindCompletionsExclude` MSBuild property (canonical shell names,
+semicolon-separated, e.g. `-p:JdkFindCompletionsExclude=fish;powershell`);
+the `completions` command then lists and serves only the rest.
 
 ## JSON output
 
@@ -64,8 +91,8 @@ removed.
 
 Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled;
 run mode (`--`) adds `126`/`127` when the command cannot be executed or is
-not found. `--json` switches every command to machine-readable output on
-stdout. Ctrl+C / SIGINT / SIGTERM cancel the scan: running runtime probes
+not found. `--json` switches every locating command to machine-readable output
+on stdout; `jdkfind completions` prints its script verbatim. Ctrl+C / SIGINT / SIGTERM cancel the scan: running runtime probes
 are killed and the process exits with `130`.
 
 ## Library usage

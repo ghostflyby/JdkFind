@@ -266,5 +266,63 @@ public class CommandLineIntegrationTests : IDisposable
         Assert.Equal(plain + Environment.NewLine, stdout);
     }
 
+    [Fact]
+    public void CompletionsCommand_NoShell_ListsCarriedShellsOnStdout()
+    {
+        var (exitCode, stdout, stderr) = RunCli(["completions"], StubFinder());
+
+        Assert.Equal(0, exitCode);
+        // The registry order is part of the contract; the default build
+        // embeds all four scripts.
+        Assert.Equal(
+            ["bash", "zsh", "fish", "powershell"],
+            stdout.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries));
+        Assert.Contains("jdkfind completions", stderr);
+    }
+
+    [Theory]
+    [InlineData("bash", "complete -F _jdkfind jdkfind")]
+    [InlineData("zsh", "compdef _jdkfind jdkfind")]
+    [InlineData("fish", "complete -c jdkfind")]
+    [InlineData("powershell", "Register-ArgumentCompleter")]
+    [InlineData("BASH", "complete -F _jdkfind jdkfind")]
+    public void CompletionsCommand_Shell_WritesEmbeddedScriptToStdout(string shell, string marker)
+    {
+        var (exitCode, stdout, stderr) = RunCli(["completions", shell], StubFinder());
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains(marker, stdout);
+        Assert.Equal(string.Empty, stderr);
+    }
+
+    [Fact]
+    public void CompletionsCommand_UnknownShell_IsAUsageError()
+    {
+        var (exitCode, stdout, stderr) = RunCli(["completions", "tcsh"], StubFinder());
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("Unknown shell 'tcsh'", stderr);
+    }
+
+    [Fact]
+    public void CompletionsCommand_IgnoresJsonFlag_ScriptIsTheOutputContract()
+    {
+        var (exitCode, stdout, _) = RunCli(["completions", "bash", "--json"], StubFinder());
+
+        Assert.Equal(0, exitCode);
+        Assert.StartsWith("# bash completion for the jdkfind dotnet tool.", stdout);
+    }
+
+    [Fact]
+    public void CompletionsCommand_RunModeSeparator_IsAUsageError()
+    {
+        var (exitCode, stdout, stderr) = RunCli(["completions", "bash", "--", "ls"], StubFinder());
+
+        Assert.Equal(2, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Contains("'--' runs a command", stderr);
+    }
+
     public void Dispose() => _temp.Dispose();
 }
