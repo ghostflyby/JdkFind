@@ -49,11 +49,17 @@ _jdkfind_version_values() {
 }
 
 # Lists the extensionless executables in bin/ of the current selection, so
-# 'jdkfind 21 jav<TAB>' completes against that exact installation.
+# 'jdkfind 21 jav<TAB>' completes against that exact installation. Any further
+# arguments are selection filters forwarded to the CLI, so the listing is the
+# installation the command will actually use.
 _jdkfind_bin_tools() {
     local home tool
     local -a cmd=("${COMP_WORDS[0]}")
-    [[ -n ${1-} ]] && cmd+=("$1")
+    if (($#)); then
+        [[ -n $1 ]] && cmd+=("$1")
+        shift
+    fi
+    (($#)) && cmd+=("$@")
     cmd+=(--no-probe)
     home="$(command "${cmd[@]}" 2>/dev/null)" || return 0
     [[ -d $home/bin ]] || return 0
@@ -78,10 +84,99 @@ _jdkfind_complete_values() {
 }
 
 _jdkfind() {
-    local cur prev i w verword='' subcmd='' sub=0 ver=0 tool=0 dd=0 ddidx=0 skip=0 shellgiven=0
+    local cur prev i w verword='' subcmd='' pending='' sub=0 ver=0 tool=0 dd=0 ddidx=0 skip=0 shellgiven=0
+    local -a sel=()
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD - 1]}"
+
+    # Grammar state from the completed words. Everything from the first '--'
+    # onward is the child command's line, so the scan stops interpreting it;
+    # sel collects the selection filters, which the bin/ listing forwards.
+    for ((i = 1; i < COMP_CWORD; i++)); do
+        w="${COMP_WORDS[i]}"
+        if ((skip)); then
+            skip=0
+            sel+=("$pending" "$w")
+            continue
+        fi
+        if [[ $w == -- ]]; then
+            dd=1
+            ddidx=$i
+            continue
+        fi
+        if ((dd)); then
+            continue
+        fi
+        case $w in
+        --vendor=* | --distribution=* | --arch=* | --release=*)
+            sel+=("$w")
+            ;;
+        --vendor | --distribution | --arch | --release)
+            skip=1
+            pending=$w
+            ;;
+        --jdk-only | --no-probe)
+            sel+=("$w")
+            ;;
+        -*) ;;
+        info | list | completions)
+            sub=1
+            subcmd=$w
+            ;;
+        [0-9]*)
+            ver=1
+            verword=$w
+            ;;
+        *) [[ $subcmd == completions ]] && shellgiven=1 || tool=1 ;;
+        esac
+    done
+
+    # Run mode, after fish's java_home --exec completion: the words after '--'
+    # are a standalone command line for the resolved installation. The command
+    # word offers the executables of the selection's bin/; once it stands, the
+    # rest of the line is handed to that command's own completion when one is
+    # registered (file names otherwise). This block precedes the option-value
+    # cases below: a child accepts its own --vendor or --release. Only
+    # COMP_WORDS/COMP_CWORD are re-anchored, so a completer that rebuilds its
+    # words from COMP_LINE (bash-completion's _init_completion) still sees the
+    # whole jdkfind line; compspec functions that trust COMP_WORDS do not care.
+    if ((dd)); then
+        if ((COMP_CWORD == ddidx + 1)); then
+            while IFS= read -r w; do
+                [[ $w == "$cur"* ]] || continue
+                COMPREPLY+=("$w")
+            done < <(_jdkfind_bin_tools "$verword" "${sel[@]}")
+            return 0
+        fi
+
+        local run_cmd="${COMP_WORDS[ddidx + 1]}" spec func found=0
+        local -a spec_words=()
+        spec="$(complete -p "$run_cmd" 2>/dev/null)" || spec=
+        # Only a spec that names a function can be delegated by calling it: a
+        # -W word list or -C command carries its candidates inline, and its
+        # quoted payload must not be mistaken for an option either.
+        if [[ $spec != *" -W "* && $spec != *" -C "* ]]; then
+            read -r -a spec_words <<<"$spec"
+            for ((i = 0; i < ${#spec_words[@]} - 1; i++)); do
+                if [[ ${spec_words[i]} == -F ]]; then
+                    func="${spec_words[i + 1]}"
+                    found=1
+                    break
+                fi
+            done
+        fi
+        if ((found)) && declare -F "$func" >/dev/null; then
+            COMP_WORDS=("${COMP_WORDS[@]:ddidx+1}")
+            COMP_CWORD=$((COMP_CWORD - ddidx - 1))
+            "$func" "$run_cmd" "$cur" "$prev"
+        else
+            while IFS= read -r w; do
+                COMPREPLY+=("$w")
+            done < <(compgen -f -- "$cur")
+        fi
+        return 0
+    fi
 
     # An option value: either the word after the option or inline after '='.
     case $cur in
@@ -97,67 +192,6 @@ _jdkfind() {
         return 0
         ;;
     esac
-
-    # Grammar state from the completed words.
-    for ((i = 1; i < COMP_CWORD; i++)); do
-        w="${COMP_WORDS[i]}"
-        if ((skip)); then
-            skip=0
-            continue
-        fi
-        if [[ $w == -- ]]; then
-            dd=1
-            ddidx=$i
-            continue
-        fi
-        if ((dd)); then
-            continue
-        fi
-        case $w in
-        --vendor=* | --distribution=* | --arch=* | --release=*) ;;
-        --vendor | --distribution | --arch | --release) skip=1 ;;
-        -*) ;;
-        info | list | completions)
-            sub=1
-            subcmd=$w
-            ;;
-        [0-9]*)
-            ver=1
-            verword=$w
-            ;;
-        *) [[ $subcmd == completions ]] && shellgiven=1 || tool=1 ;;
-        esac
-    done
-
-    # Run mode, after fish's java_home --exec completion: the word being
-    # completed after '--' is a standalone command line for the resolved
-    # installation. Its first word offers the executables of the selection's
-    # bin/; once the first word stands, the remaining words are handed to that
-    # command's own bash completion when one is registered (files otherwise).
-    if ((dd)); then
-        if ((COMP_CWORD == ddidx + 1)); then
-            while IFS= read -r w; do
-                [[ $w == "$cur"* ]] || continue
-                COMPREPLY+=("$w")
-            done < <(_jdkfind_bin_tools "$verword")
-            return 0
-        fi
-
-        local run_cmd="${COMP_WORDS[ddidx + 1]}" spec func
-        spec="$(complete -p "$run_cmd" 2>/dev/null)" || spec=
-        if [[ $spec == *" -F "* ]] && [[ $spec =~ \ -F\ ([^ ]+) ]] &&
-            declare -F "${BASH_REMATCH[1]}" >/dev/null; then
-            func="${BASH_REMATCH[1]}"
-            COMP_WORDS=("${COMP_WORDS[@]:ddidx+1}")
-            COMP_CWORD=$((COMP_CWORD - ddidx - 1))
-            "$func"
-        else
-            while IFS= read -r w; do
-                COMPREPLY+=("$w")
-            done < <(compgen -f -- "$cur")
-        fi
-        return 0
-    fi
 
     if [[ $cur == -* ]]; then
         while IFS= read -r w; do
@@ -188,7 +222,7 @@ _jdkfind() {
         if ((! tool && ! sub)); then
             while IFS= read -r w; do
                 [[ -n $w ]] && candidates+=("$w")
-            done < <(_jdkfind_bin_tools "$verword")
+            done < <(_jdkfind_bin_tools "$verword" "${sel[@]}")
         fi
     fi
     # compgen emits one candidate per line; loop-and-append instead of

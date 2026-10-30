@@ -50,9 +50,10 @@ the installations actually present, and the bin tools of the current
 selection. Dynamic values come from a `jdkfind list --json --no-probe` scan,
 so completion never launches a runtime probe. After `--` the words form the
 child command's own line, in the fashion of fish's `java_home --exec`
-completion: the command word completes from the resolved installation's
-`bin/`, and later words delegate to that command's own completion where the
-shell provides one (file names as the fallback).
+completion: the command word completes from the `bin/` of the installation
+the given version and filters resolve to, and later words are handed to that
+command's own completion where the shell exposes one (file names as the
+fallback), within the limits of each shell's completion semantics.
 
 - **bash** — `jdkfind completions bash > ~/.local/share/bash-completion/completions/jdkfind`
 - **zsh** — `jdkfind completions zsh > ~/.zfunc/_jdkfind` (a `$fpath`

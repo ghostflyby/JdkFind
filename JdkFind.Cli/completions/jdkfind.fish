@@ -112,6 +112,29 @@ function __jdkfind_version_values
     printf '%s\n' $out | sort -u
 end
 
+# Echoes the selection filters typed before '--' (options and their values),
+# so the bin/ listing resolves the same installation the run mode will.
+function __jdkfind_selection_args
+    set -l tokens (commandline -opc)
+    set -l skip 0
+    for token in $tokens[2..-1]
+        if test $skip -eq 1
+            set skip 0
+            echo $token
+            continue
+        end
+        switch $token
+            case --
+                return 0
+            case --vendor --distribution --arch --release
+                echo $token
+                set skip 1
+            case '--vendor=*' '--distribution=*' '--arch=*' '--release=*' --jdk-only --no-probe
+                echo $token
+        end
+    end
+end
+
 # Lists the extensionless executables in bin/ of the current selection, so
 # 'jdkfind 21 jav<TAB>' completes against that exact installation.
 function __jdkfind_tools
@@ -122,11 +145,12 @@ function __jdkfind_tools
             break
         end
     end
+    set -l sel (__jdkfind_selection_args)
     set -l home ''
     if test -n "$verword"
-        set home (command jdkfind $verword --no-probe 2>/dev/null)
+        set home (command jdkfind $verword $sel --no-probe 2>/dev/null)
     else
-        set home (command jdkfind --no-probe 2>/dev/null)
+        set home (command jdkfind $sel --no-probe 2>/dev/null)
     end
     if test -n "$home"; and test -d "$home/bin"
         for file in $home/bin/*
