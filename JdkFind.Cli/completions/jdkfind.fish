@@ -96,10 +96,11 @@ function __jdkfind_version_values
         set -l parts (string split . -- $value)
         set -l trimmed
         for segment in $parts[1..3]
-            if not string match --quiet --regex '^[0-9]+$' -- $segment
+            set -l digits (string match --regex '^[0-9]+' -- $segment)
+            if test (count $digits) -eq 0
                 break
             end
-            set --append trimmed $segment
+            set --append trimmed $digits
         end
         if test (count $trimmed) -gt 0
             set --append out (string join . -- $trimmed)
@@ -155,3 +156,7 @@ complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_subcommand' -
 complete -c jdkfind -n 'not __jdkfind_past_dd; and not __jdkfind_seen_completions; and __jdkfind_wants_version' -a '(__jdkfind_version_values)' -d 'Version prefix'
 complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_tool' -a '(__jdkfind_tools)' -d 'Bin tool of the selection'
 complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_shell' -a '(command jdkfind completions 2>/dev/null)' -d 'Shell this build carries'
+
+# Run mode: --no-files above silences fish's own file completion, so bring it
+# back for the child command's arguments (-F re-enables it per condition).
+complete -c jdkfind -n __jdkfind_past_dd -F

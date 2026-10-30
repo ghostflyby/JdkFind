@@ -33,7 +33,8 @@ _jdkfind_version_values() {
         IFS=. read -r -a parts <<<"$value"
         trimmed=()
         for segment in "${parts[@]:0:3}"; do
-            [[ $segment =~ ^[0-9]+$ ]] || break
+            segment="${segment%%[!0-9]*}"
+            [[ -n $segment ]] || break
             trimmed+=("$segment")
         done
         if [[ ${#trimmed[@]} -gt 0 ]]; then
@@ -128,13 +129,17 @@ _jdkfind() {
         esac
     done
 
-    # Run mode: complete the command right after '--'; past that, an empty
-    # COMPREPLY makes readline fall back to file names.
+    # Run mode: the word right after '--' is the child command; its arguments
+    # complete as file names (readline does not fall back on its own).
     if ((dd)); then
         if ((after_dd == 0)); then
             while IFS= read -r w; do
                 COMPREPLY+=("$w")
             done < <(compgen -c -- "$cur")
+        else
+            while IFS= read -r w; do
+                COMPREPLY+=("$w")
+            done < <(compgen -f -- "$cur")
         fi
         return 0
     fi

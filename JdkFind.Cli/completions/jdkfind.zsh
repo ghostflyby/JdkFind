@@ -37,7 +37,8 @@ _jdkfind_version_values() {
         parts=(${(s:.:)value})
         trimmed=()
         for segment in ${parts[1,3]}; do
-            [[ $segment == <-> ]] || break
+            segment=${segment%%[!0-9]*}
+            [[ -n $segment ]] || break
             trimmed+=($segment)
         done
         (($#trimmed)) && out+=("${(j:.:)trimmed}")

@@ -48,8 +48,9 @@ carries. The scripts complete the subcommands, option names and option values
 (vendors, distributions, architectures, release levels), version prefixes of
 the installations actually present, and the bin tools of the current
 selection. Dynamic values come from a `jdkfind list --json --no-probe` scan,
-so completion never launches a runtime probe; everything after `--` falls
-back to normal command and file completion.
+so completion never launches a runtime probe. After `--` the line belongs to
+the child command: its first word completes as a command name and the rest
+as file names (fish offers file names only).
 
 - **bash** — `jdkfind completions bash > ~/.local/share/bash-completion/completions/jdkfind`
 - **zsh** — `jdkfind completions zsh > ~/.zfunc/_jdkfind` (a `$fpath`
@@ -63,8 +64,10 @@ The scripts live in [`JdkFind.Cli/completions`](JdkFind.Cli/completions) and
 are embedded into the tool as manifest resources. A packaging build can leave
 shells out — for a channel that installs completion files itself — with the
 `JdkFindCompletionsExclude` MSBuild property (canonical shell names,
-semicolon-separated, e.g. `-p:JdkFindCompletionsExclude=fish;powershell`);
-the `completions` command then lists and serves only the rest.
+semicolon-separated; on a command line escape the semicolons as `%3B`, e.g.
+`-p:JdkFindCompletionsExclude=fish%3Bpowershell`, or pass it as an
+environment variable). The `completions` command then lists and serves only
+the rest.
 
 ## JSON output
 

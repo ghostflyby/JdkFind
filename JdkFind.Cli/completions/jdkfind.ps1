@@ -49,8 +49,8 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
             $take = [Math]::Min(3, $parts.Count)
             $segments = @()
             foreach ($part in $parts[0..($take - 1)]) {
-                if ($part -notmatch '^[0-9]+$') { break }
-                $segments += $part
+                if ($part -notmatch '^([0-9]+)') { break }
+                $segments += $Matches[1]
             }
             if ($segments.Count -gt 0) { $segments -join '.' }
         }
