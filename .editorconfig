@@ -15,6 +15,12 @@ indent_size = 2
 [*.{yaml,yml}]
 indent_size = 2
 
+[*.{bash,zsh}]
+indent_size = 4
+
+[*.zsh]
+shell_variant = zsh
+
 [*.cs]
 indent_size = 4
 
