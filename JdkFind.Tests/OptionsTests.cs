@@ -98,6 +98,31 @@ public class OptionsTests
     }
 
     [Fact]
+    public void Parse_CompletionsTakesAShell()
+    {
+        var options = Options.Parse(["completions", "bash"]);
+
+        Assert.Equal(SubCommand.Completions, options.Command);
+        Assert.Equal("bash", options.Shell);
+        Assert.Throws<ArgumentException>(() => Options.Parse(["completions", "tcsh"]));
+    }
+
+    [Fact]
+    public void Parse_Completions_AcceptsLooseOrderings()
+    {
+        var toolFirst = Options.Parse(["java", "completions"]);
+
+        Assert.Equal(SubCommand.Completions, toolFirst.Command);
+        Assert.Equal("java", toolFirst.Tool);
+        Assert.Null(toolFirst.Shell);
+
+        var versionFirst = Options.Parse(["21", "completions", "bash"]);
+
+        Assert.Equal(SubCommand.Completions, versionFirst.Command);
+        Assert.Equal("bash", versionFirst.Shell);
+    }
+
+    [Fact]
     public void Parse_FlagsApplyToAnyCommand()
     {
         var options = Options.Parse(["info", "--jdk-only", "--no-probe", "--vendor", "zulu", "--arch=aarch64", "--release=8", "--json"]);

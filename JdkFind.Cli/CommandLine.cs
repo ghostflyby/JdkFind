@@ -61,6 +61,13 @@ internal static class CommandLine
     private static async Task<int> ExecuteAsync(
         Options options, CancellationToken cancellationToken, JdkFinder? finder)
     {
+        // The completions command prints an embedded script and never scans.
+        // It must run before the default-finder fallback below (which reads
+        // the machine's env and PATH), and the filters and --json do not
+        // apply to it — the script itself is the output contract.
+        if (options.Command == SubCommand.Completions)
+            return WriteCompletions(options);
+
         finder ??= options.NoProbe
             ? JdkFinder.Default with { ProbeRuntimeProperties = false }
             : JdkFinder.Default;
@@ -122,6 +129,32 @@ internal static class CommandLine
         await Console.Out.WriteLineAsync(options.Tool is null
             ? chosen.Home.FullName
             : ToolPath(chosen, options.Tool));
+        return ExitSuccess;
+    }
+
+    /// <summary>Serves the completions command: without a shell it lists what
+    /// this build carries, otherwise it writes the embedded script verbatim
+    /// to stdout. A known shell whose script was excluded at build time is a
+    /// usage error, distinct from an unknown shell caught at parse time.</summary>
+    private static int WriteCompletions(Options options)
+    {
+        if (options.Shell is null)
+        {
+            foreach (var shell in Completions.AvailableShells())
+                Console.WriteLine(shell);
+
+            Console.Error.WriteLine("Run 'jdkfind completions <shell>' to print a script.");
+            return ExitSuccess;
+        }
+
+        var script = Completions.ReadScript(options.Shell);
+        if (script is null)
+        {
+            Console.Error.WriteLine($"No completion script for '{options.Shell}' in this build.");
+            return ExitUsage;
+        }
+
+        Console.Out.Write(script);
         return ExitSuccess;
     }
 

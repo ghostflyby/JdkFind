@@ -14,11 +14,15 @@ internal sealed class CommandTree
 
     internal required Command List { get; init; }
 
+    internal required Command Completions { get; init; }
+
     internal required Argument<string[]> Operands { get; init; }
 
     internal required Argument<string?> Version { get; init; }
 
     internal required Argument<string?> ListVersion { get; init; }
+
+    internal required Argument<string?> Shell { get; init; }
 
     internal required Option<bool> Json { get; init; }
 

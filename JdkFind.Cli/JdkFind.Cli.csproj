@@ -38,6 +38,24 @@
     <ProjectReference Include="..\JdkFind\JdkFind.csproj"/>
   </ItemGroup>
 
+  <!-- Completion scripts embedded as manifest resources and served by the
+       `completions` command. JdkFindCompletionsExclude lists shells to leave
+       out of the embedding — canonical shell names (bash, zsh, fish,
+       powershell), semicolon-separated, case-insensitive — for packaging
+       channels that install completion files themselves and prefer the
+       command not to offer them; the runtime then reports the shell as not
+       available in this build. -->
+  <ItemGroup>
+    <EmbeddedResource Include="completions/jdkfind.bash" LogicalName="jdkfind.completions.bash"
+                      Condition="!$([System.String]::Copy('$(JdkFindCompletionsExclude)').ToLower().Contains('bash'))"/>
+    <EmbeddedResource Include="completions/jdkfind.zsh" LogicalName="jdkfind.completions.zsh"
+                      Condition="!$([System.String]::Copy('$(JdkFindCompletionsExclude)').ToLower().Contains('zsh'))"/>
+    <EmbeddedResource Include="completions/jdkfind.fish" LogicalName="jdkfind.completions.fish"
+                      Condition="!$([System.String]::Copy('$(JdkFindCompletionsExclude)').ToLower().Contains('fish'))"/>
+    <EmbeddedResource Include="completions/jdkfind.ps1" LogicalName="jdkfind.completions.powershell"
+                      Condition="!$([System.String]::Copy('$(JdkFindCompletionsExclude)').ToLower().Contains('powershell'))"/>
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="JdkFind.Tests"/>
   </ItemGroup>

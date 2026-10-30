@@ -9,6 +9,7 @@ internal enum SubCommand
     None,
     Info,
     List,
+    Completions,
 }
 
 /// <summary>
@@ -28,6 +29,7 @@ internal sealed class Options
                                            jdkfind [version] -- <command>        Run <command> with JAVA_HOME and bin/ of the selection (exec on Unix, spawn on Windows)
                                            jdkfind info [version] [options]      Print one installation's details
                                            jdkfind list [options]                List all matching installations
+                                           jdkfind completions [shell] [options]  Print a shell-completion script (bash, zsh, fish, powershell)
 
                                            The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
                                            newest version first, installations with a compiler preferred on ties.
@@ -57,6 +59,9 @@ internal sealed class Options
     internal bool ShowVersion => _parseResult.GetResult(_versionOption) is not null;
 
     internal SubCommand Command { get; private set; }
+
+    /// <summary>Shell named after 'completions' (bash, zsh, fish, powershell), or null to list.</summary>
+    internal string? Shell { get; private set; }
 
     /// <summary>Positional version prefix (numeric, dot-separated, e.g. "21", "21.0", "21.0.5").</summary>
     internal string? VersionPrefix { get; private set; }
@@ -112,7 +117,7 @@ internal sealed class Options
         if (tail is not null)
         {
             if (options.Command != SubCommand.None)
-                throw new ArgumentException("'--' runs a command; it is not valid with 'info' or 'list'.");
+                throw new ArgumentException("'--' runs a command; it is not valid with 'info', 'list' or 'completions'.");
             if (options.Tool is not null)
                 throw new ArgumentException("'--' runs a command; the tool positional has no effect with it.");
             if (tail.Length == 0)
@@ -200,6 +205,18 @@ internal sealed class Options
         };
         list.Add(listVersion);
 
+        var shell = new Argument<string?>("shell")
+        {
+            Description = "bash, zsh, fish or powershell", Arity = ArgumentArity.ZeroOrOne,
+        };
+
+        var completions = new Command("completions")
+        {
+            Description = "Print a shell-completion script (bash, zsh, fish, powershell)",
+            TreatUnmatchedTokensAsErrors = true,
+        };
+        completions.Add(shell);
+
         var root = new RootCommand(RootDescription)
         {
             // Tokens matched by nothing on the default command are usage errors too.
@@ -215,6 +232,7 @@ internal sealed class Options
         root.Add(noProbe);
         root.Add(info);
         root.Add(list);
+        root.Add(completions);
 
         // The root command auto-injects a standard --version option; keep it and
         // let Run dispatch it like the help action.
@@ -225,9 +243,11 @@ internal sealed class Options
             Root = root,
             Info = info,
             List = list,
+            Completions = completions,
             Operands = operands,
             Version = version,
             ListVersion = listVersion,
+            Shell = shell,
             Json = json,
             Vendor = vendor,
             Distribution = distribution,
@@ -256,6 +276,7 @@ internal sealed class Options
             VersionPrefix = infoVersion is not null ? ValidateVersionPrefix(infoVersion)
                 : listVersion is not null ? ValidateVersionPrefix(listVersion)
                 : null,
+            Shell = parseResult.GetValue(tree.Shell) is { } shellText ? ValidateShell(shellText) : null,
             OutputJson = parseResult.GetValue(tree.Json),
             Vendor = parseResult.GetValue(tree.Vendor),
             Distribution = parseResult.GetValue(tree.Distribution),
@@ -272,6 +293,7 @@ internal sealed class Options
         // `jdkfind java list` keep the same result.
         options.Command = parseResult.CommandResult.Command == tree.Info ? SubCommand.Info
             : parseResult.CommandResult.Command == tree.List ? SubCommand.List
+            : parseResult.CommandResult.Command == tree.Completions ? SubCommand.Completions
             : SubCommand.None;
 
         return options;
@@ -295,6 +317,7 @@ internal sealed class Options
         _tree.Root.SetAction(Action);
         _tree.Info.SetAction(Action);
         _tree.List.SetAction(Action);
+        _tree.Completions.SetAction(Action);
 
         return _parseResult.InvokeAsync(new InvocationConfiguration());
     }
@@ -346,4 +369,11 @@ internal sealed class Options
         int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var release)
             ? release
             : throw new ArgumentException($"Invalid release '{text}'.");
+
+    /// <summary>The completions argument must name a shell the CLI knows; a
+    /// build that excluded the script reports that at execution time.</summary>
+    private static string ValidateShell(string text) =>
+        Completions.IsKnownShell(text)
+            ? text.ToLowerInvariant()
+            : throw new ArgumentException($"Unknown shell '{text}'. Shells: bash, zsh, fish, powershell.");
 }
