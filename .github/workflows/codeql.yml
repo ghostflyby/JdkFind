@@ -23,6 +23,7 @@ jobs:
       # Required to upload the SARIF results to the Security tab.
       security-events: write
       contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v7
 
