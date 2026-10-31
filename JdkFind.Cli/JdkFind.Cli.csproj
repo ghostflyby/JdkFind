@@ -19,6 +19,7 @@
     <PackageId>JdkFind.Cli</PackageId>
     <Authors>ghostflyby</Authors>
     <Description>Locate installed JDKs across Windows, macOS and Linux.</Description>
+    <PackageTags>jdk;java;java-home;discovery;dotnet-tool;cli</PackageTags>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/ghostflyby/JdkFind</RepositoryUrl>
