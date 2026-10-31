@@ -32,7 +32,7 @@ permissions:
 jobs:
   build:
     name: Build and test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
@@ -41,7 +41,8 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-
+          cache: true
+          cache-dependency-path: '**/*.csproj'
       - name: Set version from tag
         run: |
           "VERSION=$( $env:GITHUB_REF_NAME -replace '^v', '' )" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
@@ -60,14 +61,16 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pkg
-          path: pkg/*.nupkg
+          path: |
+            pkg/*.nupkg
+            pkg/*.snupkg
           if-no-files-found: error
           retention-days: 7
 
   publish:
     name: Publish to nuget.org + GitHub release
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     # id-token: write lets NuGet/login exchange the OIDC token for a short-lived
     # NuGet API key (Trusted Publishing); attestations: write persists the build
@@ -92,7 +95,8 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-
+          cache: true
+          cache-dependency-path: '**/*.csproj'
       - name: Download packages
         uses: actions/download-artifact@v8
         with:
@@ -104,8 +108,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
           $version = $env:GITHUB_REF_NAME -replace '^v', ''
-          # The built-in SemVer type is the format validator: an unparseable tag
-          # throws here, so no hand-rolled regex needs keeping in sync.
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$')
+          {
+            throw "tag '$env:GITHUB_REF_NAME' is not a valid vX.Y.Z[(-suffix)] version"
+          }
           $candidateV = [semver]::new($version)
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
           # Refuse versions nuget.org already has, before anything else runs: a
@@ -194,7 +200,9 @@ jobs:
         with:
           subject-path: |
             pkg/JdkFind.${{ env.VERSION }}.nupkg
+            pkg/JdkFind.${{ env.VERSION }}.snupkg
             pkg/JdkFind.Cli.${{ env.VERSION }}.nupkg
+            pkg/JdkFind.Cli.${{ env.VERSION }}.snupkg
 
       - name: NuGet login (OIDC → temporary API key)
         uses: NuGet/login@v1
@@ -223,7 +231,8 @@ jobs:
         run: |
           gh release create "$env:GITHUB_REF_NAME" --title "$env:GITHUB_REF_NAME" `
             --notes "JDK locator library and jdkfind tool — see https://www.nuget.org/packages/JdkFind.Cli/$env:VERSION for package details." `
-            "pkg/JdkFind.$env:VERSION.nupkg" "pkg/JdkFind.Cli.$env:VERSION.nupkg"
+            "pkg/JdkFind.$env:VERSION.nupkg" "pkg/JdkFind.$env:VERSION.snupkg" `
+            "pkg/JdkFind.Cli.$env:VERSION.nupkg" "pkg/JdkFind.Cli.$env:VERSION.snupkg"
         env:
           GH_TOKEN: ${{ github.token }}
 

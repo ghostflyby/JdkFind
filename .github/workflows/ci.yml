@@ -31,7 +31,7 @@ jobs:
         # system and the environment: path separators, case-sensitivity, symlink
         # and permission semantics all differ per OS. Symlink/permission tests
         # skip themselves on Windows by design.
-        os: [ windows-latest, ubuntu-latest, macos-latest ]
+        os: [ windows-2025, ubuntu-24.04, macos-26 ]
     steps:
       - uses: actions/checkout@v7
 
@@ -39,12 +39,17 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
       - name: Restore
         run: dotnet restore JdkFind.slnx
 
       - name: Build
         run: dotnet build JdkFind.slnx -c Release --no-restore --nologo
+
+      - name: Format
+        run: dotnet format JdkFind.slnx --verify-no-changes --no-restore
 
       - name: Test
         # xunit.v3 runs on Microsoft.Testing.Platform, which the .NET 10 SDK's
@@ -53,7 +58,7 @@ jobs:
 
   package:
     name: Package and smoke-test the tool
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
@@ -62,11 +67,13 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
       - name: Pack
         run: |
-          dotnet pack JdkFind/JdkFind.csproj -c Release --nologo -o pkg
-          dotnet pack JdkFind.Cli/JdkFind.Cli.csproj -c Release --nologo -o pkg
+          dotnet pack JdkFind/JdkFind.csproj -c Release --nologo -o pkg -p:Version=0.0.0-ci
+          dotnet pack JdkFind.Cli/JdkFind.Cli.csproj -c Release --nologo -o pkg -p:Version=0.0.0-ci
 
       - name: Smoke-test the packed tool
         # Install the exact tool package from a local folder source and run it: this
@@ -75,8 +82,7 @@ jobs:
         # pinned so a newer release on nuget.org can never shadow the local package.
         # GitHub runners ship JDKs, so discovery must surface at least one home.
         run: |
-          version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' JdkFind.Cli/JdkFind.Cli.csproj)
-          dotnet tool install --global --add-source "$PWD/pkg" JdkFind.Cli --version "$version"
+          dotnet tool install --global --add-source "$PWD/pkg" JdkFind.Cli --version 0.0.0-ci
           "$HOME/.dotnet/tools/jdkfind" --help
           # The default command prints the newest home on stdout; GitHub runners
           # ship JDKs, so discovery must surface at least one.
@@ -88,6 +94,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pkg
-          path: pkg/*.nupkg
+          path: |
+            pkg/*.nupkg
+            pkg/*.snupkg
           if-no-files-found: error
           retention-days: 7
