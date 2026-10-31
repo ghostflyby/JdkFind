@@ -108,8 +108,10 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
           $version = $env:GITHUB_REF_NAME -replace '^v', ''
-          # The built-in SemVer type is the format validator: an unparseable tag
-          # throws here, so no hand-rolled regex needs keeping in sync.
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$')
+          {
+            throw "tag '$env:GITHUB_REF_NAME' is not a valid vX.Y.Z[(-suffix)] version"
+          }
           $candidateV = [semver]::new($version)
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
           # Refuse versions nuget.org already has, before anything else runs: a
