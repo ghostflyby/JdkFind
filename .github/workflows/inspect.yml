@@ -19,7 +19,11 @@ permissions:
 
 jobs:
   inspect:
-    name: InspectCode
+    # Distinct from the SARIF tool name on purpose: uploading the report makes
+    # GitHub Advanced Security publish its own check run named after
+    # tool.driver.name ("InspectCode"), and required status checks match by name
+    # only, so the gate needs a name of its own.
+    name: InspectCode gate
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
