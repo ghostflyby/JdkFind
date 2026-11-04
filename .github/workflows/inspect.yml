@@ -46,11 +46,12 @@ jobs:
       # global install and no PATH step. The version is pinned because the inspection
       # rule set shifts between releases: an unpinned tool would change the gate's
       # verdict without a code change.
-      # --severity=INFO and --swea are what make the report match the editor: the
-      # default floor (SUGGESTION) drops hints and info, and the default solution-wide
-      # analysis mode under-reports cross-project findings.
+      # The report is scoped to warnings and errors on purpose: code scanning turns
+      # every included result into an alert, and suggestion-level results would flood
+      # it with API-shape advice. --swea stays on so cross-project findings are not
+      # under-reported.
       - name: Run InspectCode
-        run: dotnet tool exec JetBrains.ReSharper.GlobalTools@2026.2.3.1 -- inspectcode JdkFind.slnx --output=inspect.sarif --format=Sarif --severity=INFO --swea --verbosity=WARN
+        run: dotnet tool exec JetBrains.ReSharper.GlobalTools@2026.2.3.1 -- inspectcode JdkFind.slnx --output=inspect.sarif --format=Sarif --severity=WARNING --swea --verbosity=WARN
 
       # InspectCode exits 0 no matter how many findings it reports, so the gate has
       # to read the report. Only error-level (failure) results block; warnings are
