@@ -50,14 +50,9 @@ jobs:
               throw 'InspectCode produced no SARIF report.'
           }
           $sarif = Get-Content inspect.sarif -Raw | ConvertFrom-Json
-          $errors = @()
-          $warnings = @()
-          foreach ($run in $sarif.runs) {
-              foreach ($result in $run.results) {
-                  if ($result.level -eq 'error') { $errors += $result }
-                  elseif ($result.level -eq 'warning') { $warnings += $result }
-              }
-          }
+          $results = @($sarif.runs | ForEach-Object { $_.results })
+          $errors = @($results | Where-Object { $_.level -eq 'error' })
+          $warnings = @($results | Where-Object { $_.level -eq 'warning' })
           if ($errors.Count -eq 0) {
               "InspectCode: no error-level findings ($($warnings.Count) warning(s))." |
                   Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
@@ -72,16 +67,15 @@ jobs:
           ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           throw "InspectCode reported $($errors.Count) error-level finding(s); download the inspectcode-sarif artifact for the full report."
 
-      # Fork PRs get a read-only token; the artifact below still carries the report.
       - name: Upload SARIF to code scanning
-        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: always() && !cancelled() && hashFiles('inspect.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: inspect.sarif
           category: inspectcode
 
       - name: Upload the report
-        if: always()
+        if: always() && !cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: inspectcode-sarif
