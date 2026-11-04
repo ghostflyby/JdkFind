@@ -1,0 +1,99 @@
+name: Inspect
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+# Only the latest commit's inspection matters for the merge gate, so a new push
+# supersedes the in-flight run.
+concurrency:
+  group: inspect-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: the report is uploaded as an artifact and (outside fork PRs) as
+# a SARIF result set, which is the only reason for security-events: write below.
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: InspectCode
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Restore
+        run: dotnet restore JdkFind.slnx
+
+      # `dotnet tool exec` runs the tool straight from the package cache, so there is no
+      # global install and no PATH step. The version is pinned because the inspection
+      # rule set shifts between releases: an unpinned tool would change the gate's
+      # verdict without a code change.
+      # --severity=INFO and --swea are what make the report match the editor: the
+      # default floor (SUGGESTION) drops hints and info, and the default solution-wide
+      # analysis mode under-reports cross-project findings.
+      - name: Run InspectCode
+        run: dotnet tool exec JetBrains.ReSharper.GlobalTools@2026.2.3.1 -- inspectcode JdkFind.slnx --output=inspect.sarif --format=Sarif --severity=INFO --swea --verbosity=WARN
+
+      # InspectCode exits 0 no matter how many findings it reports, so the gate has
+      # to read the report. Only error-level (failure) results block; warnings are
+      # counted into the summary but never fail the run.
+      - name: Enforce the failure gate
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath inspect.sarif)) {
+              throw 'InspectCode produced no SARIF report.'
+          }
+          $sarif = Get-Content inspect.sarif -Raw | ConvertFrom-Json
+          $errors = @()
+          $warnings = @()
+          foreach ($run in $sarif.runs) {
+              foreach ($result in $run.results) {
+                  if ($result.level -eq 'error') { $errors += $result }
+                  elseif ($result.level -eq 'warning') { $warnings += $result }
+              }
+          }
+          if ($errors.Count -eq 0) {
+              "InspectCode: no error-level findings ($($warnings.Count) warning(s))." |
+                  Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              exit 0
+          }
+          $lines = $errors | Group-Object ruleId | Sort-Object Count -Descending |
+              ForEach-Object { "- $($_.Name): $($_.Count)" }
+          @(
+              "InspectCode blocked this run with $($errors.Count) error-level finding(s)."
+              ''
+              $lines
+          ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          throw "InspectCode reported $($errors.Count) error-level finding(s); download the inspectcode-sarif artifact for the full report."
+
+      # Fork pull requests get a read-only token, so the upload would fail there;
+      # the artifact below still carries the report for those runs.
+      - name: Upload SARIF to code scanning
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: inspect.sarif
+          category: inspectcode
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: inspectcode-sarif
+          path: inspect.sarif
+          if-no-files-found: warn
+          retention-days: 7

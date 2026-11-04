@@ -253,7 +253,7 @@ public class JvmVersionTests
         Assert.Equal(string.Empty, version.Original);
         Assert.Equal(string.Empty, version.ToString());
         Assert.False(version.IsPreRelease);
-        Assert.Equal(0, version.CompareTo(JvmVersion.Unknown("")));
+        Assert.Equal(0, version.CompareTo(JvmVersion.Unknown()));
     }
 
     [Fact]
