@@ -6,23 +6,18 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Only the latest commit's inspection matters for the merge gate, so a new push
-# supersedes the in-flight run.
+# Only the latest commit matters for the gate.
 concurrency:
   group: inspect-${{ github.ref }}
   cancel-in-progress: true
 
-# Least privilege: the report is uploaded as an artifact and (outside fork PRs) as
-# a SARIF result set, which is the only reason for security-events: write below.
+# security-events: write is only for the SARIF upload.
 permissions:
   contents: read
 
 jobs:
   inspect:
-    # Distinct from the SARIF tool name on purpose: uploading the report makes
-    # GitHub Advanced Security publish its own check run named after
-    # tool.driver.name ("InspectCode"), and required status checks match by name
-    # only, so the gate needs a name of its own.
+    # Not "InspectCode": the SARIF upload creates a check run of that name too.
     name: InspectCode gate
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -42,20 +37,12 @@ jobs:
       - name: Restore
         run: dotnet restore JdkFind.slnx
 
-      # `dotnet tool exec` runs the tool straight from the package cache, so there is no
-      # global install and no PATH step. The version is pinned because the inspection
-      # rule set shifts between releases: an unpinned tool would change the gate's
-      # verdict without a code change.
-      # The report is scoped to warnings and errors on purpose: code scanning turns
-      # every included result into an alert, and suggestion-level results would flood
-      # it with API-shape advice. --swea stays on so cross-project findings are not
-      # under-reported.
+      # Pinned: the rule set changes between releases and would flip the gate.
+      # Warnings and errors only: code scanning turns every result into an alert.
       - name: Run InspectCode
         run: dotnet tool exec JetBrains.ReSharper.GlobalTools@2026.2.3.1 -- inspectcode JdkFind.slnx --output=inspect.sarif --format=Sarif --severity=WARNING --swea --verbosity=WARN
 
-      # InspectCode exits 0 no matter how many findings it reports, so the gate has
-      # to read the report. Only error-level (failure) results block; warnings are
-      # counted into the summary but never fail the run.
+      # InspectCode exits 0 regardless of findings; only error level fails.
       - name: Enforce the failure gate
         shell: pwsh
         run: |
@@ -85,8 +72,7 @@ jobs:
           ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
           throw "InspectCode reported $($errors.Count) error-level finding(s); download the inspectcode-sarif artifact for the full report."
 
-      # Fork pull requests get a read-only token, so the upload would fail there;
-      # the artifact below still carries the report for those runs.
+      # Fork PRs get a read-only token; the artifact below still carries the report.
       - name: Upload SARIF to code scanning
         if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@v4
