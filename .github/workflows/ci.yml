@@ -53,8 +53,18 @@ jobs:
 
       - name: Test
         # xunit.v3 runs on Microsoft.Testing.Platform, which the .NET 10 SDK's
-        # dotnet test drives natively.
-        run: dotnet test --solution JdkFind.slnx -c Release --no-build --no-restore
+        # dotnet test drives natively. --report-trx (provided by
+        # Microsoft.Testing.Extensions.TrxReport, referenced by the test
+        # project) writes the .trx into TestResults.
+        run: dotnet test --solution JdkFind.slnx -c Release --no-build --no-restore --report-trx --results-directory TestResults
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results-${{ matrix.os }}
+          path: TestResults
+          if-no-files-found: ignore
 
   package:
     name: Package and smoke-test the tool
