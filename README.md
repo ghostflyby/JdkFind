@@ -76,9 +76,9 @@ the rest.
 
 `--json` writes a stable, machine-readable contract: camelCase keys,
 UTF-8, one object per installation (`list` emits an array). Every key
-is always present — unknown values are `null` — and within the same
-major version the shape is additive-only: keys are never renamed or
-removed.
+is always present — unknown values are `null` (the VM name/version pair
+degrades to an empty string) — and within the same major version the
+shape is additive-only: keys are never renamed or removed.
 
 | Key                              | Type           | Meaning                                                                 |
 |----------------------------------|----------------|-------------------------------------------------------------------------|
@@ -91,7 +91,7 @@ removed.
 | `distribution`                   | string         | foojay-style distribution name (e.g. `Zulu`)                            |
 | `vendorRaw`                      | string \| null | The binary's reported vendor, falling back to the release `IMPLEMENTOR` |
 | `runtimeName` / `runtimeVersion` | string \| null | Probed, falling back to the release file                                |
-| `vmName` / `vmVersion`           | string \| null | Probed, falling back to the release file                                |
+| `vmName` / `vmVersion`           | string         | Probed, falling back to the release file (empty when unknown)           |
 | `architecture` / `osName`        | string \| null | Probed, falling back to the release file                                |
 | `providers`                      | string[]       | Detection sources that reported this home                               |
 
