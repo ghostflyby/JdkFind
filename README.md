@@ -76,9 +76,9 @@ the rest.
 
 `--json` writes a stable, machine-readable contract: camelCase keys,
 UTF-8, one object per installation (`list` emits an array). Every key
-is always present — unknown values are `null` — and within the same
-major version the shape is additive-only: keys are never renamed or
-removed.
+is always present — unknown values are `null` (the VM name/version pair
+degrades to an empty string) — and within the same major version the
+shape is additive-only: keys are never renamed or removed.
 
 | Key                              | Type           | Meaning                                                                 |
 |----------------------------------|----------------|-------------------------------------------------------------------------|
@@ -90,8 +90,8 @@ removed.
 | `vendor`                         | string         | Normalized upstream vendor (e.g. `Azul`)                                |
 | `distribution`                   | string         | foojay-style distribution name (e.g. `Zulu`)                            |
 | `vendorRaw`                      | string \| null | The binary's reported vendor, falling back to the release `IMPLEMENTOR` |
-| `runtimeName` / `runtimeVersion` | string \| null | Probed `java.runtime.*`                                                 |
-| `vmName` / `vmVersion`           | string \| null | Probed `java.vm.*`                                                      |
+| `runtimeName` / `runtimeVersion` | string \| null | Probed, falling back to the release file                                |
+| `vmName` / `vmVersion`           | string         | Probed, falling back to the release file (empty when unknown)           |
 | `architecture` / `osName`        | string \| null | Probed, falling back to the release file                                |
 | `providers`                      | string[]       | Detection sources that reported this home                               |
 
@@ -178,8 +178,8 @@ take precedence over the home's release file, which only fills what the
 binary did not say. The platform specification guarantees the standard
 property set (vendor, os.name, os.arch, java.vm.name, java.vm.version), so
 their counterparts on `JavaExecutable` are non-nullable strings — empty only
-when no probe ran, the probe degraded, or an implementation broke that
-promise; the runtime-only `java.runtime.*` pair is null in those cases.
+when the binary did not report them and the release file does not carry them
+either; the runtime-only `java.runtime.*` pair is null under the same rule.
 
 ## Build and test
 

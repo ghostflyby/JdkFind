@@ -173,6 +173,37 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
+    public void Locate_UnprobedRuntime_FillsIdentityFromRelease()
+    {
+        var jdk = Path.Combine(_temp.FullPath, "jdks", "full-release");
+        Directory.CreateDirectory(Path.Combine(jdk, "bin"));
+        File.WriteAllText(Path.Combine(jdk, "bin", JavaHomeLayout.JavaExecutableName), string.Empty);
+        File.WriteAllText(
+            Path.Combine(jdk, "release"),
+            """
+            JAVA_VERSION="21.0.5"
+            IMPLEMENTOR="Release Vendor"
+            JAVA_RUNTIME_NAME="Release Runtime"
+            JAVA_RUNTIME_VERSION="21.0.5+3"
+            JAVA_VM_NAME="Release VM"
+            JAVA_VM_VERSION="21.0.5+3"
+            """);
+        var finder = new JdkFinder
+        {
+            Providers = [new StubJvmProvider("stub", jdk)],
+            ProbeRuntimeProperties = false,
+        };
+
+        var jvm = Assert.Single(finder.Locate().ToList());
+
+        // No probe ran; the release file's own identity claims fill the executable.
+        Assert.Equal("Release Runtime", jvm.Executable.RuntimeName);
+        Assert.Equal("21.0.5+3", jvm.Executable.RuntimeVersion);
+        Assert.Equal("Release VM", jvm.Executable.VmName);
+        Assert.Equal("21.0.5+3", jvm.Executable.VmVersion);
+    }
+
+    [Fact]
     public void Locate_ProbesInstallationsConcurrently()
     {
         if (OperatingSystem.IsWindows())

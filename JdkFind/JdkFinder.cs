@@ -350,26 +350,9 @@ public sealed record JdkFinder
         IReadOnlyDictionary<string, string> release,
         JvmRuntimeProbe.Outcome? outcome)
     {
-        // The raw JAVA_VERSION string is preserved on JvmVersion.Original; unparseable
-        // values degrade to the Unknown placeholder (sorts before every known version).
-        var version = JvmVersion.Parse(release.GetValueOrDefault("JAVA_VERSION"));
-        var vendorRaw = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR"));
-
-        return new Jvm
-        {
-            Home = new DirectoryInfo(homePath),
-            Providers = providers,
-            Executable = BuildExecutable(JavaHomeLayout.JavaExecutablePath(homePath), new DirectoryInfo(homePath), release,
-                outcome),
-            Version = version,
-            LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
-            HasCompiler = File.Exists(Path.Combine(homePath, "bin", JavaHomeLayout.CompilerExecutableName)),
-            VendorRaw = vendorRaw,
-            Vendor = JvmIdentity.DetectVendor(vendorRaw),
-            Distribution = JvmIdentity.DetectDistribution(
-                NonEmpty(release.GetValueOrDefault("IMPLEMENTOR_VERSION")), vendorRaw,
-                release.ContainsKey("GRAALVM_VERSION")),
-        };
+        var executable = BuildExecutable(JavaHomeLayout.JavaExecutablePath(homePath), new DirectoryInfo(homePath),
+            release, outcome);
+        return Jvm.FromRelease(homePath, executable, release) with { Providers = providers };
     }
 
     /// <summary>Builds the installation a probed home yields. Null when the release
@@ -387,8 +370,8 @@ public sealed record JdkFinder
 
     /// <summary>Builds a java runtime dossier: every property probes first and
     /// the release file fills what the binary did not report. The runtime-only
-    /// properties stay null when no probe ran or the binary did not report
-    /// them.</summary>
+    /// pair stays null when neither side reports it; the VM fields degrade to
+    /// the empty string under the same rule.</summary>
     private static JavaExecutable BuildExecutable(
         string javaExecutablePath, DirectoryInfo? home, IReadOnlyDictionary<string, string>? release,
         JvmRuntimeProbe.Outcome? outcome)
@@ -410,10 +393,14 @@ public sealed record JdkFinder
                      ?? NonEmpty(release?.GetValueOrDefault("OS_NAME")) ?? string.Empty,
             Architecture = NonEmpty(properties?.GetValueOrDefault("os.arch"))
                            ?? NonEmpty(release?.GetValueOrDefault("OS_ARCH")) ?? string.Empty,
-            RuntimeName = properties?.GetValueOrDefault("java.runtime.name"),
-            RuntimeVersion = properties?.GetValueOrDefault("java.runtime.version"),
-            VmName = properties?.GetValueOrDefault("java.vm.name") ?? string.Empty,
-            VmVersion = properties?.GetValueOrDefault("java.vm.version") ?? string.Empty,
+            RuntimeName = NonEmpty(properties?.GetValueOrDefault("java.runtime.name"))
+                          ?? NonEmpty(release?.GetValueOrDefault("JAVA_RUNTIME_NAME")),
+            RuntimeVersion = NonEmpty(properties?.GetValueOrDefault("java.runtime.version"))
+                             ?? NonEmpty(release?.GetValueOrDefault("JAVA_RUNTIME_VERSION")),
+            VmName = NonEmpty(properties?.GetValueOrDefault("java.vm.name"))
+                     ?? NonEmpty(release?.GetValueOrDefault("JAVA_VM_NAME")) ?? string.Empty,
+            VmVersion = NonEmpty(properties?.GetValueOrDefault("java.vm.version"))
+                        ?? NonEmpty(release?.GetValueOrDefault("JAVA_VM_VERSION")) ?? string.Empty,
         };
     }
 

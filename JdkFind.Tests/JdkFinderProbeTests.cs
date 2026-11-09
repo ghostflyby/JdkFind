@@ -31,6 +31,17 @@ public class JdkFinderProbeTests : IDisposable
                                                            EOPROBE
                                                            exit 0
                                                            """);
+        // The release file carries identity claims too; the probe outranks them all.
+        File.WriteAllText(
+            Path.Combine(home, "release"),
+            """
+            JAVA_VERSION="21.0.5"
+            IMPLEMENTOR="Release Vendor"
+            JAVA_RUNTIME_NAME="Release Runtime"
+            JAVA_RUNTIME_VERSION="21.0.5+3"
+            JAVA_VM_NAME="Release VM"
+            JAVA_VM_VERSION="21.0.5+3"
+            """);
 
         var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
 
@@ -42,8 +53,40 @@ public class JdkFinderProbeTests : IDisposable
         Assert.Equal("testarch", executable.Architecture);
         Assert.Equal("TestOS", executable.OsName);
         Assert.Equal("Probe Runtime", executable.RuntimeName);
+        Assert.Equal("17.0.9+1", executable.RuntimeVersion);
         Assert.Equal("Probe VM", executable.VmName);
+        Assert.Equal("17.0.9+1", executable.VmVersion);
         Assert.Equal(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), executable.Path);
+    }
+
+    [Fact]
+    public void FromExecutable_DegradedProbe_FillsIdentityFromRelease()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The fake java executable is a POSIX shell script.
+
+        // The binary runs but reports nothing: the probe degrades, and the
+        // release file fills the identity fields it carries.
+        var home = CreateFakeHome(_temp.FullPath, "21.0.5", "exit 0");
+        File.WriteAllText(
+            Path.Combine(home, "release"),
+            """
+            JAVA_VERSION="21.0.5"
+            IMPLEMENTOR="Release Vendor"
+            JAVA_RUNTIME_NAME="Release Runtime"
+            JAVA_RUNTIME_VERSION="21.0.5+3"
+            JAVA_VM_NAME="Release VM"
+            JAVA_VM_VERSION="21.0.5+3"
+            """);
+
+        var executable = new JdkFinder().FromExecutable(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName));
+
+        Assert.NotNull(executable);
+        Assert.Null(executable.StartFailure);
+        Assert.Equal("Release Runtime", executable.RuntimeName);
+        Assert.Equal("21.0.5+3", executable.RuntimeVersion);
+        Assert.Equal("Release VM", executable.VmName);
+        Assert.Equal("21.0.5+3", executable.VmVersion);
     }
 
     [Fact]
