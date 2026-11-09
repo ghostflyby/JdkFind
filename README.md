@@ -14,6 +14,30 @@ Locate installed JDKs on Windows, macOS and Linux — a .NET library and the
 dotnet tool install --global JdkFind.Cli
 ```
 
+## Native binaries
+
+Release pages on GitHub also carry self-contained `jdkfind` binaries built
+with NativeAOT — no .NET runtime needed:
+
+| Asset                     | Runs on                                  |
+|---------------------------|------------------------------------------|
+| `jdkfind-linux-musl-x64.tar.gz`    | any Linux distribution, x64 — fully static |
+| `jdkfind-linux-musl-arm64.tar.gz`  | any Linux distribution, arm64 — fully static |
+| `jdkfind-osx-arm64.tar.gz`         | macOS, Apple Silicon                       |
+| `jdkfind-osx-x64.tar.gz`           | macOS, Intel                               |
+| `jdkfind-win-x64.zip`              | Windows, x64                               |
+| `jdkfind-win-arm64.zip`            | Windows, ARM64                             |
+
+The Linux builds are statically linked against musl (`StaticExecutable`), so
+they run on glibc and musl distributions alike; the macOS builds link only
+OS-shipped libraries (`/usr/lib`, `/System/Library` — libc is part of the
+system) and the Windows builds need no VC++ redistributable. A `SHA256SUMS`
+file accompanies each release. The NuGet packages stay managed IL — the
+dotnet tool works wherever a .NET 10 runtime does, including FreeBSD and
+OpenBSD, which have no native builds (no official NativeAOT toolchain exists
+for them). macOS Gatekeeper may quarantine downloaded binaries;
+`xattr -d com.apple.quarantine jdkfind` clears it.
+
 ## CLI usage
 
 ```console
