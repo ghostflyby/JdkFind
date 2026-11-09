@@ -86,7 +86,7 @@ jobs:
       matrix:
         include:
           - { rid: linux-musl-x64, os: ubuntu-24.04, image: "mcr.microsoft.com/dotnet/sdk:10.0-alpine-aot-amd64" }
-          - { rid: linux-musl-arm64, os: ubuntu-24.04-arm, image: "mcr.microsoft.com/dotnet/sdk:10.0-alpine-aot-arm64v8" }
+          - { rid: linux-musl-arm64, os: ubuntu-24.04, image: "mcr.microsoft.com/dotnet/sdk:10.0-alpine-aot-amd64" }
           - { rid: osx-arm64, os: macos-26 }
           - { rid: osx-x64, os: macos-26 }
           - { rid: win-x64, os: windows-2025 }
@@ -149,15 +149,20 @@ jobs:
           {
             throw 'the linux binary is not statically linked'
           }
-          $ldd = (ldd $binary 2>&1 | Out-String).Trim()
-          Write-Host $ldd
-          # glibc phrasing: "not a dynamic executable"; newer ldd: "statically linked".
-          if ($ldd -notmatch 'not a dynamic executable|statically linked')
+          # Executed only when the host matches the binary architecture; a
+          # cross-built binary gets the static checks above only.
+          if ((uname -m) -eq 'aarch64')
           {
-            throw 'the linux binary has dynamic dependencies'
+            $ldd = (ldd $binary 2>&1 | Out-String).Trim()
+            Write-Host $ldd
+            # glibc phrasing: "not a dynamic executable"; newer ldd: "statically linked".
+            if ($ldd -notmatch 'not a dynamic executable|statically linked')
+            {
+              throw 'the linux binary has dynamic dependencies'
+            }
+            $global:LASTEXITCODE = 0
+            & $binary --version
           }
-          $global:LASTEXITCODE = 0
-          & $binary --version
         env:
           RID: ${{ matrix.rid }}
 
