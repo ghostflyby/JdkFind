@@ -143,7 +143,8 @@ jobs:
           }
           $ldd = (ldd out/jdkfind 2>&1 | Out-String).Trim()
           Write-Host $ldd
-          if ($ldd -notmatch 'not a dynamic executable')
+          # glibc phrasing: "not a dynamic executable"; newer ldd: "statically linked".
+          if ($ldd -notmatch 'not a dynamic executable|statically linked')
           {
             throw 'the linux binary has dynamic dependencies'
           }
