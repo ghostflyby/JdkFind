@@ -31,8 +31,8 @@ with NativeAOT — no .NET runtime needed:
 The Linux builds are statically linked against musl (`StaticExecutable`), so
 they run on glibc and musl distributions alike; the macOS builds link only
 OS-shipped libraries (`/usr/lib`, `/System/Library` — libc is part of the
-system) and the Windows builds need no VC++ redistributable. A `SHA256SUMS`
-file accompanies each release. The NuGet packages stay managed IL — the
+system) and the Windows builds need no VC++ redistributable. The NuGet
+packages stay managed IL — the
 dotnet tool works wherever a .NET 10 runtime does, including FreeBSD and
 OpenBSD, which have no native builds (no official NativeAOT toolchain exists
 for them). macOS Gatekeeper may quarantine downloaded binaries;

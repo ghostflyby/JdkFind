@@ -74,12 +74,8 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # NativeAOT single-file binaries, attached to the GitHub release on tag runs
-  # and uploaded as run artifacts on manual (dry-run) runs. The NuGet packages
-  # stay managed IL — these are the only native assets this repository ships.
-  # StaticExecutable is passed only for the musl targets: static linking is
-  # what lets them run on any distribution, while macOS forbids it (libc ships
-  # with the OS, the binary links only system libraries) and Windows ignores it.
+  # NativeAOT binaries for the release assets. StaticExecutable is musl-only:
+  # macOS forbids static linking (libc ships with the OS) and Windows ignores it.
   native:
     name: Native ${{ matrix.rid }}
     needs: build
@@ -109,13 +105,13 @@ jobs:
           $version = if ($env:GITHUB_REF_NAME -match '^v') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
 
-      # The musl linker backend needs the musl toolchain; glibc targets and the
-      # other platforms link against what the runner images ship.
+      # NativeAOT links musl targets with the musl toolchain (musl-gcc); lld
+      # replaces Ubuntu 24.04's bfd, which asserts on static-pie links.
       - name: Install the musl toolchain
         if: startsWith(matrix.rid, 'linux')
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools
+          sudo apt-get install -y musl-tools lld
 
       - name: Publish
         run: |
@@ -126,20 +122,22 @@ jobs:
           if ($env:RID -like 'linux-*')
           {
             $publishArgs += '-p:StaticExecutable=true'
+            $publishArgs += '-p:LinkerFlavor=lld'
           }
           dotnet publish @publishArgs
         env:
           RID: ${{ matrix.rid }}
 
-      # Executed smoke on the matching host architecture; cross-compiled RIDs
-      # (osx-x64, win-arm64) only get static inspection here.
+      # Executed where the runner matches; cross builds only get static checks.
       - name: Smoke (linux)
         if: startsWith(matrix.rid, 'linux')
         run: |
           $ErrorActionPreference = 'Stop'
           $info = (file out/jdkfind) -join ' '
           Write-Host $info
-          if ($info -notmatch 'statically linked')
+          # StaticExecutable produces a static-PIE executable, which file
+          # reports as "static-pie linked".
+          if ($info -notmatch 'static(ally|-pie) linked')
           {
             throw 'the linux binary is not statically linked'
           }
@@ -157,11 +155,12 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           otool -L out/jdkfind
-          # Only OS-shipped libraries may appear: libc and the Swift runtime ship
-          # with macOS, everything under /System/Library is a system framework.
-          $deps = (otool -L out/jdkfind | Select-Object -Skip 1) |
-            ForEach-Object { ($_ -split '\s+')[0] }
-          $nonSystem = @($deps | Where-Object { $_ -notmatch '^/usr/lib/' -and $_ -notmatch '^/System/Library/' })
+          # Only OS-shipped libraries may appear.
+          $nonSystem = @(
+            otool -L out/jdkfind |
+            Select-Object -Skip 1 |
+            Where-Object { $_.Trim() -and $_.Trim() -notmatch '^(/usr/lib|/System/Library)/' }
+          )
           if ($nonSystem.Count -gt 0)
           {
             throw "non-system dependencies: $($nonSystem -join ', ')"
@@ -192,7 +191,7 @@ jobs:
           }
           else
           {
-            # tar preserves the executable bit; zip on Windows needs nothing.
+            # tar preserves the executable bit.
             tar -czf "jdkfind-$env:RID.tar.gz" -C out jdkfind
           }
         env:
@@ -383,23 +382,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      # The NativeAOT binaries ride on the same release (README "Native
-      # binaries"); a checksum file lets consumers verify the downloads.
       - name: Attach native binaries
         run: |
           $ErrorActionPreference = 'Stop'
           $archives = Get-ChildItem 'native' -Recurse -File |
-            Where-Object { $_.Name -like 'jdkfind-*.tar.gz' -or $_.Name -like 'jdkfind-*.zip' } |
-            Sort-Object Name
+            Where-Object { $_.Name -like 'jdkfind-*.tar.gz' -or $_.Name -like 'jdkfind-*.zip' }
           if ($archives.Count -ne 6)
           {
             throw "expected 6 native archives, found $($archives.Count)"
           }
-          $sums = $archives | ForEach-Object {
-            "$( (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant() )  $( $_.Name )"
-          }
-          $sums | Set-Content -Path 'native/SHA256SUMS'
-          gh release upload "$env:GITHUB_REF_NAME" @($archives.FullName + 'native/SHA256SUMS') --clobber
+          gh release upload "$env:GITHUB_REF_NAME" @($archives.FullName) --clobber
         env:
           GH_TOKEN: ${{ github.token }}
 
