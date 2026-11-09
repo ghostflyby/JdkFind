@@ -122,7 +122,13 @@ jobs:
           if ($env:RID -like 'linux-*')
           {
             $publishArgs += '-p:StaticExecutable=true'
-            $publishArgs += '-p:LinkerFlavor=lld'
+            # Ubuntu 24.04's bfd asserts on the x64 static-pie link; the arm64
+            # bfd handles it, and an lld-linked arm64 binary trips its own
+            # stack-protector self-relocation at startup.
+            if ($env:RID -eq 'linux-musl-x64')
+            {
+              $publishArgs += '-p:LinkerFlavor=lld'
+            }
           }
           dotnet publish @publishArgs
         env:
