@@ -105,32 +105,31 @@ jobs:
           $version = if ($env:GITHUB_REF_NAME -match '^v') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
 
-      # NativeAOT links musl targets with the musl toolchain (musl-gcc); lld
-      # replaces Ubuntu 24.04's bfd, which asserts on static-pie links.
-      - name: Install the musl toolchain
+      # Linux musl builds run in Alpine — the configuration Microsoft itself
+      # builds and tests: an Ubuntu musl-gcc cross environment produces a
+      # static-pie binary that trips its stack-protector self-relocation at
+      # startup (arm64 crashes with both bfd and lld; x64 needed lld to link).
+      - name: Publish (Linux, in Alpine)
         if: startsWith(matrix.rid, 'linux')
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y musl-tools lld
+          docker run --rm -i -v "$PWD:/src" -w /src \
+            -e RID -e VERSION alpine:3.21 sh -s <<'EOF'
+          set -e
+          apk add --no-cache bash curl clang build-base libstdc++
+          curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0 --install-dir /dotnet
+          export PATH="/dotnet:$PATH"
+          dotnet publish JdkFind.Cli/JdkFind.Cli.csproj -c Release -r "$RID" \
+            -p:PublishAot=true -p:StaticExecutable=true --nologo -o "out/$RID" -p:Version="$VERSION"
+          EOF
+        env:
+          RID: ${{ matrix.rid }}
 
       - name: Publish
+        if: ${{ !startsWith(matrix.rid, 'linux') }}
         run: |
-          $publishArgs = @(
-            'JdkFind.Cli/JdkFind.Cli.csproj', '-c', 'Release', '-r', $env:RID,
-            '-p:PublishAot=true', '--nologo', '-o', 'out', "-p:Version=$env:VERSION"
-          )
-          if ($env:RID -like 'linux-*')
-          {
-            $publishArgs += '-p:StaticExecutable=true'
-            # Ubuntu 24.04's bfd asserts on the x64 static-pie link; the arm64
-            # bfd handles it, and an lld-linked arm64 binary trips its own
-            # stack-protector self-relocation at startup.
-            if ($env:RID -eq 'linux-musl-x64')
-            {
-              $publishArgs += '-p:LinkerFlavor=lld'
-            }
-          }
-          dotnet publish @publishArgs
+          dotnet publish JdkFind.Cli/JdkFind.Cli.csproj -c Release -r $env:RID `
+            -p:PublishAot=true --nologo -o out -p:Version=$env:VERSION
         env:
           RID: ${{ matrix.rid }}
 
@@ -139,7 +138,8 @@ jobs:
         if: startsWith(matrix.rid, 'linux')
         run: |
           $ErrorActionPreference = 'Stop'
-          $info = (file out/jdkfind) -join ' '
+          $binary = "out/$env:RID/jdkfind"
+          $info = (file $binary) -join ' '
           Write-Host $info
           # StaticExecutable produces a static-PIE executable, which file
           # reports as "static-pie linked".
@@ -147,7 +147,7 @@ jobs:
           {
             throw 'the linux binary is not statically linked'
           }
-          $ldd = (ldd out/jdkfind 2>&1 | Out-String).Trim()
+          $ldd = (ldd $binary 2>&1 | Out-String).Trim()
           Write-Host $ldd
           # glibc phrasing: "not a dynamic executable"; newer ldd: "statically linked".
           if ($ldd -notmatch 'not a dynamic executable|statically linked')
@@ -155,7 +155,9 @@ jobs:
             throw 'the linux binary has dynamic dependencies'
           }
           $global:LASTEXITCODE = 0
-          out/jdkfind --version
+          & $binary --version
+        env:
+          RID: ${{ matrix.rid }}
 
       - name: Smoke (macos)
         if: startsWith(matrix.rid, 'osx')
@@ -199,7 +201,7 @@ jobs:
           else
           {
             # tar preserves the executable bit.
-            tar -czf "jdkfind-$env:RID.tar.gz" -C out jdkfind
+            tar -czf "jdkfind-$env:RID.tar.gz" -C "out/$env:RID" jdkfind
           }
         env:
           RID: ${{ matrix.rid }}
