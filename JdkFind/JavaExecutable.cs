@@ -7,10 +7,10 @@ namespace JdkFind;
 ///     <c>os.name</c>, <c>os.arch</c>, <c>java.vm.name</c>,
 ///     <c>java.vm.version</c>, ...), so their counterparts here are non-nullable:
 ///     they carry the binary's own reported values — which take precedence over
-///     the backing release file — and are empty when no probe ran or an
-///     implementation did not report one. The runtime-only
+///     the backing release file — and are empty when neither the binary nor the
+///     release file reports one. The runtime-only
 ///     <c>java.runtime.name</c>/<c>java.runtime.version</c> pair is not part of
-///     that guarantee and stays nullable.
+///     that guarantee and stays nullable under the same rule.
 /// </summary>
 public sealed record JavaExecutable
 {
@@ -83,20 +83,23 @@ public sealed record JavaExecutable
     /// file's <c>OS_ARCH</c>; empty when neither reports it.</summary>
     public string Architecture { get; init; } = string.Empty;
 
-    /// <summary>The probed <c>java.runtime.name</c>; null when not probed or not
-    /// reported (not part of the standard property guarantee).</summary>
+    /// <summary>The binary's reported <c>java.runtime.name</c>, falling back to
+    /// the release file's <c>JAVA_RUNTIME_NAME</c>; null when neither reports it
+    /// (not part of the standard property guarantee).</summary>
     public string? RuntimeName { get; init; }
 
-    /// <summary>The probed <c>java.runtime.version</c>; null when not probed or not
-    /// reported (not part of the standard property guarantee).</summary>
+    /// <summary>The binary's reported <c>java.runtime.version</c>, falling back
+    /// to the release file's <c>JAVA_RUNTIME_VERSION</c>; null when neither
+    /// reports it (not part of the standard property guarantee).</summary>
     public string? RuntimeVersion { get; init; }
 
-    /// <summary>The probed <c>java.vm.name</c>; empty when not probed or not
-    /// reported.</summary>
+    /// <summary>The binary's reported <c>java.vm.name</c>, falling back to the
+    /// release file's <c>JAVA_VM_NAME</c>; empty when neither reports it.</summary>
     public string VmName { get; init; } = string.Empty;
 
-    /// <summary>The probed <c>java.vm.version</c>; empty when not probed or not
-    /// reported.</summary>
+    /// <summary>The binary's reported <c>java.vm.version</c>, falling back to
+    /// the release file's <c>JAVA_VM_VERSION</c>; empty when neither reports
+    /// it.</summary>
     public string VmVersion { get; init; } = string.Empty;
 
     /// <summary>Summarizes the binary: version, vendor and path.</summary>
