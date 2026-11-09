@@ -350,26 +350,9 @@ public sealed record JdkFinder
         IReadOnlyDictionary<string, string> release,
         JvmRuntimeProbe.Outcome? outcome)
     {
-        // The raw JAVA_VERSION string is preserved on JvmVersion.Original; unparseable
-        // values degrade to the Unknown placeholder (sorts before every known version).
-        var version = JvmVersion.Parse(release.GetValueOrDefault("JAVA_VERSION"));
-        var vendorRaw = NonEmpty(release.GetValueOrDefault("IMPLEMENTOR"));
-
-        return new Jvm
-        {
-            Home = new DirectoryInfo(homePath),
-            Providers = providers,
-            Executable = BuildExecutable(JavaHomeLayout.JavaExecutablePath(homePath), new DirectoryInfo(homePath), release,
-                outcome),
-            Version = version,
-            LanguageVersion = ReleaseFile.TryGetLanguageVersion(version.Original),
-            HasCompiler = File.Exists(Path.Combine(homePath, "bin", JavaHomeLayout.CompilerExecutableName)),
-            VendorRaw = vendorRaw,
-            Vendor = JvmIdentity.DetectVendor(vendorRaw),
-            Distribution = JvmIdentity.DetectDistribution(
-                NonEmpty(release.GetValueOrDefault("IMPLEMENTOR_VERSION")), vendorRaw,
-                release.ContainsKey("GRAALVM_VERSION")),
-        };
+        var executable = BuildExecutable(JavaHomeLayout.JavaExecutablePath(homePath), new DirectoryInfo(homePath),
+            release, outcome);
+        return Jvm.FromRelease(homePath, executable, release) with { Providers = providers };
     }
 
     /// <summary>Builds the installation a probed home yields. Null when the release
