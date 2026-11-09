@@ -272,5 +272,117 @@ public class ProviderTests : IDisposable
         Assert.Equal([first, second], provider.GetHomes());
     }
 
+    [Fact]
+    public void Mise_ScansInjectedDataHome()
+    {
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "installs", "java", "21.0.5-tem");
+        var provider = new MiseJvmProvider(_temp.FullPath);
+
+        Assert.Equal("mise", provider.Name);
+        Assert.Equal([jdk], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Jenv_ScansInjectedVersionsDirectory()
+    {
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "versions", "temurin-21");
+        var provider = new JenvJvmProvider(_temp.FullPath);
+
+        Assert.Equal("jenv", provider.Name);
+        Assert.Equal([jdk], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Coursier_ScansNameAndVersionLevels()
+    {
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jvm", "temurin-21", "21.0.5+11");
+        TestJdk.Create(_temp.FullPath, "17.0.2", "jvm", "adoptium-17", "17.0.2+8");
+        var provider = new CoursierJvmProvider(Path.Combine(_temp.FullPath, "jvm"));
+
+        Assert.Equal("coursier", provider.Name);
+        Assert.Equal(2, provider.GetHomes().Count);
+        Assert.Contains(jdk, provider.GetHomes());
+    }
+
+    [Fact]
+    public void Coursier_ProbesFlatEntriesToo()
+    {
+        // A home sitting directly below jvm/ — not under a name directory — must
+        // not be lost to the nested shape.
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jvm", "temurin-21");
+        var provider = new CoursierJvmProvider(Path.Combine(_temp.FullPath, "jvm"));
+
+        Assert.Equal([jdk], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Conda_ScansEnvironmentsListAndPrefix()
+    {
+        var listed = TestJdk.Create(_temp.FullPath, "21.0.5", "envs", "ml");
+        var active = TestJdk.Create(_temp.FullPath, "17.0.2", "envs", "active");
+        File.WriteAllLines(Path.Combine(_temp.FullPath, "environments.txt"), [listed, "not-a-real-env"]);
+        var provider = new CondaJvmProvider(Path.Combine(_temp.FullPath, "environments.txt"), active);
+
+        Assert.Equal("conda", provider.Name);
+        Assert.Equal(2, provider.GetHomes().Count);
+        Assert.Contains(listed, provider.GetHomes());
+        Assert.Contains(active, provider.GetHomes());
+    }
+
+    [Fact]
+    public void Nix_ProbesProfileAndLibOpenjdk()
+    {
+        var libHome = TestJdk.Create(_temp.FullPath, "21.0.5", "profiles", "user", "lib", "openjdk");
+        var flatHome = TestJdk.Create(_temp.FullPath, "17.0.2", "profiles", "system");
+        var provider = new NixJvmProvider(
+        [
+            Path.Combine(_temp.FullPath, "profiles", "user"),
+            Path.Combine(_temp.FullPath, "profiles", "system"),
+        ]);
+
+        Assert.Equal("nix", provider.Name);
+        Assert.Equal([libHome, flatHome], provider.GetHomes());
+    }
+
+    [Fact]
+    public void MacPorts_ScansInjectedShareJavaPrefix()
+    {
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "share", "java", "openjdk21");
+        var provider = new MacPortsJvmProvider(Path.Combine(_temp.FullPath, "share", "java"));
+
+        Assert.Equal("macports", provider.Name);
+        Assert.Equal([jdk], provider.GetHomes());
+    }
+
+    [Fact]
+    public void Snap_ScansSandboxJvmAndIdeJbr()
+    {
+        var sandboxJdk = TestJdk.Create(_temp.FullPath, "21.0.5", "openjdk", "current", "usr", "lib", "jvm", "21.0.5");
+        var ideJbr = TestJdk.Create(_temp.FullPath, "17.0.2", "intellij", "current", "jbr");
+        // A snap carrying neither location must contribute nothing.
+        TestJdk.Create(_temp.FullPath, "11", "notes", "current", "usr", "bin");
+        var provider = new SnapJvmProvider(_temp.FullPath);
+
+        Assert.Equal("snap", provider.Name);
+        Assert.Equal(2, provider.GetHomes().Count);
+        Assert.Contains(sandboxJdk, provider.GetHomes());
+        Assert.Contains(ideJbr, provider.GetHomes());
+    }
+
+    [Fact]
+    public void WindowsUserPrograms_ScansVendorAndVersionLevels()
+    {
+        var nested = TestJdk.Create(_temp.FullPath, "21.0.5", "programs", "Eclipse Adoptium", "jdk-21.0.5");
+        var flat = TestJdk.Create(_temp.FullPath, "17.0.2", "programs", "jdk-17");
+        // A non-java vendor directory must contribute nothing.
+        Directory.CreateDirectory(Path.Combine(_temp.FullPath, "programs", "Some Editor"));
+        var provider = new WindowsUserProgramsJvmProvider(Path.Combine(_temp.FullPath, "programs"));
+
+        Assert.Equal("windows-user-programs", provider.Name);
+        Assert.Equal(2, provider.GetHomes().Count);
+        Assert.Contains(nested, provider.GetHomes());
+        Assert.Contains(flat, provider.GetHomes());
+    }
+
     public void Dispose() => _temp.Dispose();
 }
