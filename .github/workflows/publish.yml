@@ -85,8 +85,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { rid: linux-musl-x64, os: ubuntu-24.04 }
-          - { rid: linux-musl-arm64, os: ubuntu-24.04-arm }
+          - { rid: linux-musl-x64, os: ubuntu-24.04, image: "mcr.microsoft.com/dotnet/sdk:10.0-alpine-aot-amd64" }
+          - { rid: linux-musl-arm64, os: ubuntu-24.04-arm, image: "mcr.microsoft.com/dotnet/sdk:10.0-alpine-aot-arm64v8" }
           - { rid: osx-arm64, os: macos-26 }
           - { rid: osx-x64, os: macos-26 }
           - { rid: win-x64, os: windows-2025 }
@@ -105,21 +105,22 @@ jobs:
           $version = if ($env:GITHUB_REF_NAME -match '^v') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
 
-      # Linux musl builds run in Alpine — the configuration Microsoft itself
-      # builds and tests: an Ubuntu musl-gcc cross environment produces a
-      # static-pie binary that trips its stack-protector self-relocation at
-      # startup (arm64 crashes with both bfd and lld; x64 needed lld to link).
+      # Linux musl builds run in Microsoft's Alpine AOT SDK images — the
+      # toolchain configuration Microsoft builds and tests. An Ubuntu musl-gcc
+      # cross environment produces a static-pie binary that trips its
+      # stack-protector self-relocation at startup (arm64 crashes with both bfd
+      # and lld; x64 needed lld to link). The AOT toolchain is preinstalled in
+      # the image; the container stays out of the job level because the JS
+      # actions (checkout, upload-artifact) bundle glibc node and cannot run
+      # under musl.
       - name: Publish (Linux, in Alpine)
         if: startsWith(matrix.rid, 'linux')
         shell: bash
         run: |
           docker run --rm -i -v "$PWD:/src" -w /src \
             -e RID -e VERSION -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
-            alpine:3.21 sh -s <<'EOF'
+            "${{ matrix.image }}" sh -s <<'EOF'
           set -e
-          apk add --no-cache bash curl clang build-base libstdc++
-          curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0 --install-dir /dotnet
-          export PATH="/dotnet:$PATH"
           dotnet publish JdkFind.Cli/JdkFind.Cli.csproj -c Release -r "$RID" \
             -p:PublishAot=true -p:StaticExecutable=true --nologo -o "out/$RID" -p:Version="$VERSION"
           EOF
