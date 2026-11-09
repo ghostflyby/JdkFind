@@ -114,7 +114,8 @@ jobs:
         shell: bash
         run: |
           docker run --rm -i -v "$PWD:/src" -w /src \
-            -e RID -e VERSION alpine:3.21 sh -s <<'EOF'
+            -e RID -e VERSION -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
+            alpine:3.21 sh -s <<'EOF'
           set -e
           apk add --no-cache bash curl clang build-base libstdc++
           curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0 --install-dir /dotnet
@@ -129,7 +130,7 @@ jobs:
         if: ${{ !startsWith(matrix.rid, 'linux') }}
         run: |
           dotnet publish JdkFind.Cli/JdkFind.Cli.csproj -c Release -r $env:RID `
-            -p:PublishAot=true --nologo -o out -p:Version=$env:VERSION
+            -p:PublishAot=true --nologo -o "out/$env:RID" -p:Version=$env:VERSION
         env:
           RID: ${{ matrix.rid }}
 
@@ -163,10 +164,11 @@ jobs:
         if: startsWith(matrix.rid, 'osx')
         run: |
           $ErrorActionPreference = 'Stop'
-          otool -L out/jdkfind
+          $binary = "out/$env:RID/jdkfind"
+          otool -L $binary
           # Only OS-shipped libraries may appear.
           $nonSystem = @(
-            otool -L out/jdkfind |
+            otool -L $binary |
             Select-Object -Skip 1 |
             Where-Object { $_.Trim() -and $_.Trim() -notmatch '^(/usr/lib|/System/Library)/' }
           )
@@ -176,7 +178,7 @@ jobs:
           }
           if ($env:RID -eq 'osx-arm64')
           {
-            out/jdkfind --version
+            & $binary --version
           }
         env:
           RID: ${{ matrix.rid }}
@@ -187,7 +189,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           if ($env:RID -eq 'win-x64')
           {
-            out\jdkfind.exe --version
+            out\$env:RID\jdkfind.exe --version
           }
         env:
           RID: ${{ matrix.rid }}
@@ -196,7 +198,7 @@ jobs:
         run: |
           if ($env:RID -like 'win-*')
           {
-            Compress-Archive -Path out/jdkfind.exe -DestinationPath "jdkfind-$env:RID.zip"
+            Compress-Archive -Path "out/$env:RID/jdkfind.exe" -DestinationPath "jdkfind-$env:RID.zip"
           }
           else
           {
