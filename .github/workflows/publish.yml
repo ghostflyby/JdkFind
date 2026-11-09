@@ -189,7 +189,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           if ($env:RID -eq 'win-x64')
           {
-            out\$env:RID\jdkfind.exe --version
+            & "out/$env:RID/jdkfind.exe" --version
           }
         env:
           RID: ${{ matrix.rid }}
