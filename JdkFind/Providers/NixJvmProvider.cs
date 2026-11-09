@@ -1,15 +1,17 @@
 namespace JdkFind.Providers;
 
 /// <summary>
-///     Scans Nix profiles for the openjdk layout nixpkgs installs: the JDK image
-///     sits at <c>lib/openjdk</c> inside a profile; the profile root itself is
-///     probed too, for environments that expose a home directly. Profiles come
-///     from <c>NIX_PROFILES</c> when set, otherwise the fixed defaults — the
-///     per-user profile (<c>~/.nix-profile</c> and the newer
-///     <c>~/.local/state/nix/profiles/profile</c>), home-manager's per-user
-///     directory, the daemon's default profile and the NixOS system profile.
+///     Scans the openjdk layout nixpkgs installs into Nix profiles: the JDK
+///     image sits at <c>lib/openjdk</c> inside each profile, so every profile's
+///     <c>lib</c> directory is the prefix whose children are the candidates (a
+///     profile root itself carries no <c>release</c> file, so the root is never
+///     a home). Profiles come from <c>NIX_PROFILES</c> when set, otherwise the
+///     fixed defaults — the per-user profile (<c>~/.nix-profile</c> and the
+///     newer <c>~/.local/state/nix/profiles/profile</c>), home-manager's
+///     per-user directory, the daemon's default profile and the NixOS system
+///     profile.
 /// </summary>
-public sealed class NixJvmProvider(IEnumerable<string> profiles) : IJvmProvider
+public sealed class NixJvmProvider(IEnumerable<string> profiles) : ICommonPrefixesJvmProvider
 {
     /// <inheritdoc />
     public string Name => "nix";
@@ -19,13 +21,8 @@ public sealed class NixJvmProvider(IEnumerable<string> profiles) : IJvmProvider
     /// <summary>Scans the default Nix profiles.</summary>
     public NixJvmProvider() : this(ResolveDefaultProfiles()) { }
 
-    IEnumerable<string> IJvmProvider.GetJavaHomes()
-    {
-        foreach (var profile in _profileList)
-            foreach (var candidate in new[] { profile, Path.Combine(profile, "lib", "openjdk") })
-                if (JavaHomeLayout.Probe(candidate) is { } home)
-                    yield return home;
-    }
+    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes() =>
+        _profileList.Select(profile => Path.Combine(profile, "lib"));
 
     private static IEnumerable<string> ResolveDefaultProfiles()
     {

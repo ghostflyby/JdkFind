@@ -330,10 +330,12 @@ public class ProviderTests : IDisposable
     }
 
     [Fact]
-    public void Nix_ProbesProfileAndLibOpenjdk()
+    public void Nix_ProbesLibOpenjdkPerProfile()
     {
-        var libHome = TestJdk.Create(_temp.FullPath, "21.0.5", "profiles", "user", "lib", "openjdk");
-        var flatHome = TestJdk.Create(_temp.FullPath, "17.0.2", "profiles", "system");
+        // nixpkgs installs the JDK image at <profile>/lib/openjdk; a profile root
+        // itself carries no release file, so only the lib layout yields homes.
+        var userHome = TestJdk.Create(_temp.FullPath, "21.0.5", "profiles", "user", "lib", "openjdk");
+        var systemHome = TestJdk.Create(_temp.FullPath, "17.0.2", "profiles", "system", "lib", "openjdk");
         var provider = new NixJvmProvider(
         [
             Path.Combine(_temp.FullPath, "profiles", "user"),
@@ -341,7 +343,7 @@ public class ProviderTests : IDisposable
         ]);
 
         Assert.Equal("nix", provider.Name);
-        Assert.Equal([libHome, flatHome], provider.GetHomes());
+        Assert.Equal([userHome, systemHome], provider.GetHomes());
     }
 
     [Fact]

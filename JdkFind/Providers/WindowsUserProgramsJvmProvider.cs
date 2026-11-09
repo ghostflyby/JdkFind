@@ -3,12 +3,13 @@ namespace JdkFind.Providers;
 /// <summary>
 ///     Scans the per-user Windows install location <c>%LOCALAPPDATA%\Programs</c>
 ///     where un-elevated MSI installers and unpacked distributions land (e.g. a
-///     per-user Temurin under <c>Programs\Eclipse Adoptium\jdk-…</c>). Each
-///     directory below is probed itself and then one level deep, covering both a
-///     home sitting directly under <c>Programs</c> and the vendor-then-version
-///     nesting the installers use.
+///     per-user Temurin under <c>Programs\Eclipse Adoptium\jdk-…</c>). The
+///     prefixes deliberately overlap — <c>Programs</c> itself plus every vendor
+///     directory below it — so homes sitting directly under <c>Programs</c> are
+///     probed under the root while the vendor-then-version nesting is probed
+///     under the vendor.
 /// </summary>
-public sealed class WindowsUserProgramsJvmProvider(string? programsDirectory) : IJvmProvider
+public sealed class WindowsUserProgramsJvmProvider(string? programsDirectory) : ICommonPrefixesJvmProvider
 {
     /// <inheritdoc />
     public string Name => "windows-user-programs";
@@ -16,9 +17,15 @@ public sealed class WindowsUserProgramsJvmProvider(string? programsDirectory) : 
     /// <summary>Scans the default per-user programs directory.</summary>
     public WindowsUserProgramsJvmProvider() : this(ResolveDefaultProgramsDirectory()) { }
 
-    IEnumerable<string> IJvmProvider.GetJavaHomes() =>
-        JvmScanning.EnumerateGuarded(programsDirectory ?? string.Empty)
-            .SelectMany(JvmScanning.ProbeNested);
+    IEnumerable<string> ICommonPrefixesJvmProvider.GetCommonPrefixes()
+    {
+        if (programsDirectory is null)
+            yield break;
+
+        yield return programsDirectory;
+        foreach (var vendor in JvmScanning.EnumerateGuarded(programsDirectory))
+            yield return vendor;
+    }
 
     private static string? ResolveDefaultProgramsDirectory()
     {
