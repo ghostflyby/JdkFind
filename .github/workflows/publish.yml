@@ -74,83 +74,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # The musl builds run as job-level Alpine containers in Microsoft's Alpine
-  # AOT SDK images — the toolchain configuration Microsoft builds and tests
-  # musl targets with. An Ubuntu musl-gcc cross environment instead produces a
-  # static-pie binary that trips its stack-protector self-relocation at
-  # startup (arm64 crashes under both bfd and lld; x64 needed lld to link).
-  # Job-level Alpine containers are a supported runner configuration: the
-  # runner ships musl node builds and selects them through its hard-coded
-  # Alpine detection (non-Alpine musl distros are the unsupported case).
-  native-linux:
-    name: Native ${{ matrix.rid }}
-    needs: build
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    container:
-      image: ${{ matrix.image }}
-      env:
-        DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: '1'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { rid: linux-musl-x64, os: ubuntu-24.04, image: "mcr.microsoft.com/dotnet/sdk:10.0-alpine-aot-amd64" }
-          - { rid: linux-musl-arm64, os: ubuntu-24.04-arm, image: "mcr.microsoft.com/dotnet/sdk:10.0-alpine-aot-arm64v8" }
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set version
-        shell: bash
-        env:
-          REF_NAME: ${{ github.ref_name }}
-        run: |
-          # Dispatch runs have a branch name here; the version only matters on
-          # the publish path, so a placeholder keeps pack happy.
-          case "$REF_NAME" in
-            v*) version="${REF_NAME#v}" ;;
-            *) version="0.0.0" ;;
-          esac
-          echo "VERSION=$version" >> "$GITHUB_ENV"
-
-      - name: Publish
-        shell: bash
-        env:
-          RID: ${{ matrix.rid }}
-        run: |
-          dotnet publish JdkFind.Cli/JdkFind.Cli.csproj -c Release -r "$RID" \
-            -p:PublishAot=true -p:StaticExecutable=true --nologo -o "out/$RID" -p:Version="$VERSION"
-
-      - name: Smoke
-        shell: bash
-        env:
-          RID: ${{ matrix.rid }}
-        run: |
-          binary="out/$RID/jdkfind"
-          file "$binary"
-          # StaticExecutable produces a static-PIE executable, which file
-          # reports as "static-pie linked"; ldd's phrasing moved from "not a
-          # dynamic executable" to "statically linked".
-          file "$binary" | grep -Eq 'static(ally|-pie) linked'
-          ldd "$binary" 2>&1 | grep -Eq 'not a dynamic executable|statically linked'
-          "$binary" --version
-
-      - name: Package
-        shell: bash
-        env:
-          RID: ${{ matrix.rid }}
-        run: |
-          # tar preserves the executable bit.
-          tar -czf "jdkfind-$RID.tar.gz" -C "out/$RID" jdkfind
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: jdkfind-${{ matrix.rid }}
-          path: jdkfind-${{ matrix.rid }}.*
-          if-no-files-found: error
-          retention-days: 7
-
   # NativeAOT binaries for the release assets. StaticExecutable is musl-only:
   # macOS forbids static linking (libc ships with the OS) and Windows ignores it.
   native:
@@ -162,6 +85,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - { rid: linux-musl-x64, os: ubuntu-24.04, image: "mcr.microsoft.com/dotnet/sdk:10.0-alpine-aot-amd64" }
+          - { rid: linux-musl-arm64, os: ubuntu-24.04-arm, image: "mcr.microsoft.com/dotnet/sdk:10.0-alpine-aot-arm64v8" }
           - { rid: osx-arm64, os: macos-26 }
           - { rid: osx-x64, os: macos-26 }
           - { rid: win-x64, os: windows-2025 }
@@ -180,7 +105,30 @@ jobs:
           $version = if ($env:GITHUB_REF_NAME -match '^v') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
 
+      # Linux musl builds run in Microsoft's Alpine AOT SDK images — the
+      # toolchain configuration Microsoft builds and tests. An Ubuntu musl-gcc
+      # cross environment produces a static-pie binary that trips its
+      # stack-protector self-relocation at startup (arm64 crashes with both bfd
+      # and lld; x64 needed lld to link). The AOT toolchain is preinstalled in
+      # the image; the container stays out of the job level because the JS
+      # actions (checkout, upload-artifact) bundle glibc node and cannot run
+      # under musl.
+      - name: Publish (Linux, in Alpine)
+        if: startsWith(matrix.rid, 'linux')
+        shell: bash
+        run: |
+          docker run --rm -i -v "$PWD:/src" -w /src \
+            -e RID -e VERSION -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
+            "${{ matrix.image }}" sh -s <<'EOF'
+          set -e
+          dotnet publish JdkFind.Cli/JdkFind.Cli.csproj -c Release -r "$RID" \
+            -p:PublishAot=true -p:StaticExecutable=true --nologo -o "out/$RID" -p:Version="$VERSION"
+          EOF
+        env:
+          RID: ${{ matrix.rid }}
+
       - name: Publish
+        if: ${{ !startsWith(matrix.rid, 'linux') }}
         run: |
           dotnet publish JdkFind.Cli/JdkFind.Cli.csproj -c Release -r $env:RID `
             -p:PublishAot=true --nologo -o "out/$env:RID" -p:Version=$env:VERSION
@@ -188,6 +136,31 @@ jobs:
           RID: ${{ matrix.rid }}
 
       # Executed where the runner matches; cross builds only get static checks.
+      - name: Smoke (linux)
+        if: startsWith(matrix.rid, 'linux')
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $binary = "out/$env:RID/jdkfind"
+          $info = (file $binary) -join ' '
+          Write-Host $info
+          # StaticExecutable produces a static-PIE executable, which file
+          # reports as "static-pie linked".
+          if ($info -notmatch 'static(ally|-pie) linked')
+          {
+            throw 'the linux binary is not statically linked'
+          }
+          $ldd = (ldd $binary 2>&1 | Out-String).Trim()
+          Write-Host $ldd
+          # glibc phrasing: "not a dynamic executable"; newer ldd: "statically linked".
+          if ($ldd -notmatch 'not a dynamic executable|statically linked')
+          {
+            throw 'the linux binary has dynamic dependencies'
+          }
+          $global:LASTEXITCODE = 0
+          & $binary --version
+        env:
+          RID: ${{ matrix.rid }}
+
       - name: Smoke (macos)
         if: startsWith(matrix.rid, 'osx')
         run: |
@@ -248,7 +221,7 @@ jobs:
     name: Publish to nuget.org + GitHub release
     # Tag-gated: a manual dispatch run must never reach nuget.org or the release.
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [ build, native, native-linux ]
+    needs: [ build, native ]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     # id-token: write lets NuGet/login exchange the OIDC token for a short-lived
