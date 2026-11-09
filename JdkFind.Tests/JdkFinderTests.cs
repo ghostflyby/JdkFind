@@ -296,9 +296,10 @@ public class JdkFinderTests : IDisposable
     {
         string[] expected =
         [
-            "java-home", "path", "macos", "unix", "flatpak", "homebrew",
-            "windows-programs", "windows-registry", "intellij", "sdkman",
-            "asdf", "gradle", "jabba", "scoop",
+            "java-home", "path", "macos", "unix", "flatpak", "snap", "homebrew",
+            "macports", "nix", "windows-programs", "windows-user-programs",
+            "windows-registry", "intellij", "sdkman", "asdf", "mise", "jenv",
+            "gradle", "jabba", "coursier", "conda", "scoop",
         ];
 
         Assert.Equal(expected, JdkFinder.Default.Providers.Select(p => p.Name).ToArray());
