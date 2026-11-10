@@ -146,8 +146,9 @@ public class CommandLineIntegrationTests : IDisposable
 
         var (_, stdout, _) = RunCli(["env", "17"], StubFinder(jdk21, jdk17));
 
-        Assert.Contains(jdk17, stdout);
-        Assert.DoesNotContain(jdk21, stdout);
+        Assert.StartsWith("export JAVA_HOME='", stdout);
+        Assert.Contains(Path.Combine(_temp.FullPath, "jdks", "jdk17"), stdout);
+        Assert.DoesNotContain(Path.Combine(_temp.FullPath, "jdks", "jdk21"), stdout);
     }
 
     [Fact]
@@ -156,10 +157,14 @@ public class CommandLineIntegrationTests : IDisposable
         var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         var (_, fish, _) = RunCli(["env", "--format", "fish"], StubFinder(jdk));
-        Assert.Equal($"set -gx JAVA_HOME '{jdk}'{Environment.NewLine}", fish);
+        Assert.StartsWith("set -gx JAVA_HOME '", fish);
+        // fish doubles the backslashes a Windows home carries.
+        Assert.Contains(jdk.Replace("\\", "\\\\"), fish);
 
         var (_, powershell, _) = RunCli(["env", "--format", "powershell"], StubFinder(jdk));
-        Assert.Equal($"$env:JAVA_HOME = '{jdk}'{Environment.NewLine}", powershell);
+        Assert.StartsWith("$env:JAVA_HOME = '", powershell);
+        // PowerShell keeps the backslashes of the home as-is.
+        Assert.Contains(jdk, powershell);
     }
 
     [Fact]

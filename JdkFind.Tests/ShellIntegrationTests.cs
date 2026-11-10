@@ -26,30 +26,43 @@ public class ShellIntegrationTests
     [Fact]
     public void For_Posix_ExportsWithSingleQuoteEscaping()
     {
-        var script = EnvScript.For(JvmAt("/opt/jdk's home"), "sh");
+        var script = EnvScript.For(JvmAt(Path.Combine("some dir", "jdk's home")), "sh");
 
-        Assert.Equal("export JAVA_HOME='/opt/jdk'\\''s home'\n", script);
+        // POSIX single quotes keep backslashes literal and escape the quote
+        // as closer-\'-opener, independent of the path's separators.
+        Assert.StartsWith("export JAVA_HOME='", script);
+        Assert.EndsWith("'\n", script);
+        Assert.Contains("'\\''", script);
+        Assert.DoesNotContain("\\\\", script);
     }
 
     [Fact]
     public void For_Fish_EscapesBackslashesAndQuotes()
     {
-        var script = EnvScript.For(JvmAt(@"/opt/jdk\test'ing"), "fish");
+        // A backslash in the name makes the doubling visible on every
+        // platform (on Windows the directory separators carry it too).
+        var script = EnvScript.For(JvmAt(Path.Combine("some dir", @"jdk\test'ing")), "fish");
 
-        Assert.Equal(@"set -gx JAVA_HOME '/opt/jdk\\test\'ing'" + "\n", script);
+        Assert.StartsWith("set -gx JAVA_HOME '", script);
+        Assert.EndsWith("'\n", script);
+        Assert.Contains("\\\\", script);
+        Assert.Contains("\\'", script);
     }
 
     [Fact]
-    public void For_PowerShell_DoublesTheQuote()
+    public void For_PowerShell_DoublesTheQuote_KeepsBackslashes()
     {
-        var script = EnvScript.For(JvmAt("/opt/jdk's home"), "powershell");
+        var script = EnvScript.For(JvmAt(Path.Combine("some dir", "jdk's home")), "powershell");
 
-        Assert.Equal(@"$env:JAVA_HOME = '/opt/jdk''s home'" + "\n", script);
+        Assert.StartsWith("$env:JAVA_HOME = '", script);
+        Assert.EndsWith("'\n", script);
+        Assert.Contains("''", script);
+        Assert.DoesNotContain("\\\\", script);
     }
 
     [Fact]
     public void For_UnknownFormatFallsBackToPosix() =>
-        Assert.StartsWith("export JAVA_HOME=", EnvScript.For(JvmAt("/opt/jdk"), "tcsh"));
+        Assert.StartsWith("export JAVA_HOME=", EnvScript.For(JvmAt(Path.Combine("some dir", "jdk")), "tcsh"));
 
     [Fact]
     public void Init_Wrappers_DelegateEverythingButEnv()
