@@ -137,6 +137,15 @@ public class OptionsTests
     }
 
     [Fact]
+    public void Parse_EnvDuplicateFormat_IsRejected()
+    {
+        // The wrapper injects its own --format before the user's args; a user
+        // --format through the wrapper is a misuse — fish syntax evaluated in
+        // bash would corrupt the session — so it fails loudly instead.
+        Assert.Throws<ArgumentException>(() => Options.Parse(["env", "--format", "sh", "--format", "fish"]));
+    }
+
+    [Fact]
     public void Parse_InitTakesAShell()
     {
         var options = Options.Parse(["init", "zsh"]);

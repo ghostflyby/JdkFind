@@ -17,19 +17,20 @@ internal static class ShellInit
         # for the selected installation and prepends its bin directory to PATH in
         # the current shell. Enable with: eval "$(jdkfind init bash)"
         jdkfind() {
-            case "$1" in
+            case "${1:-}" in
             env)
                 shift
                 local output
                 if ! output="$(command jdkfind env --format sh "$@")"
                 then
-                    printf '%s\n' "$output" >&2
                     return 1
                 fi
                 eval "$output"
                 if [ -n "${JDKFIND_BIN:-}" ]
                 then
-                    export PATH="$(printf '%s' "$PATH" | awk -v old="$JDKFIND_BIN" 'BEGIN { RS = ":" } $0 != old' ORS = ":")"
+                    # ENVIRON sidesteps awk's escape processing of -v values,
+                    # which mangles backslash-bearing Windows paths.
+                    export PATH="$(printf '%s' "$PATH" | awk 'BEGIN { RS = ":" } $0 != ENVIRON["JDKFIND_BIN"]' ORS = ":")"
                     export PATH="${PATH%:}"
                 fi
                 export JDKFIND_BIN="$JAVA_HOME/bin"
@@ -48,13 +49,12 @@ internal static class ShellInit
         # for the selected installation and prepends its bin directory to PATH in
         # the current shell. Enable with: eval "$(jdkfind init zsh)"
         jdkfind() {
-            case "$1" in
+            case "${1:-}" in
             env)
                 shift
                 local output
                 if ! output="$(command jdkfind env --format sh "$@")"
                 then
-                    printf '%s\n' "$output" >&2
                     return 1
                 fi
                 eval "$output"
@@ -81,7 +81,6 @@ internal static class ShellInit
             if test "$argv[1]" = "env"
                 set -l args $argv[2..-1]
                 if not set -l output (command jdkfind env --format fish $args)
-                    printf '%s\n' $output
                     return 1
                 end
                 eval "$output"

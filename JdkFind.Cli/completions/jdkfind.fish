@@ -43,6 +43,10 @@ function __jdkfind_seen_init
     __jdkfind_tokens | string match --quiet init
 end
 
+function __jdkfind_seen_env
+    __jdkfind_tokens | string match --quiet env
+end
+
 function __jdkfind_wants_version
     not __jdkfind_tokens | string match --quiet --regex '^[0-9]'
 end
@@ -169,6 +173,7 @@ end
 complete -c jdkfind --no-files
 
 complete -c jdkfind -s j -l json -d 'Write JSON to stdout (list: array; others: single object)' -n 'not __jdkfind_past_dd'
+complete -c jdkfind -l format -d 'Output shell for the export lines' -r -x -a 'sh fish powershell' -n '__jdkfind_seen_env; and not __jdkfind_past_dd'
 complete -c jdkfind -l vendor -d 'Filter by vendor substring' -x -a '(__jdkfind_values vendor)' -n 'not __jdkfind_past_dd'
 complete -c jdkfind -l distribution -d 'Filter by distribution substring (foojay names)' -x -a '(__jdkfind_values distribution)' -n 'not __jdkfind_past_dd'
 complete -c jdkfind -l arch -d 'Filter by architecture substring' -x -a '(__jdkfind_values arch)' -n 'not __jdkfind_past_dd'

@@ -33,7 +33,7 @@ internal sealed class Options
                                            jdkfind list [options]                List all matching installations
                                            jdkfind completions [shell] [options]  Print a shell-completion script (bash, zsh, fish, powershell)
                                            jdkfind env [version] [--format f]    Print shell code exporting JAVA_HOME of the selection
-                                           jdkfind init <shell>                  Print a shell wrapper providing env in the current shell
+                                           jdkfind init [shell]                  Print a shell wrapper providing env in the current shell
 
                                            The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
                                            newest version first, installations with a compiler preferred on ties.
@@ -125,7 +125,7 @@ internal sealed class Options
         if (tail is not null)
         {
             if (options.Command != SubCommand.None)
-                throw new ArgumentException("'--' runs a command; it is not valid with 'info', 'list' or 'completions'.");
+                throw new ArgumentException("'--' runs a command; it is not valid with subcommands.");
             if (options.Tool is not null)
                 throw new ArgumentException("'--' runs a command; the tool positional has no effect with it.");
             if (tail.Length == 0)

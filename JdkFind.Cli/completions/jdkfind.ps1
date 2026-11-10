@@ -179,6 +179,23 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
         return $results
     }
 
+    # env's own --format: the option and its static values, completing after
+    # the option word and inline after '='.
+    if ($SubName -eq 'env') {
+        if ($wordToComplete -match '^--format=(.*)$') {
+            foreach ($format in 'sh', 'fish', 'powershell') {
+                AddResult $format 'ParameterValue' 'Output shell for the export lines'
+            }
+            return $results
+        }
+        if ($Tokens.Count -gt 0 -and $Tokens[$Tokens.Count - 1] -eq '--format') {
+            foreach ($format in 'sh', 'fish', 'powershell') {
+                AddResult $format 'ParameterValue' 'Output shell for the export lines'
+            }
+            return $results
+        }
+    }
+
     if ($wordToComplete.StartsWith('-')) {
         $OptionTooltips = [ordered]@{
             '--json'         = 'Write JSON to stdout (list: array; others: single object)'
@@ -192,6 +209,9 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
             '--help'         = 'Show help'
             '-h'             = 'Show help'
             '--version'      = 'Print version'
+        }
+        if ($SubName -eq 'env') {
+            $OptionTooltips['--format'] = 'Output shell for the export lines'
         }
         foreach ($name in $OptionTooltips.Keys) {
             AddResult $name 'ParameterName' $OptionTooltips[$name]
@@ -217,18 +237,6 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
             }
         }
         return $results
-    }
-
-    if ($SubName -eq 'env') {
-        # The --format option value and the option itself are env-scoped.
-        $formatWord = $wordToComplete
-        if ($formatWord -match '^--format=(.*)$') { $formatWord = $Matches[1] }
-        foreach ($format in 'sh', 'fish', 'powershell') {
-            AddResult $format 'ParameterValue' 'Output shell for the export lines'
-        }
-        if ($formatWord -notmatch '^-') {
-            return $results
-        }
     }
 
     if (-not $Sub) {
