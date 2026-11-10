@@ -114,7 +114,11 @@ jdkfind env 17     # switches; the old bin/ entry is removed from PATH
 
 - **bash** — `eval "$(jdkfind init bash)"` in `~/.bashrc`
 - **zsh** — `eval "$(jdkfind init zsh)"` in `~/.zshrc`
-- **fish** — `jdkfind init fish | source` in `config.fish`
+- **fish** — `jdkfind init fish | source` in `config.fish`; fish also
+  auto-loads functions from directories, so the wrapper can be installed
+  without touching any rc file:
+  `jdkfind init fish > ~/.config/fish/functions/jdkfind.fish`
+  (packagers: the same file works in `/usr/share/fish/vendor_functions.d/`)
 - **PowerShell** — `jdkfind init powershell | Invoke-Expression` in `$PROFILE`
 
 The environment is set for the current shell only. `cmd.exe` has no
