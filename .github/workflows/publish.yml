@@ -48,7 +48,7 @@ jobs:
       - name: Set version from tag
         run: |
           # Dispatch refs are branches; a placeholder keeps pack happy.
-          $version = if ($env:GITHUB_REF_NAME -match '^v') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
 
       # A release candidate must pass the full suite (the multi-OS gate lives in
@@ -90,7 +90,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The Alpine image ships the SDK; only the host jobs need setup-dotnet.
       - name: Set up .NET
+        if: ${{ !startsWith(matrix.rid, 'linux') }}
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
@@ -98,24 +100,22 @@ jobs:
           cache-dependency-path: '**/*.csproj'
       - name: Set version
         run: |
-          $version = if ($env:GITHUB_REF_NAME -match '^v') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
 
       # Microsoft's Alpine AOT images: an Ubuntu musl-gcc cross environment
       # produces static-pie binaries that crash at startup on arm64.
       - name: Publish (Linux, in Alpine)
         if: startsWith(matrix.rid, 'linux')
-        shell: bash
         run: |
-          docker run --rm -i -v "$PWD:/src" -w /src \
-            -e RID -e VERSION -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
-            "${{ matrix.image }}" sh -s <<'EOF'
-          set -e
-          dotnet publish JdkFind.Cli/JdkFind.Cli.csproj -c Release -r "$RID" \
-            -p:PublishAot=true -p:StaticExecutable=true --nologo -o "out/$RID" -p:Version="$VERSION"
-          EOF
+          docker run --rm -v "${PWD}:/src" -w /src `
+            -e RID -e VERSION -e DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 `
+            $env:IMAGE `
+            dotnet publish JdkFind.Cli/JdkFind.Cli.csproj -c Release -r $env:RID `
+            -p:PublishAot=true -p:StaticExecutable=true --nologo -o "out/$env:RID" -p:Version=$env:VERSION
         env:
           RID: ${{ matrix.rid }}
+          IMAGE: ${{ matrix.image }}
 
       - name: Publish
         if: ${{ !startsWith(matrix.rid, 'linux') }}
@@ -176,6 +176,15 @@ jobs:
         if: startsWith(matrix.rid, 'win')
         run: |
           $ErrorActionPreference = 'Stop'
+          # win-arm64 is cross-built and cannot execute here; the PE header
+          # machine type is checked for both, and only win-x64 runs.
+          $bytes = [IO.File]::ReadAllBytes("out/$env:RID/jdkfind.exe")
+          $machine = [BitConverter]::ToUInt16($bytes, [BitConverter]::ToInt32($bytes, 0x3C) + 4)
+          $expected = if ($env:RID -eq 'win-arm64') { 0xAA64 } else { 0x8664 }
+          if ($machine -ne $expected)
+          {
+            throw "wrong PE machine type: 0x$($machine.ToString('X4')), expected 0x$($expected.ToString('X4'))"
+          }
           if ($env:RID -eq 'win-x64')
           {
             & "out/$env:RID/jdkfind.exe" --version
@@ -207,8 +216,9 @@ jobs:
 
   publish:
     name: Publish to nuget.org + GitHub release
-    # Tag-gated: a manual dispatch run must never reach nuget.org or the release.
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Push events only: a dispatch started from a tag ref shares it, and must
+    # stay a dry run.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [ build, native ]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -248,6 +258,16 @@ jobs:
         with:
           pattern: jdkfind-*
           path: native
+
+      - name: Verify native archives
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archives = Get-ChildItem 'native' -Recurse -File |
+            Where-Object { $_.Name -like 'jdkfind-*.tar.gz' -or $_.Name -like 'jdkfind-*.zip' }
+          if ($archives.Count -ne 6)
+          {
+            throw "expected 6 native archives, found $($archives.Count)"
+          }
 
       - name: Validate tag is SemVer, on main, with green CI, and not a downgrade
         run: |
@@ -349,6 +369,8 @@ jobs:
             pkg/JdkFind.${{ env.VERSION }}.snupkg
             pkg/JdkFind.Cli.${{ env.VERSION }}.nupkg
             pkg/JdkFind.Cli.${{ env.VERSION }}.snupkg
+            native/**/jdkfind-*.tar.gz
+            native/**/jdkfind-*.zip
 
       - name: NuGet login (OIDC → temporary API key)
         uses: NuGet/login@v1
@@ -375,23 +397,20 @@ jobs:
 
       - name: Create GitHub release
         run: |
-          gh release create "$env:GITHUB_REF_NAME" --title "$env:GITHUB_REF_NAME" `
-            --notes "JDK locator library and jdkfind tool — see https://www.nuget.org/packages/JdkFind.Cli/$env:VERSION for package details." `
-            "pkg/JdkFind.$env:VERSION.nupkg" "pkg/JdkFind.$env:VERSION.snupkg" `
-            "pkg/JdkFind.Cli.$env:VERSION.nupkg" "pkg/JdkFind.Cli.$env:VERSION.snupkg"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Attach native binaries
-        run: |
           $ErrorActionPreference = 'Stop'
+          # Native archives ride with the release from the start: a failed
+          # attach after creation would have no recovery path.
           $archives = Get-ChildItem 'native' -Recurse -File |
             Where-Object { $_.Name -like 'jdkfind-*.tar.gz' -or $_.Name -like 'jdkfind-*.zip' }
           if ($archives.Count -ne 6)
           {
             throw "expected 6 native archives, found $($archives.Count)"
           }
-          gh release upload "$env:GITHUB_REF_NAME" @($archives.FullName) --clobber
+          gh release create "$env:GITHUB_REF_NAME" --title "$env:GITHUB_REF_NAME" `
+            --notes "JDK locator library and jdkfind tool — see https://www.nuget.org/packages/JdkFind.Cli/$env:VERSION for package details." `
+            "pkg/JdkFind.$env:VERSION.nupkg" "pkg/JdkFind.$env:VERSION.snupkg" `
+            "pkg/JdkFind.Cli.$env:VERSION.nupkg" "pkg/JdkFind.Cli.$env:VERSION.snupkg" `
+            @($archives.FullName)
         env:
           GH_TOKEN: ${{ github.token }}
 
