@@ -10,6 +10,8 @@ internal enum SubCommand
     Info,
     List,
     Completions,
+    Env,
+    Init,
 }
 
 /// <summary>
@@ -30,6 +32,8 @@ internal sealed class Options
                                            jdkfind info [version] [options]      Print one installation's details
                                            jdkfind list [options]                List all matching installations
                                            jdkfind completions [shell] [options]  Print a shell-completion script (bash, zsh, fish, powershell)
+                                           jdkfind env [version] [--format f]    Print shell code exporting JAVA_HOME of the selection
+                                           jdkfind init <shell>                  Print a shell wrapper providing env in the current shell
 
                                            The version is a numeric prefix (21, 21.0, 21.0.5); the selection is stable —
                                            newest version first, installations with a compiler preferred on ties.
@@ -62,6 +66,10 @@ internal sealed class Options
 
     /// <summary>Shell named after 'completions' (bash, zsh, fish, powershell), or null to list.</summary>
     internal string? Shell { get; private set; }
+
+    /// <summary>The env output shell (sh, fish or powershell); null means the
+    /// POSIX default that bash and zsh share.</summary>
+    internal string? Format { get; private set; }
 
     /// <summary>Positional version prefix (numeric, dot-separated, e.g. "21", "21.0", "21.0.5").</summary>
     internal string? VersionPrefix { get; private set; }
@@ -217,6 +225,36 @@ internal sealed class Options
         };
         completions.Add(shell);
 
+        var envVersion = new Argument<string?>("version")
+        {
+            Description = "Numeric version prefix (21, 21.0.5)", Arity = ArgumentArity.ZeroOrOne,
+        };
+
+        var format = new Option<string>("--format")
+        {
+            Description = "Output shell for the export lines: sh, fish, or powershell (default sh)",
+        };
+
+        var env = new Command("env")
+        {
+            Description = "Print shell code exporting JAVA_HOME of the selection",
+            TreatUnmatchedTokensAsErrors = true,
+        };
+        env.Add(envVersion);
+        env.Add(format);
+
+        var initShell = new Argument<string?>("shell")
+        {
+            Description = "bash, zsh, fish or powershell", Arity = ArgumentArity.ZeroOrOne,
+        };
+
+        var init = new Command("init")
+        {
+            Description = "Print a shell wrapper providing env in the current shell",
+            TreatUnmatchedTokensAsErrors = true,
+        };
+        init.Add(initShell);
+
         var root = new RootCommand(RootDescription)
         {
             // Tokens matched by nothing on the default command are usage errors too.
@@ -233,6 +271,8 @@ internal sealed class Options
         root.Add(info);
         root.Add(list);
         root.Add(completions);
+        root.Add(env);
+        root.Add(init);
 
         // The root command auto-injects a standard --version option; keep it and
         // let Run dispatch it like the help action.
@@ -244,10 +284,15 @@ internal sealed class Options
             Info = info,
             List = list,
             Completions = completions,
+            Env = env,
+            Init = init,
             Operands = operands,
             Version = version,
             ListVersion = listVersion,
+            EnvVersion = envVersion,
+            Format = format,
             Shell = shell,
+            InitShell = initShell,
             Json = json,
             Vendor = vendor,
             Distribution = distribution,
@@ -271,12 +316,17 @@ internal sealed class Options
     {
         var infoVersion = parseResult.GetValue(tree.Version);
         var listVersion = parseResult.GetValue(tree.ListVersion);
+        var envVersion = parseResult.GetValue(tree.EnvVersion);
         var options = new Options(parseResult, tree, tree.VersionOption)
         {
             VersionPrefix = infoVersion is not null ? ValidateVersionPrefix(infoVersion)
                 : listVersion is not null ? ValidateVersionPrefix(listVersion)
+                : envVersion is not null ? ValidateVersionPrefix(envVersion)
                 : null,
-            Shell = parseResult.GetValue(tree.Shell) is { } shellText ? ValidateShell(shellText) : null,
+            Shell = parseResult.GetValue(tree.Shell) is { } shellText ? ValidateShell(shellText)
+                : parseResult.GetValue(tree.InitShell) is { } initShellText ? ValidateShell(initShellText)
+                : null,
+            Format = parseResult.GetValue(tree.Format) is { } formatText ? ValidateFormat(formatText) : null,
             OutputJson = parseResult.GetValue(tree.Json),
             Vendor = parseResult.GetValue(tree.Vendor),
             Distribution = parseResult.GetValue(tree.Distribution),
@@ -294,6 +344,8 @@ internal sealed class Options
         options.Command = parseResult.CommandResult.Command == tree.Info ? SubCommand.Info
             : parseResult.CommandResult.Command == tree.List ? SubCommand.List
             : parseResult.CommandResult.Command == tree.Completions ? SubCommand.Completions
+            : parseResult.CommandResult.Command == tree.Env ? SubCommand.Env
+            : parseResult.CommandResult.Command == tree.Init ? SubCommand.Init
             : SubCommand.None;
 
         return options;
@@ -318,6 +370,8 @@ internal sealed class Options
         _tree.Info.SetAction(Action);
         _tree.List.SetAction(Action);
         _tree.Completions.SetAction(Action);
+        _tree.Env.SetAction(Action);
+        _tree.Init.SetAction(Action);
 
         return _parseResult.InvokeAsync(new InvocationConfiguration());
     }
@@ -376,4 +430,12 @@ internal sealed class Options
         Completions.IsKnownShell(text)
             ? text.ToLowerInvariant()
             : throw new ArgumentException($"Unknown shell '{text}'. Shells: bash, zsh, fish, powershell.");
+
+    /// <summary>The env output shells; bash and zsh share the sh statements.</summary>
+    private static string ValidateFormat(string text) =>
+        text.Equals("sh", StringComparison.OrdinalIgnoreCase) ||
+        text.Equals("fish", StringComparison.OrdinalIgnoreCase) ||
+        text.Equals("powershell", StringComparison.OrdinalIgnoreCase)
+            ? text.ToLowerInvariant()
+            : throw new ArgumentException($"Unknown output format '{text}'. Formats: sh, fish, powershell.");
 }

@@ -64,9 +64,13 @@ internal static class CommandLine
         // The completions command prints an embedded script and never scans.
         // It must run before the default-finder fallback below (which reads
         // the machine's env and PATH), and the filters and --json do not
-        // apply to it — the script itself is the output contract.
+        // apply to it — the script itself is the output contract. The init
+        // command is the same kind of pure emitter.
         if (options.Command == SubCommand.Completions)
             return WriteCompletions(options);
+
+        if (options.Command == SubCommand.Init)
+            return WriteInit(options);
 
         finder ??= options.NoProbe
             ? JdkFinder.Default with { ProbeRuntimeProperties = false }
@@ -126,6 +130,12 @@ internal static class CommandLine
             return ExitSuccess;
         }
 
+        if (options.Command == SubCommand.Env)
+        {
+            Console.Out.Write(EnvScript.For(chosen, options.Format));
+            return ExitSuccess;
+        }
+
         await Console.Out.WriteLineAsync(options.Tool is null
             ? chosen.Home.FullName
             : ToolPath(chosen, options.Tool));
@@ -155,6 +165,24 @@ internal static class CommandLine
         }
 
         Console.Out.Write(script);
+        return ExitSuccess;
+    }
+
+    /// <summary>Serves the init command: without a shell it lists the wrappers
+    /// this build emits, otherwise it writes the wrapper function verbatim to
+    /// stdout for eval/sourcing into the shell's startup file.</summary>
+    private static int WriteInit(Options options)
+    {
+        if (options.Shell is null)
+        {
+            foreach (var shell in ShellInit.AvailableShells())
+                Console.WriteLine(shell);
+
+            Console.Error.WriteLine("Run 'jdkfind init <shell>' to print a wrapper.");
+            return ExitSuccess;
+        }
+
+        Console.Out.Write(ShellInit.ReadScript(options.Shell));
         return ExitSuccess;
     }
 

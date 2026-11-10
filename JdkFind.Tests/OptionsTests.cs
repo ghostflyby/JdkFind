@@ -108,6 +108,53 @@ public class OptionsTests
     }
 
     [Fact]
+    public void Parse_EnvTakesAnOptionalVersionPrefixAndFormat()
+    {
+        var bare = Options.Parse(["env"]);
+
+        Assert.Equal(SubCommand.Env, bare.Command);
+        Assert.Null(bare.VersionPrefix);
+        Assert.Null(bare.Format);
+
+        var full = Options.Parse(["env", "21", "--format", "fish"]);
+
+        Assert.Equal(SubCommand.Env, full.Command);
+        Assert.Equal("21", full.VersionPrefix);
+        Assert.Equal("fish", full.Format);
+
+        var inline = Options.Parse(["env", "--format=powershell"]);
+
+        Assert.Equal(SubCommand.Env, inline.Command);
+        Assert.Equal("powershell", inline.Format);
+    }
+
+    [Fact]
+    public void Parse_EnvFormat_DefaultsToSh_AndRejectsUnknown()
+    {
+        Assert.Null(Options.Parse(["env", "17"]).Format);
+        Assert.Equal("sh", Options.Parse(["env", "--format", "SH"]).Format);
+        Assert.Throws<ArgumentException>(() => Options.Parse(["env", "--format", "bash"]));
+    }
+
+    [Fact]
+    public void Parse_InitTakesAShell()
+    {
+        var options = Options.Parse(["init", "zsh"]);
+
+        Assert.Equal(SubCommand.Init, options.Command);
+        Assert.Equal("zsh", options.Shell);
+        Assert.Null(options.Format);
+        Assert.Throws<ArgumentException>(() => Options.Parse(["init", "tcsh"]));
+    }
+
+    [Fact]
+    public void Parse_EnvRejectsToolPositionalAndRunTail()
+    {
+        Assert.Throws<ArgumentException>(() => Options.Parse(["env", "java"]));
+        Assert.Throws<ArgumentException>(() => Options.Parse(["env", "--", "java"]));
+    }
+
+    [Fact]
     public void Parse_Completions_AcceptsLooseOrderings()
     {
         var toolFirst = Options.Parse(["java", "completions"]);
