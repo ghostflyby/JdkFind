@@ -128,7 +128,11 @@ jobs:
               # clang's musl driver looks for it. The host bfd knows no
               # aarch64 emulation.
               apk add --no-cache lld
-              # A fresh --initdb root has no repositories file; -X supplies it.
+              # A fresh --initdb root has neither repositories nor keys; -X
+              # supplies the repository, and the host image's Alpine public
+              # keys (arch-independent) verify the index.
+              mkdir -p /musl-arm64/etc/apk/keys
+              cp /etc/apk/keys/*.pub /musl-arm64/etc/apk/keys/
               apk add --root /musl-arm64 --initdb --arch aarch64 \
                 -X https://dl-cdn.alpinelinux.org/alpine/v3.21/main musl-dev
               mkdir -p /usr/lib/aarch64-linux-musl
