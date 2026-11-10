@@ -1,42 +1,13 @@
 # JdkFind
 
-Locate installed JDKs on Windows, macOS and Linux — a .NET library and the
-`jdkfind` dotnet tool.
-
-- **Library** (`JdkFind`, assembly `JdkFind.Core.dll`): net10.0, zero
-  third-party dependencies, trim/AOT-compatible (`IsAotCompatible`).
-- **Tool** (`JdkFind.Cli`, assembly `jdkfind.dll`): the `jdkfind` command,
-  packaged as a portable dotnet tool.
+Locate installed JDKs on Windows, macOS and Linux — a .NET library (`JdkFind`, zero third-party dependencies, trim/AOT-compatible) and the
+`jdkfind` dotnet tool (`JdkFind.Cli`).
 
 ## Install
 
 ```bash
 dotnet tool install --global JdkFind.Cli
 ```
-
-## Native binaries
-
-Release pages on GitHub also carry self-contained `jdkfind` binaries built
-with NativeAOT — no .NET runtime needed:
-
-| Asset                     | Runs on                                  |
-|---------------------------|------------------------------------------|
-| `jdkfind-linux-musl-x64.tar.gz`    | any Linux distribution, x64 — fully static |
-| `jdkfind-linux-musl-arm64.tar.gz`  | any Linux distribution, arm64 — fully static |
-| `jdkfind-osx-arm64.tar.gz`         | macOS, Apple Silicon                       |
-| `jdkfind-osx-x64.tar.gz`           | macOS, Intel                               |
-| `jdkfind-win-x64.zip`              | Windows, x64                               |
-| `jdkfind-win-arm64.zip`            | Windows, ARM64                             |
-
-The Linux builds are statically linked against musl (`StaticExecutable`), so
-they run on glibc and musl distributions alike; the macOS builds link only
-OS-shipped libraries (`/usr/lib`, `/System/Library` — libc is part of the
-system) and the Windows builds need no VC++ redistributable. The NuGet
-packages stay managed IL — the
-dotnet tool works wherever a .NET 10 runtime does, including FreeBSD and
-OpenBSD, which have no native builds (no official NativeAOT toolchain exists
-for them). macOS Gatekeeper may quarantine downloaded binaries;
-`xattr -d com.apple.quarantine jdkfind` clears it.
 
 ## CLI usage
 
@@ -54,86 +25,47 @@ $ jdkfind list --arch x64                        # filter by architecture substr
 $ jdkfind completions bash                       # print a completion script (bash, zsh, fish, powershell)
 ```
 
-`--arch` is a case-insensitive substring match against the raw
-`OS_ARCH`/`os.arch` value. Release files disagree on the spelling, so a
-text naming one well-known alias matches every spelling in its group:
-`x86_64`/`amd64`/`x64` and `aarch64`/`arm64`.
-
-By default `jdkfind` executes each installation's own java executable
-once to enrich the metadata with runtime properties (runtime and VM
-name/version — the Gradle approach); failures degrade silently to the
-release-file metadata.
+`--arch` matches case-insensitively, with aliases grouped (`x86_64`/`amd64`/`x64`, `aarch64`/`arm64`). Each installation's java is
+run once to enrich metadata; failures fall back silently to the release file.
 
 ## Shell completions
 
-`jdkfind completions <shell>` prints a completion script to stdout — `bash`,
-`zsh`, `fish` or `powershell`; run it without a shell to list what this build
-carries. The scripts complete the subcommands, option names and option values
-(vendors, distributions, architectures, release levels), version prefixes of
-the installations actually present, and the bin tools of the current
-selection. Dynamic values come from a `jdkfind list --json --no-probe` scan,
-so completion never launches a runtime probe. After `--` the words form the
-child command's own line, in the fashion of fish's `java_home --exec`
-completion: the command word completes from the `bin/` of the installation
-the given version and filters resolve to, and later words are handed to that
-command's own completion where the shell exposes one (file names as the
-fallback), within the limits of each shell's completion semantics.
+`jdkfind completions <shell>` prints a completion script for `bash`, `zsh`,
+`fish` or `powershell`. It completes subcommands, option values, installed
+versions, and (after `--`) the child command itself; dynamic values come from
+a `jdkfind list --json --no-probe` scan, so no runtime is probed.
 
 - **bash** — `jdkfind completions bash > ~/.local/share/bash-completion/completions/jdkfind`
-- **zsh** — `jdkfind completions zsh > ~/.zfunc/_jdkfind` (a `$fpath`
-  directory; the `#compdef` header registers it), or
-  `eval "$(jdkfind completions zsh)"` in `~/.zshrc` after `compinit`.
+- **zsh** — `jdkfind completions zsh > ~/.zfunc/_jdkfind`, or
+  `eval "$(jdkfind completions zsh)"` after `compinit`
 - **fish** — `jdkfind completions fish > ~/.config/fish/completions/jdkfind.fish`
-- **PowerShell** — `Invoke-Expression (jdkfind completions powershell)` in
-  `$PROFILE`.
+- **PowerShell** — `Invoke-Expression (jdkfind completions powershell)` in `$PROFILE`
 
-The scripts live in [`JdkFind.Cli/completions`](JdkFind.Cli/completions) and
-are embedded into the tool as manifest resources. A packaging build can leave
-shells out — for a channel that installs completion files itself — with the
-`JdkFindCompletionsExclude` MSBuild property (canonical shell names,
-semicolon-separated; on a command line escape the semicolons as `%3B`, e.g.
-`-p:JdkFindCompletionsExclude=fish%3Bpowershell`, or pass it as an
-environment variable). The `completions` command then lists and serves only
-the rest.
+The scripts are embedded from
+[`JdkFind.Cli/completions`](JdkFind.Cli/completions); a packaging build can
+exclude shells with the `JdkFindCompletionsExclude` MSBuild property.
 
 ## Shell integration
 
-`jdkfind env [version]` prints shell code exporting `JAVA_HOME` of the
-selected installation — `eval "$(jdkfind env 21)"` switches the current
-shell. With a one-line wrapper (printed by `jdkfind init`), plain
-`jdkfind env 21` does it directly and also prepends the installation's
-`bin` directory to `PATH`, removing the previously managed entry:
-
-```bash
-# ~/.bashrc
-eval "$(jdkfind init bash)"
-
-jdkfind env 21     # JAVA_HOME and PATH now point at the newest 21.x
-jdkfind env 17     # switches; the old bin/ entry is removed from PATH
-```
+`jdkfind env [version]` prints shell code exporting `JAVA_HOME`; with the
+wrapper from `jdkfind init`, plain `jdkfind env 21` also prepends the
+installation's `bin` to `PATH` and removes the previously managed entry.
 
 - **bash** — `eval "$(jdkfind init bash)"` in `~/.bashrc`
 - **zsh** — `eval "$(jdkfind init zsh)"` in `~/.zshrc`
-- **fish** — `jdkfind init fish | source` in `config.fish`; fish also
-  auto-loads functions from directories, so the wrapper can be installed
-  without touching any rc file:
-  `jdkfind init fish > ~/.config/fish/functions/jdkfind.fish`
-  (packagers: the same file works in `/usr/share/fish/vendor_functions.d/`)
+- **fish** — `jdkfind init fish | source` in `config.fish`; or drop the
+  wrapper into `~/.config/fish/functions/jdkfind.fish` (packagers:
+  `/usr/share/fish/vendor_functions.d/`)
 - **PowerShell** — `jdkfind init powershell | Invoke-Expression` in `$PROFILE`
 
-The environment is set for the current shell only. `cmd.exe` has no
-function mechanism — use the run mode (`jdkfind 21 -- java -version`) or
-`--format powershell` for copyable `$env:` assignments. Without the
-wrapper, the raw output works standalone: `--format` accepts `sh`
-(default), `fish` and `powershell`.
+The environment applies to the current shell only. `cmd.exe` has no functions,
+so use run mode (`jdkfind 21 -- java -version`) or `--format powershell`; raw
+`--format` also accepts `sh` (default) and `fish`.
 
 ## JSON output
 
-`--json` writes a stable, machine-readable contract: camelCase keys,
-UTF-8, one object per installation (`list` emits an array). Every key
-is always present — unknown values are `null` (the VM name/version pair
-degrades to an empty string) — and within the same major version the
-shape is additive-only: keys are never renamed or removed.
+`--json` is a stable machine-readable contract: camelCase keys, UTF-8, every
+key always present (`null` when unknown), additive-only within a major version.
 
 | Key                              | Type           | Meaning                                                                 |
 |----------------------------------|----------------|-------------------------------------------------------------------------|
@@ -152,9 +84,8 @@ shape is additive-only: keys are never renamed or removed.
 
 Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled;
 run mode (`--`) adds `126`/`127` when the command cannot be executed or is
-not found. `--json` switches every locating command to machine-readable output
-on stdout; `jdkfind completions` prints its script verbatim. Ctrl+C / SIGINT / SIGTERM cancel the scan: running runtime probes
-are killed and the process exits with `130`.
+missing. Ctrl+C (SIGINT) / SIGTERM cancel the scan — running probes are
+killed — and exit with `130`.
 
 ## Library usage
 
@@ -166,42 +97,45 @@ using JdkFind;
 foreach (var jvm in JdkFinder.Default.Locate())
     Console.WriteLine($"{jvm.LanguageVersion} {jvm.Vendor} -> {jvm.Home.FullName}");
 
-// Customize through a with expression; the async overload honours the
-// cancellation token for probes and release reads.
+// Customize with a with expression; the async overload takes a cancellation
+// token for probes and release reads.
 var finder = JdkFinder.Default with { Providers = [new NasSource()], ProbeRuntimeProperties = false };
 IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
 ```
 
 ## Discovery sources
 
-| Source                                                                                                                                                                                                                                                               | Platforms        |
-|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|
-| `JAVA_HOME`, `PATH` entries                                                                                                                                                                                                                                          | all              |
-| `/System/Library/Java/JavaVirtualMachines` (system), `/Library/Java/JavaVirtualMachines` (machine) and `~/Library/Java/JavaVirtualMachines` (per-user; also IntelliJ's download target)                                                                              | macOS            |
-| Homebrew kegs — `openjdk`, `openjdk@N`, `graalvm` (`HOMEBREW_PREFIX`, `/opt/homebrew`, …); cask JDKs land in `/Library/Java` and are found above                                                                                                                     | macOS, Linux     |
-| `/usr/lib/jvm`, `/usr/java`, `/usr/lib64/jvm`, `/usr/lib32/jvm`, `/opt/jdk`, `/opt/jdks`, `/opt/ibm`, Gentoo installs (`/usr/lib`, `/usr/lib64`, `/opt`), `$SNAP` mirrors                                                                                            | Linux            |
-| `/usr/local` ports layout (`openjdk*`)                                                                                                                                                                                                                               | FreeBSD, OpenBSD |
-| `/opt/local/share/java` — MacPorts installs under its prefix, so `/usr/libexec/java_home` cannot see them                                                                                                                                                             | macOS            |
-| Nix profiles — `<profile>/lib/openjdk` under `NIX_PROFILES`, `~/.nix-profile`, `~/.local/state/nix/profiles`, `/nix/var/nix/profiles/default`, `/etc/profiles/per-user/*` and `/run/current-system/sw`                                                                | macOS, Linux, BSDs |
-| Flatpak sandbox JVMs — shared runtime extensions (`/usr/lib/sdk`) and the app-bundled `/app/jdk` (inside a flatpak sandbox)                                                                                                                                          | Linux (flatpak)  |
-| Snap mounts — `usr/lib/jvm` inside each `/snap/<name>/current` sandbox and the JetBrains `jbr` the IDE snaps carry                                                                                                                                                    | Linux (snap)     |
-| `%ProgramFiles%`/`%ProgramFiles(x86)%` vendor directories (Java, Eclipse Adoptium, AdoptOpenJDK, Microsoft, Zulu, Amazon Corretto, BellSoft), Windows registry (JavaSoft, Adoptium, Microsoft, Azul, Corretto, AdoptOpenJDK, IBM Semeru, BellSoft — 64+32-bit views) | Windows          |
-| `%LOCALAPPDATA%\Programs` — per-user installs (un-elevated MSI, unpacked distributions), probed one vendor level deep                                                                                                                                                 | Windows          |
-| `~/.jdks` (IntelliJ)                                                                                                                                                                                                                                                 | Windows, Linux   |
-| SDKMAN! (`SDKMAN_DIR`), asdf (`ASDF_DATA_DIR`), mise (`MISE_DATA_DIR`), jenv (`JENV_ROOT`), Gradle (`GRADLE_USER_HOME`), Jabba (`JABBA_HOME`), Coursier (`COURSIER_JVM_CACHE`/`COURSIER_CACHE`), conda (`CONDA_PREFIX`, `~/.conda/environments.txt`), Scoop (`SCOOP`/`SCOOP_GLOBAL`) | per tool         |
+- **All platforms** — `JAVA_HOME`, `PATH` entries.
+- **macOS** — `/System/Library/Java/JavaVirtualMachines`,
+  `/Library/Java/JavaVirtualMachines`, `~/Library/Java/JavaVirtualMachines`,
+  MacPorts (`/opt/local/share/java`), Homebrew kegs.
+- **Linux** — `/usr/lib/jvm`, `/usr/java`, `/usr/lib64/jvm`, `/usr/lib32/jvm`,
+  `/opt/jdk`, `/opt/jdks`, `/opt/ibm`, Gentoo layouts, `$SNAP` mirrors,
+  Homebrew kegs; inside a flatpak sandbox the shared runtime extensions and
+  `/app/jdk`; inside snap mounts `usr/lib/jvm` and the JetBrains `jbr`.
+- **FreeBSD / OpenBSD** — `/usr/local` ports layout (`openjdk*`).
+- **Nix** — `<profile>/lib/openjdk` under `NIX_PROFILES`, `~/.nix-profile`,
+  `~/.local/state/nix/profiles`, `/nix/var/nix/profiles/default`,
+  `/etc/profiles/per-user/*`, `/run/current-system/sw`.
+- **Windows** — vendor directories under `%ProgramFiles%` /
+  `%ProgramFiles(x86)%`, the JavaSoft/Adoptium/Microsoft/Azul/Corretto/
+  AdoptOpenJDK/IBM Semeru/BellSoft registry keys (64- and 32-bit views),
+  `%LOCALAPPDATA%\Programs`.
+- **IDEs** — `~/.jdks` (IntelliJ) on Windows and Linux.
+- **Version managers** — SDKMAN!, asdf, mise, jenv, Gradle, Jabba, Coursier,
+  conda and Scoop, each honouring its environment variable (`SDKMAN_DIR`,
+  `ASDF_DATA_DIR`, `MISE_DATA_DIR`, `JENV_ROOT`, `GRADLE_USER_HOME`,
+  `JABBA_HOME`, `COURSIER_JVM_CACHE`/`COURSIER_CACHE`, `CONDA_PREFIX`,
+  `SCOOP`/`SCOOP_GLOBAL`).
 
-Environment variables always take precedence over the default locations.
-Missing or unreadable locations are skipped silently; results are
-deduplicated by canonical path (symbolic links expanded), so the same
-physical JDK is reported once no matter how many providers found it —
-with `Providers` (the SOURCE column) faithfully listing every one of them.
+Environment variables win over defaults; missing or unreadable locations are
+skipped silently; results are deduplicated by canonical path (symlinks
+expanded), and `Providers` lists every source that reported the home.
 
 ## Probing a specific JVM
 
-Discovery answers "what exists"; probing answers "does *this* binary run,
-and what does it say about itself?" — the pre-flight check before launching
-with a user-configured java. The two concepts live on separate types: a
-`JavaExecutable` is the runnable binary — the minimal JRE — and a `Jvm` is an
+Discovery answers what exists; probing answers whether a given binary runs and
+what it reports. `JavaExecutable` is the runnable binary; `Jvm` is an
 installation directory whose `Executable` property carries its own java.
 
 ```csharp
@@ -213,32 +147,22 @@ if (runtime is null)
 }
 else if (runtime.StartFailure is { } failure)
 {
-    // The binary did not run to completion — `failure` carries the reason
-    // (spawn error, exit code, or timeout) plus the output tail for display.
+    // Did not run to completion: spawn error, exit code or timeout,
+    // plus the output tail for display.
 }
 else
 {
     // runtime.Version, runtime.Architecture, ... describe what the binary
-    // reported; runtime.Home is the backing installation directory (null for a
-    // standalone binary) and runtime.Installation derives the full Jvm.
+    // reported; runtime.Installation derives the full Jvm.
 }
 ```
 
-The probe runs `-XshowSettings:properties -version` under a 15-second cap
-that kills the child on overrun — the synchronous factories accept a
-`timeout` override, while the async twins take a cancellation token (compose
-`CancellationTokenSource.CancelAfter` to bound the wait yourself); runtimes
-that reject that option are reported as a start failure rather than specially
-accommodated. The child's environment has the JVM-affecting
-variables (`_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`,
-`CLASSPATH`, `LD_PRELOAD`, `LD_LIBRARY_PATH`) removed, so the verdict
-describes the binary, not the launcher's shell. Values the binary reports
-take precedence over the home's release file, which only fills what the
-binary did not say. The platform specification guarantees the standard
-property set (vendor, os.name, os.arch, java.vm.name, java.vm.version), so
-their counterparts on `JavaExecutable` are non-nullable strings — empty only
-when the binary did not report them and the release file does not carry them
-either; the runtime-only `java.runtime.*` pair is null under the same rule.
+The probe runs `-XshowSettings:properties -version` with a 15-second cap that
+kills the child on overrun (the synchronous factories take a `timeout`
+override; the async twins take a cancellation token). JVM-affecting variables (`_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`, `CLASSPATH`,
+`LD_PRELOAD`, `LD_LIBRARY_PATH`) are stripped, so the verdict describes the
+binary, not the shell. Binary-reported values win over the release file, which
+fills only the gaps; a binary that rejects the option is a start failure.
 
 ## Build and test
 
@@ -247,8 +171,8 @@ dotnet build JdkFind.slnx
 dotnet test JdkFind.Tests/JdkFind.Tests.csproj
 ```
 
-Requires the .NET 10 SDK (see `global.json`). Tests run on
-[xunit.v3](https://xunit.net/) driven natively by `dotnet test` through
+Requires the .NET 10 SDK (see `global.json`). Tests are
+[xunit.v3](https://xunit.net/), run by `dotnet test` through
 Microsoft.Testing.Platform.
 
 ## License
