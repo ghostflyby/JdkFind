@@ -96,6 +96,33 @@ semicolon-separated; on a command line escape the semicolons as `%3B`, e.g.
 environment variable). The `completions` command then lists and serves only
 the rest.
 
+## Shell integration
+
+`jdkfind env [version]` prints shell code exporting `JAVA_HOME` of the
+selected installation — `eval "$(jdkfind env 21)"` switches the current
+shell. With a one-line wrapper (printed by `jdkfind init`), plain
+`jdkfind env 21` does it directly and also prepends the installation's
+`bin` directory to `PATH`, removing the previously managed entry:
+
+```bash
+# ~/.bashrc
+eval "$(jdkfind init bash)"
+
+jdkfind env 21     # JAVA_HOME and PATH now point at the newest 21.x
+jdkfind env 17     # switches; the old bin/ entry is removed from PATH
+```
+
+- **bash** — `eval "$(jdkfind init bash)"` in `~/.bashrc`
+- **zsh** — `eval "$(jdkfind init zsh)"` in `~/.zshrc`
+- **fish** — `jdkfind init fish | source` in `config.fish`
+- **PowerShell** — `jdkfind init powershell | Invoke-Expression` in `$PROFILE`
+
+The environment is set for the current shell only. `cmd.exe` has no
+function mechanism — use the run mode (`jdkfind 21 -- java -version`) or
+`--format powershell` for copyable `$env:` assignments. Without the
+wrapper, the raw output works standalone: `--format` accepts `sh`
+(default), `fish` and `powershell`.
+
 ## JSON output
 
 `--json` writes a stable, machine-readable contract: camelCase keys,

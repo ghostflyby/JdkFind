@@ -107,7 +107,7 @@ _jdkfind_operand() {
             sel+=("$w")
             ;;
         -*) ;;
-        info | list | completions)
+        info | list | completions | env | init)
             sub=1
             subcmd=$w
             ;;
@@ -115,7 +115,7 @@ _jdkfind_operand() {
             ver=1
             verword=$w
             ;;
-        *) if [[ $subcmd == completions ]]; then shellgiven=1; else tool=1; fi ;;
+        *) if [[ $subcmd == completions || $subcmd == init ]]; then shellgiven=1; else tool=1; fi ;;
         esac
     done
 
@@ -146,12 +146,26 @@ _jdkfind_operand() {
             shells=(${(f)"$(command jdkfind completions 2>/dev/null)"})
             (($#shells)) && _describe -t shells shell shells && ret=0
         fi
+    elif [[ $subcmd == init ]]; then
+        # The shell argument mirrors the wrappers this build emits.
+        if ((! shellgiven)); then
+            local -a wrappers=(bash zsh fish powershell)
+            _describe -t wrappers shell wrappers && ret=0
+        fi
+    elif [[ $subcmd == env ]]; then
+        if ((! ver)); then
+            local -a versions
+            versions=(${(f)"$(_jdkfind_version_values)"})
+            (($#versions)) && _describe -t versions 'version prefix' versions && ret=0
+        fi
     else
         if ((! sub)); then
             local -a subcmds=(
                 'info:print one installation'"'"'s details'
                 'list:list all matching installations'
                 'completions:print a shell-completion script'
+                'env:print shell code exporting JAVA_HOME'
+                'init:print a shell wrapper providing env'
             )
             _describe -t commands command subcmds && ret=0
         fi

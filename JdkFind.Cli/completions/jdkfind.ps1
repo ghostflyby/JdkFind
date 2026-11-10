@@ -121,12 +121,12 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
             continue
         }
         if ($token.StartsWith('-')) { continue }
-        if ($token -eq 'info' -or $token -eq 'list' -or $token -eq 'completions') {
+        if ($token -eq 'info' -or $token -eq 'list' -or $token -eq 'completions' -or $token -eq 'env' -or $token -eq 'init') {
             $Sub = $true
             $SubName = $token
             continue
         }
-        if ($SubName -eq 'completions') { $ShellGiven = $true; continue }
+        if ($SubName -eq 'completions' -or $SubName -eq 'init') { $ShellGiven = $true; continue }
         if ($token -match '^[0-9]') { $Version = $token; continue }
         $Tool = $true
     }
@@ -179,6 +179,23 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
         return $results
     }
 
+    # env's own --format: the option and its static values, completing after
+    # the option word and inline after '='.
+    if ($SubName -eq 'env') {
+        if ($wordToComplete -match '^--format=(.*)$') {
+            foreach ($format in 'sh', 'fish', 'powershell') {
+                AddResult $format 'ParameterValue' 'Output shell for the export lines'
+            }
+            return $results
+        }
+        if ($Tokens.Count -gt 0 -and $Tokens[$Tokens.Count - 1] -eq '--format') {
+            foreach ($format in 'sh', 'fish', 'powershell') {
+                AddResult $format 'ParameterValue' 'Output shell for the export lines'
+            }
+            return $results
+        }
+    }
+
     if ($wordToComplete.StartsWith('-')) {
         $OptionTooltips = [ordered]@{
             '--json'         = 'Write JSON to stdout (list: array; others: single object)'
@@ -192,6 +209,9 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
             '--help'         = 'Show help'
             '-h'             = 'Show help'
             '--version'      = 'Print version'
+        }
+        if ($SubName -eq 'env') {
+            $OptionTooltips['--format'] = 'Output shell for the export lines'
         }
         foreach ($name in $OptionTooltips.Keys) {
             AddResult $name 'ParameterName' $OptionTooltips[$name]
@@ -209,10 +229,22 @@ Register-ArgumentCompleter -Native -CommandName jdkfind -ScriptBlock {
         return $results
     }
 
+    if ($SubName -eq 'init') {
+        # The shell argument mirrors the wrappers this build emits.
+        if (-not $ShellGiven) {
+            foreach ($wrapper in 'bash', 'zsh', 'fish', 'powershell') {
+                AddResult $wrapper 'ParameterValue' 'Shell wrapper this build emits'
+            }
+        }
+        return $results
+    }
+
     if (-not $Sub) {
         AddResult 'info' 'Command' 'Print one installation''s details'
         AddResult 'list' 'Command' 'List all matching installations'
         AddResult 'completions' 'Command' 'Print a shell-completion script'
+        AddResult 'env' 'Command' 'Print shell code exporting JAVA_HOME'
+        AddResult 'init' 'Command' 'Print a shell wrapper providing env'
     }
     if ($null -eq $Version) {
         foreach ($prefix in (Get-JdkFindVersionPrefixes)) {

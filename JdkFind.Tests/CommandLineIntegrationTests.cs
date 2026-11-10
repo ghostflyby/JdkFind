@@ -76,7 +76,7 @@ public class CommandLineIntegrationTests : IDisposable
     }
 
     [Fact]
-    public void InfoCommand_WritesDetailsToStderr_KeepsStdoutEmpty()
+    public void InfoCommand_PrintsDetailsToStderr_KeepsStdoutEmpty()
     {
         var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
@@ -124,6 +124,104 @@ public class CommandLineIntegrationTests : IDisposable
 
         Assert.StartsWith("[", stdout);
         Assert.EndsWith("]" + Environment.NewLine, stdout);
+    }
+
+    [Fact]
+    public void EnvCommand_PrintsThePosixExport()
+    {
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
+
+        var (exitCode, stdout, stderr) = RunCli(["env"], StubFinder(jdk));
+
+        Assert.Equal(0, exitCode);
+        // The output contract is a literal LF on every platform: a CR would
+        // leak into the evaluated JAVA_HOME value.
+        Assert.Equal($"export JAVA_HOME='{jdk}'\n", stdout);
+        Assert.Equal(string.Empty, stderr);
+    }
+
+    [Fact]
+    public void EnvCommand_VersionPrefix_SelectsTheMatchingInstallation()
+    {
+        var jdk21 = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk21");
+        var jdk17 = TestJdk.Create(_temp.FullPath, "17.0.2", "jdks", "jdk17");
+
+        var (_, stdout, _) = RunCli(["env", "17"], StubFinder(jdk21, jdk17));
+
+        Assert.StartsWith("export JAVA_HOME='", stdout);
+        Assert.Contains(Path.Combine(_temp.FullPath, "jdks", "jdk17"), stdout);
+        Assert.DoesNotContain(Path.Combine(_temp.FullPath, "jdks", "jdk21"), stdout);
+    }
+
+    [Fact]
+    public void EnvCommand_Formats_SelectTheStatementSyntax()
+    {
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
+
+        var (_, fish, _) = RunCli(["env", "--format", "fish"], StubFinder(jdk));
+        Assert.StartsWith("set -gx JAVA_HOME '", fish);
+        // fish doubles the backslashes a Windows home carries.
+        Assert.Contains(jdk.Replace("\\", "\\\\"), fish);
+
+        var (_, powershell, _) = RunCli(["env", "--format", "powershell"], StubFinder(jdk));
+        Assert.StartsWith("$env:JAVA_HOME = '", powershell);
+        // PowerShell keeps the backslashes of the home as-is.
+        Assert.Contains(jdk, powershell);
+    }
+
+    [Fact]
+    public void EnvCommand_FormatRejectsUnknownShells()
+    {
+        var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
+
+        var (exitCode, _, stderr) = RunCli(["env", "--format", "bash"], StubFinder(jdk));
+
+        Assert.Equal(2, exitCode);
+        Assert.Contains("sh, fish, powershell", stderr);
+    }
+
+    [Fact]
+    public void EnvCommand_NoMatch_ExitsNotFoundWithEmptyOutput()
+    {
+        // The silent-exit contract is shared with every other locating command.
+        var (exitCode, stdout, stderr) = RunCli(["env"], StubFinder("/nonexistent/jdk"));
+
+        Assert.Equal(1, exitCode);
+        Assert.Equal(string.Empty, stdout);
+        Assert.Equal(string.Empty, stderr);
+    }
+
+    [Fact]
+    public void InitCommand_WithoutShell_ListsWhatThisBuildEmits()
+    {
+        var (exitCode, stdout, stderr) = RunCli(["init"], StubFinder());
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("bash", stdout);
+        Assert.Contains("zsh", stdout);
+        Assert.Contains("fish", stdout);
+        Assert.Contains("powershell", stdout);
+        Assert.Contains("Run 'jdkfind init <shell>' to print a wrapper.", stderr);
+    }
+
+    [Fact]
+    public void InitCommand_PrintsTheWrapperVerbatim()
+    {
+        var (exitCode, stdout, stderr) = RunCli(["init", "zsh"], StubFinder());
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("jdkfind env --format sh", stdout);
+        Assert.Contains("JDKFIND_BIN", stdout);
+        Assert.Equal(string.Empty, stderr);
+    }
+
+    [Fact]
+    public void InitCommand_UnknownShell_IsAUsageError()
+    {
+        var (exitCode, _, stderr) = RunCli(["init", "tcsh"], StubFinder());
+
+        Assert.Equal(2, exitCode);
+        Assert.Contains("Shells: bash, zsh, fish, powershell", stderr);
     }
 
     [Fact]

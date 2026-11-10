@@ -120,7 +120,7 @@ _jdkfind() {
             sel+=("$w")
             ;;
         -*) ;;
-        info | list | completions)
+        info | list | completions | env | init)
             sub=1
             subcmd=$w
             ;;
@@ -128,7 +128,7 @@ _jdkfind() {
             ver=1
             verword=$w
             ;;
-        *) [[ $subcmd == completions ]] && shellgiven=1 || tool=1 ;;
+        *) [[ $subcmd == completions || $subcmd == init ]] && shellgiven=1 || tool=1 ;;
         esac
     done
 
@@ -193,18 +193,38 @@ _jdkfind() {
         ;;
     esac
 
+    local -a opts=(--json -j --vendor --distribution --arch --release --jdk-only --no-probe --help -h --version)
+    if [[ $subcmd == env ]]; then
+        opts+=(--format)
+    fi
+
     if [[ $cur == -* ]]; then
         while IFS= read -r w; do
             COMPREPLY+=("$w")
-        done < <(compgen -W \
-            "--json -j --vendor --distribution --arch --release --jdk-only --no-probe --help -h --version" \
+        done < <(compgen -W "${opts[*]}" \
             -- "$cur")
+        return 0
+    fi
+
+    case $prev in
+    --format)
+        while IFS= read -r w; do
+            [[ $w == "$cur"* ]] && COMPREPLY+=("$w")
+        done < <(printf '%s\n' sh fish powershell)
+        return 0
+        ;;
+    esac
+    if [[ $subcmd == env && $cur == --format=* ]]; then
+        while IFS= read -r w; do
+            [[ $w == "${cur#*=}"* ]] && COMPREPLY+=("$w")
+        done < <(printf '%s\n' sh fish powershell)
         return 0
     fi
 
     # Positionals: the subcommands, version prefixes of the installed JVMs,
     # and bin tools of the current selection; after 'completions' the shell
-    # names mirror what this build carries.
+    # names mirror what this build carries; after 'env' the version prefixes
+    # of the selection; after 'init' the wrappers it emits.
     local -a candidates=()
     if [[ $subcmd == completions ]]; then
         if ((! shellgiven)); then
@@ -212,8 +232,18 @@ _jdkfind() {
                 [[ -n $w ]] && candidates+=("$w")
             done < <("${COMP_WORDS[0]}" completions 2>/dev/null)
         fi
+    elif [[ $subcmd == init ]]; then
+        if ((! shellgiven)); then
+            candidates+=(bash zsh fish powershell)
+        fi
+    elif [[ $subcmd == env ]]; then
+        if ((! ver)); then
+            while IFS= read -r w; do
+                [[ -n $w ]] && candidates+=("$w")
+            done < <(_jdkfind_version_values)
+        fi
     else
-        ((sub)) || candidates+=(info list completions)
+        ((sub)) || candidates+=(info list completions env init)
         if ((! ver)); then
             while IFS= read -r w; do
                 [[ -n $w ]] && candidates+=("$w")

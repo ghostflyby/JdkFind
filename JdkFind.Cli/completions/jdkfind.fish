@@ -32,11 +32,19 @@ function __jdkfind_past_dd
 end
 
 function __jdkfind_wants_subcommand
-    not __jdkfind_tokens | string match --quiet --regex '^(info|list|completions)$'
+    not __jdkfind_tokens | string match --quiet --regex '^(info|list|completions|env|init)$'
 end
 
 function __jdkfind_seen_completions
     __jdkfind_tokens | string match --quiet completions
+end
+
+function __jdkfind_seen_init
+    __jdkfind_tokens | string match --quiet init
+end
+
+function __jdkfind_seen_env
+    __jdkfind_tokens | string match --quiet env
 end
 
 function __jdkfind_wants_version
@@ -44,22 +52,23 @@ function __jdkfind_wants_version
 end
 
 # A tool positional is offered only while none was given and no subcommand
-# appeared (the info/list/completions grammar has no tool slot).
+# appeared (the info/list/completions/env/init grammar has no tool slot).
 function __jdkfind_wants_tool
-    if __jdkfind_tokens | string match --quiet --invert --regex '^(info|list|completions|[0-9].*)$'
+    if __jdkfind_tokens | string match --quiet --invert --regex '^(info|list|completions|env|init|[0-9].*)$'
         return 1
     end
-    if __jdkfind_tokens | string match --quiet --regex '^(info|list|completions)$'
+    if __jdkfind_tokens | string match --quiet --regex '^(info|list|completions|env|init)$'
         return 1
     end
     return 0
 end
 
-# The shell argument of 'completions': the last positional is the subcommand.
+# The shell argument of 'completions' or 'init': the last positional is the
+# subcommand.
 function __jdkfind_wants_shell
     set -l tokens (__jdkfind_tokens)
     test (count $tokens) -gt 0
-    and test "$tokens[-1]" = completions
+    and test "$tokens[-1]" = completions -o "$tokens[-1]" = init
 end
 
 # Prints values for <field> from the installed JVMs, one per line. The
@@ -164,6 +173,7 @@ end
 complete -c jdkfind --no-files
 
 complete -c jdkfind -s j -l json -d 'Write JSON to stdout (list: array; others: single object)' -n 'not __jdkfind_past_dd'
+complete -c jdkfind -l format -d 'Output shell for the export lines' -r -x -a 'sh fish powershell' -n '__jdkfind_seen_env; and not __jdkfind_past_dd'
 complete -c jdkfind -l vendor -d 'Filter by vendor substring' -x -a '(__jdkfind_values vendor)' -n 'not __jdkfind_past_dd'
 complete -c jdkfind -l distribution -d 'Filter by distribution substring (foojay names)' -x -a '(__jdkfind_values distribution)' -n 'not __jdkfind_past_dd'
 complete -c jdkfind -l arch -d 'Filter by architecture substring' -x -a '(__jdkfind_values arch)' -n 'not __jdkfind_past_dd'
@@ -177,9 +187,12 @@ complete -c jdkfind -l version -d 'Print version' -n 'not __jdkfind_past_dd'
 complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_subcommand' -a info -d 'Print one installation\'s details'
 complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_subcommand' -a list -d 'List all matching installations'
 complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_subcommand' -a completions -d 'Print a shell-completion script'
-complete -c jdkfind -n 'not __jdkfind_past_dd; and not __jdkfind_seen_completions; and __jdkfind_wants_version' -a '(__jdkfind_version_values)' -d 'Version prefix'
+complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_subcommand' -a env -d 'Print shell code exporting JAVA_HOME'
+complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_subcommand' -a init -d 'Print a shell wrapper providing env'
+complete -c jdkfind -n 'not __jdkfind_past_dd; and not __jdkfind_seen_completions; and not __jdkfind_seen_init; and __jdkfind_wants_version' -a '(__jdkfind_version_values)' -d 'Version prefix'
 complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_tool' -a '(__jdkfind_tools)' -d 'Bin tool of the selection'
-complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_shell' -a '(command jdkfind completions 2>/dev/null)' -d 'Shell this build carries'
+complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_shell; and __jdkfind_seen_completions' -a '(command jdkfind completions 2>/dev/null)' -d 'Shell this build carries'
+complete -c jdkfind -n 'not __jdkfind_past_dd; and __jdkfind_wants_shell; and __jdkfind_seen_init' -a 'bash zsh fish powershell' -d 'Shell wrapper this build emits'
 
 # Run mode, after fish's java_home --exec completion: the words after '--'
 # are a standalone command line for the resolved installation. While the
