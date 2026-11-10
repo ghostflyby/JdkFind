@@ -10,9 +10,7 @@ name: publish
 on:
   push:
     tags: [ 'v*.*.*' ]
-  # A manual run is a dry run: the publish job below is tag-gated, so dispatch
-  # builds and smoke-tests the native binaries and uploads them as run
-  # artifacts — nuget.org and the GitHub release are unreachable from it.
+  # A manual run is a dry run: the publish job is tag-gated.
   workflow_dispatch:
 
 # A publish must never be cancelled mid-flight (a half-pushed release), and two
@@ -49,8 +47,7 @@ jobs:
           cache-dependency-path: '**/*.csproj'
       - name: Set version from tag
         run: |
-          # Dispatch runs have a branch name here; the version only matters on
-          # the publish path, so a placeholder keeps pack happy.
+          # Dispatch refs are branches; a placeholder keeps pack happy.
           $version = if ($env:GITHUB_REF_NAME -match '^v') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
 
@@ -74,8 +71,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # NativeAOT binaries for the release assets. StaticExecutable is musl-only:
-  # macOS forbids static linking (libc ships with the OS) and Windows ignores it.
+  # StaticExecutable is passed only for musl: macOS forbids static linking.
   native:
     name: Native ${{ matrix.rid }}
     needs: build
@@ -105,14 +101,8 @@ jobs:
           $version = if ($env:GITHUB_REF_NAME -match '^v') { $env:GITHUB_REF_NAME -replace '^v', '' } else { '0.0.0' }
           "VERSION=$version" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
 
-      # Linux musl builds run in Microsoft's Alpine AOT SDK images — the
-      # toolchain configuration Microsoft builds and tests. An Ubuntu musl-gcc
-      # cross environment produces a static-pie binary that trips its
-      # stack-protector self-relocation at startup (arm64 crashes with both bfd
-      # and lld; x64 needed lld to link). The AOT toolchain is preinstalled in
-      # the image; the container stays out of the job level because the JS
-      # actions (checkout, upload-artifact) bundle glibc node and cannot run
-      # under musl.
+      # Microsoft's Alpine AOT images: an Ubuntu musl-gcc cross environment
+      # produces static-pie binaries that crash at startup on arm64.
       - name: Publish (Linux, in Alpine)
         if: startsWith(matrix.rid, 'linux')
         shell: bash
@@ -143,15 +133,13 @@ jobs:
           $binary = "out/$env:RID/jdkfind"
           $info = (file $binary) -join ' '
           Write-Host $info
-          # StaticExecutable produces a static-PIE executable, which file
-          # reports as "static-pie linked".
+          # file reports static-PIE as "static-pie linked".
           if ($info -notmatch 'static(ally|-pie) linked')
           {
             throw 'the linux binary is not statically linked'
           }
           $ldd = (ldd $binary 2>&1 | Out-String).Trim()
           Write-Host $ldd
-          # glibc phrasing: "not a dynamic executable"; newer ldd: "statically linked".
           if ($ldd -notmatch 'not a dynamic executable|statically linked')
           {
             throw 'the linux binary has dynamic dependencies'
