@@ -17,9 +17,9 @@ public class ShellIntegrationTests
         Executable = new JavaExecutable
         {
             Path = Path.Combine(home, "bin", "java"),
-            Version = JdkFind.JvmVersion.Parse("21.0.5"),
+            Version = JvmVersion.Parse("21.0.5"),
         },
-        Version = JdkFind.JvmVersion.Parse("21.0.5"),
+        Version = JvmVersion.Parse("21.0.5"),
         HasCompiler = true,
     };
 
@@ -33,7 +33,7 @@ public class ShellIntegrationTests
         Assert.StartsWith("export JAVA_HOME='", script);
         Assert.EndsWith("'\n", script);
         Assert.Contains("'\\''", script);
-        Assert.DoesNotContain("\\\\", script);
+        Assert.DoesNotContain(@"\\", script);
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class ShellIntegrationTests
 
         Assert.StartsWith("set -gx JAVA_HOME '", script);
         Assert.EndsWith("'\n", script);
-        Assert.Contains("\\\\", script);
+        Assert.Contains(@"\\", script);
         Assert.Contains("\\'", script);
     }
 
@@ -57,7 +57,7 @@ public class ShellIntegrationTests
         Assert.StartsWith("$env:JAVA_HOME = '", script);
         Assert.EndsWith("'\n", script);
         Assert.Contains("''", script);
-        Assert.DoesNotContain("\\\\", script);
+        Assert.DoesNotContain(@"\\", script);
     }
 
     [Fact]
