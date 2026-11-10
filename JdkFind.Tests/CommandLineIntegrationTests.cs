@@ -134,7 +134,9 @@ public class CommandLineIntegrationTests : IDisposable
         var (exitCode, stdout, stderr) = RunCli(["env"], StubFinder(jdk));
 
         Assert.Equal(0, exitCode);
-        Assert.Equal($"export JAVA_HOME='{jdk}'{Environment.NewLine}", stdout);
+        // The output contract is a literal LF on every platform: a CR would
+        // leak into the evaluated JAVA_HOME value.
+        Assert.Equal($"export JAVA_HOME='{jdk}'\n", stdout);
         Assert.Equal(string.Empty, stderr);
     }
 
