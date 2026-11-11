@@ -134,6 +134,27 @@ await foreach (var update in monitor.WatchAsync(cancellationToken))
 The monitor owns the previous snapshot, the polling loop and the optional home
 watchers; discovery itself stays stateless and can still be called directly.
 
+### Data binding
+
+`JvmObservableMonitor` wraps a monitor in the
+`INotifyPropertyChanged`/`ObservableCollection` model used by XAML, WinForms and
+MAUI. `Jvms` is a read-only observable collection; `Count`, `IsRunning`,
+`LastUpdate`, `LastUpdated` and `LastError` raise property changes. A changed
+installation is replaced in place (`CollectionChanged` with `Replace`), so item
+templates refresh without making `Jvm` mutable.
+
+```csharp
+var state = JvmObservableMonitor.Start(monitor); // captures the UI SynchronizationContext
+
+// Bind an items control to state.Jvms and labels to the properties above.
+await state.DisposeAsync();
+```
+
+`Start` captures `SynchronizationContext.Current`; call it on the UI thread (or
+pass the UI context explicitly) so notifications arrive on the thread bindings
+expect. With no context at all, updates are applied on the monitoring loop's
+thread.
+
 ## Discovery sources
 
 - **All platforms** — `JAVA_HOME`, `PATH` entries.

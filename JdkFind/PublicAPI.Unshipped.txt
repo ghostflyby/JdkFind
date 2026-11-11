@@ -69,6 +69,16 @@ JdkFind.JvmMonitorOptions.PollInterval.get -> System.TimeSpan
 JdkFind.JvmMonitorOptions.PollInterval.init -> void
 JdkFind.JvmMonitorOptions.WatchHomes.get -> bool
 JdkFind.JvmMonitorOptions.WatchHomes.init -> void
+JdkFind.JvmObservableMonitor
+JdkFind.JvmObservableMonitor.Completion.get -> System.Threading.Tasks.Task!
+JdkFind.JvmObservableMonitor.Count.get -> int
+JdkFind.JvmObservableMonitor.DisposeAsync() -> System.Threading.Tasks.ValueTask
+JdkFind.JvmObservableMonitor.IsRunning.get -> bool
+JdkFind.JvmObservableMonitor.Jvms.get -> System.Collections.ObjectModel.ReadOnlyObservableCollection<JdkFind.Jvm!>!
+JdkFind.JvmObservableMonitor.LastError.get -> string?
+JdkFind.JvmObservableMonitor.LastUpdate.get -> JdkFind.JvmUpdate?
+JdkFind.JvmObservableMonitor.LastUpdated.get -> System.DateTimeOffset?
+JdkFind.JvmObservableMonitor.PropertyChanged -> System.ComponentModel.PropertyChangedEventHandler?
 JdkFind.JvmUpdate
 JdkFind.JvmUpdate.<Clone>$() -> JdkFind.JvmUpdate!
 JdkFind.JvmUpdate.Added.get -> System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!
@@ -92,6 +102,7 @@ override JdkFind.JvmUpdate.GetHashCode() -> int
 override JdkFind.JvmUpdate.ToString() -> string!
 static JdkFind.JvmChange.operator !=(JdkFind.JvmChange? left, JdkFind.JvmChange? right) -> bool
 static JdkFind.JvmChange.operator ==(JdkFind.JvmChange? left, JdkFind.JvmChange? right) -> bool
+static JdkFind.JvmObservableMonitor.Start(JdkFind.JvmMonitor! monitor, System.Threading.SynchronizationContext? synchronizationContext = null) -> JdkFind.JvmObservableMonitor!
 static JdkFind.JvmMonitorOptions.operator !=(JdkFind.JvmMonitorOptions? left, JdkFind.JvmMonitorOptions? right) -> bool
 static JdkFind.JvmMonitorOptions.operator ==(JdkFind.JvmMonitorOptions? left, JdkFind.JvmMonitorOptions? right) -> bool
 static JdkFind.JvmUpdate.operator !=(JdkFind.JvmUpdate? left, JdkFind.JvmUpdate? right) -> bool
