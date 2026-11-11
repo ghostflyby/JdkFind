@@ -48,3 +48,51 @@ JdkFind.Json.JvmVersionJsonConverter
 JdkFind.Json.JvmVersionJsonConverter.JvmVersionJsonConverter() -> void
 override JdkFind.Json.JvmVersionJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, JdkFind.JvmVersion value, System.Text.Json.JsonSerializerOptions! options) -> void
 override JdkFind.Json.JvmVersionJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> JdkFind.JvmVersion
+JdkFind.JvmChange
+JdkFind.JvmChange.<Clone>$() -> JdkFind.JvmChange!
+JdkFind.JvmChange.Current.get -> JdkFind.Jvm!
+JdkFind.JvmChange.Current.init -> void
+JdkFind.JvmChange.Equals(JdkFind.JvmChange? other) -> bool
+JdkFind.JvmChange.JvmChange() -> void
+JdkFind.JvmChange.Previous.get -> JdkFind.Jvm!
+JdkFind.JvmChange.Previous.init -> void
+JdkFind.JvmMonitor
+JdkFind.JvmMonitor.JvmMonitor(JdkFind.JdkFinder! finder, JdkFind.JvmMonitorOptions? options = null) -> void
+JdkFind.JvmMonitor.RequestRefresh() -> void
+JdkFind.JvmMonitor.UpdateFinder(JdkFind.JdkFinder! finder) -> void
+JdkFind.JvmMonitor.WatchAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<JdkFind.JvmUpdate!>!
+JdkFind.JvmMonitorOptions
+JdkFind.JvmMonitorOptions.<Clone>$() -> JdkFind.JvmMonitorOptions!
+JdkFind.JvmMonitorOptions.Equals(JdkFind.JvmMonitorOptions? other) -> bool
+JdkFind.JvmMonitorOptions.JvmMonitorOptions() -> void
+JdkFind.JvmMonitorOptions.PollInterval.get -> System.TimeSpan
+JdkFind.JvmMonitorOptions.PollInterval.init -> void
+JdkFind.JvmMonitorOptions.WatchHomes.get -> bool
+JdkFind.JvmMonitorOptions.WatchHomes.init -> void
+JdkFind.JvmUpdate
+JdkFind.JvmUpdate.<Clone>$() -> JdkFind.JvmUpdate!
+JdkFind.JvmUpdate.Added.get -> System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!
+JdkFind.JvmUpdate.Added.init -> void
+JdkFind.JvmUpdate.Changed.get -> System.Collections.Generic.IReadOnlyList<JdkFind.JvmChange!>!
+JdkFind.JvmUpdate.Changed.init -> void
+JdkFind.JvmUpdate.Equals(JdkFind.JvmUpdate? other) -> bool
+JdkFind.JvmUpdate.JvmUpdate() -> void
+JdkFind.JvmUpdate.Removed.get -> System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!
+JdkFind.JvmUpdate.Removed.init -> void
+JdkFind.JvmUpdate.Snapshot.get -> System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!
+JdkFind.JvmUpdate.Snapshot.init -> void
+override JdkFind.JvmChange.Equals(object? obj) -> bool
+override JdkFind.JvmChange.GetHashCode() -> int
+override JdkFind.JvmChange.ToString() -> string!
+override JdkFind.JvmMonitorOptions.Equals(object? obj) -> bool
+override JdkFind.JvmMonitorOptions.GetHashCode() -> int
+override JdkFind.JvmMonitorOptions.ToString() -> string!
+override JdkFind.JvmUpdate.Equals(object? obj) -> bool
+override JdkFind.JvmUpdate.GetHashCode() -> int
+override JdkFind.JvmUpdate.ToString() -> string!
+static JdkFind.JvmChange.operator !=(JdkFind.JvmChange? left, JdkFind.JvmChange? right) -> bool
+static JdkFind.JvmChange.operator ==(JdkFind.JvmChange? left, JdkFind.JvmChange? right) -> bool
+static JdkFind.JvmMonitorOptions.operator !=(JdkFind.JvmMonitorOptions? left, JdkFind.JvmMonitorOptions? right) -> bool
+static JdkFind.JvmMonitorOptions.operator ==(JdkFind.JvmMonitorOptions? left, JdkFind.JvmMonitorOptions? right) -> bool
+static JdkFind.JvmUpdate.operator !=(JdkFind.JvmUpdate? left, JdkFind.JvmUpdate? right) -> bool
+static JdkFind.JvmUpdate.operator ==(JdkFind.JvmUpdate? left, JdkFind.JvmUpdate? right) -> bool
