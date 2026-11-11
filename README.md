@@ -65,7 +65,8 @@ so use run mode (`jdkfind 21 -- java -version`) or `--format powershell`; raw
 ## JSON output
 
 `--json` is a stable machine-readable contract: camelCase keys, UTF-8, every
-key always present (`null` when unknown), additive-only within a major version.
+key always present (`null` for nullable fields, an empty string for the
+non-nullable ones when unknown), additive-only within a major version.
 
 | Key                              | Type           | Meaning                                                                 |
 |----------------------------------|----------------|-------------------------------------------------------------------------|
@@ -76,11 +77,17 @@ key always present (`null` when unknown), additive-only within a major version.
 | `prerelease`                     | boolean        | Pre-release build (`25-ea`, `24.0.1-ea+5`)                              |
 | `vendor`                         | string         | Normalized upstream vendor (e.g. `Azul`)                                |
 | `distribution`                   | string         | foojay-style distribution name (e.g. `Zulu`)                            |
-| `vendorRaw`                      | string \| null | The binary's reported vendor, falling back to the release `IMPLEMENTOR` |
-| `runtimeName` / `runtimeVersion` | string \| null | Probed, falling back to the release file                                |
+| `vendorRaw`                      | string         | The binary's reported vendor, falling back to the release `IMPLEMENTOR` (empty when unknown) |
+| `runtimeName` / `runtimeVersion` | string \| null | Probed, falling back to the release file (null when unknown)             |
 | `vmName` / `vmVersion`           | string         | Probed, falling back to the release file (empty when unknown)           |
-| `architecture` / `osName`        | string \| null | Probed, falling back to the release file                                |
+| `architecture` / `osName`        | string         | Probed, falling back to the release file (empty when unknown)           |
 | `providers`                      | string[]       | Detection sources that reported this home                               |
+
+The same projection is available to library consumers through `JvmJson`;
+`JvmJsonConverter` writes the key set explicitly, so serializer options cannot
+add, remove, rename, or reorder keys. For custom presentation (for example,
+indentation), declare a source-generated context for `Jvm` with the desired
+options — the converter attribute supplies the fixed shape.
 
 Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled;
 run mode (`--`) adds `126`/`127` when the command cannot be executed or is
@@ -90,6 +97,7 @@ killed — and exit with `130`.
 ## Library usage
 
 ```csharp
+using System.Text.Json;
 using JdkFind;
 
 // Every locate is a fresh scan; the result merges every source that reported
@@ -101,6 +109,9 @@ foreach (var jvm in JdkFinder.Default.Locate())
 // token for probes and release reads.
 var finder = JdkFinder.Default with { Providers = [new NasSource()], ProbeRuntimeProperties = false };
 IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
+
+// The fixed JSON projection is source-generated and AOT-safe.
+var json = JsonSerializer.Serialize(jvms, JvmJson.ListTypeInfo);
 ```
 
 ## Discovery sources

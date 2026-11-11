@@ -107,12 +107,11 @@ internal static class CommandLine
         {
             if (options.Command == SubCommand.List)
             {
-                Console.WriteLine(JsonSerializer.Serialize(
-                    [.. matches.Select(ToDto)], JvmJsonContext.Default.JvmDtoArray));
+                Console.WriteLine(JsonSerializer.Serialize(matches.ToArray(), CliJsonContext.Default.JvmArray));
             }
             else
             {
-                Console.WriteLine(JsonSerializer.Serialize(ToDto(chosen), JvmJsonContext.Default.JvmDto));
+                Console.WriteLine(JsonSerializer.Serialize(chosen, CliJsonContext.Default.Jvm));
             }
 
             return ExitSuccess;
@@ -282,23 +281,6 @@ internal static class CommandLine
             ? group.Any(alias => architecture.Contains(alias, StringComparison.OrdinalIgnoreCase))
             : architecture.Contains(text, StringComparison.OrdinalIgnoreCase);
     }
-
-    private static JvmDto ToDto(Jvm jvm) => new(
-        jvm.Home.FullName,
-        jvm.Version.Original,
-        jvm.LanguageVersion,
-        jvm.HasCompiler,
-        jvm.Version.IsPreRelease,
-        jvm.Vendor.ToString(),
-        jvm.Distribution.ToString(),
-        jvm.Executable.VendorRaw,
-        jvm.Executable.RuntimeName,
-        jvm.Executable.RuntimeVersion,
-        jvm.Executable.VmName,
-        jvm.Executable.VmVersion,
-        jvm.Executable.Architecture,
-        jvm.Executable.OsName,
-        jvm.Providers);
 
     internal static void WriteInfo(Jvm jvm, TextWriter writer)
     {

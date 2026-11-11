@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace JdkFind;
 
 /// <summary>
@@ -6,6 +8,12 @@ namespace JdkFind;
 ///     <see cref="Executable" /> — while the installation owns the layout
 ///     questions (the compiler, other executables via <see cref="Resolve" />).
 /// </summary>
+/// <remarks>
+///     Serializes through <see cref="JvmJsonConverter" /> to a fixed, primitive-only
+///     JSON projection; the converter keeps <see cref="System.IO.DirectoryInfo" />
+///     and computed members out of the payload.
+/// </remarks>
+[JsonConverter(typeof(JvmJsonConverter))]
 public sealed record Jvm
 {
     /// <summary>The Java home directory.</summary>

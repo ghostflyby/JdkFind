@@ -1,2 +1,10 @@
 #nullable enable
 
+JdkFind.JvmJson
+static JdkFind.JvmJson.TypeInfo.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<JdkFind.Jvm!>!
+static JdkFind.JvmJson.ArrayTypeInfo.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<JdkFind.Jvm![]!>!
+static JdkFind.JvmJson.ListTypeInfo.get -> System.Text.Json.Serialization.Metadata.JsonTypeInfo<System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!>!
+JdkFind.JvmJsonConverter
+JdkFind.JvmJsonConverter.JvmJsonConverter() -> void
+override JdkFind.JvmJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, JdkFind.Jvm! value, System.Text.Json.JsonSerializerOptions! options) -> void
+override JdkFind.JvmJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> JdkFind.Jvm!
