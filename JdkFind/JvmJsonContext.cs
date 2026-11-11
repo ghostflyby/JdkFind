@@ -8,7 +8,7 @@ namespace JdkFind;
 ///     pre-generated type infos through <see cref="JvmJson" />; a caller that needs
 ///     custom presentation can declare its own source-generated context, which picks
 ///     up the converter applied to <see cref="Jvm" />. The key set stays fixed because
-///     <see cref="JvmJsonConverter" /> writes it explicitly.
+///     <see cref="JvmJsonConverter" /> delegates to the internal wire model.
 /// </summary>
 [JsonSerializable(typeof(Jvm))]
 [JsonSerializable(typeof(Jvm[]))]

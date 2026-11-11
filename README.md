@@ -84,10 +84,10 @@ non-nullable ones when unknown), additive-only within a major version.
 | `providers`                      | string[]       | Detection sources that reported this home                               |
 
 The same projection is available to library consumers through `JvmJson`;
-`JvmJsonConverter` writes the key set explicitly, so serializer options cannot
-add, remove, rename, or reorder keys. For custom presentation (for example,
-indentation), declare a source-generated context for `Jvm` with the desired
-options — the converter attribute supplies the fixed shape.
+`JvmJsonConverter` fixes the key set, so serializer options cannot add, remove,
+rename, or reorder keys. For custom presentation (for example, indentation),
+declare a source-generated context for `Jvm` with the desired options — the
+converter attribute supplies the fixed shape.
 
 Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled;
 run mode (`--`) adds `126`/`127` when the command cannot be executed or is

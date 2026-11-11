@@ -34,8 +34,9 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
   infos, and `Jvm` serializes only through `JvmJsonConverter` (applied via
   `[JsonConverter]` on `Jvm`) — never let the generated serializer
   walk `Jvm`'s properties: `DirectoryInfo` and the computed
-  `JavaExecutable.Installation` recurse without bound. The converter writes the
-  key set explicitly, so serializer options cannot change the shape.
+  `JavaExecutable.Installation` recurse without bound. The converter delegates to
+  an internal wire model and fixes the key set, so serializer options cannot
+  change the shape.
 - **Environment variables win.** Version-manager providers read their env vars
   before falling back to default locations: `JAVA_HOME`, `GRADLE_USER_HOME`,
   `JABBA_HOME`, `SDKMAN_CANDIDATES_DIR`/`SDKMAN_DIR`, `SCOOP`/`SCOOP_GLOBAL`,
