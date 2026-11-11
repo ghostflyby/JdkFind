@@ -145,6 +145,37 @@ public class JvmJsonContractTests
     }
 
     [Fact]
+    public void JvmVersion_SerializesAsItsRawStringAndRoundTrips()
+    {
+        var version = JvmVersion.Parse("21.0.5+9-LTS");
+
+        var json = JsonSerializer.Serialize(version, TestJsonContext.Default.JvmVersion);
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.Equal("21.0.5+9-LTS", doc.RootElement.GetString());
+        Assert.Equal(version, JsonSerializer.Deserialize<JvmVersion>(json, TestJsonContext.Default.JvmVersion));
+    }
+
+    [Fact]
+    public void JvmVersion_UnparseableValue_RoundTripsAsUnknown()
+    {
+        var version = JvmVersion.Parse("not-a-version");
+
+        var json = JsonSerializer.Serialize(version, TestJsonContext.Default.JvmVersion);
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.Equal("not-a-version", doc.RootElement.GetString());
+        Assert.Equal(version, JsonSerializer.Deserialize<JvmVersion>(json, TestJsonContext.Default.JvmVersion));
+    }
+
+    [Fact]
+    public void VendorAndDistribution_SerializeAsTheirNames()
+    {
+        Assert.Equal("\"Azul\"", JsonSerializer.Serialize(JvmVendor.Azul, TestJsonContext.Default.JvmVendor));
+        Assert.Equal("\"Zulu\"", JsonSerializer.Serialize(JvmDistribution.Zulu, TestJsonContext.Default.JvmDistribution));
+    }
+
+    [Fact]
     public void ArrayAndListMetadata_ShareTheSameProjection()
     {
         var array = JsonSerializer.Serialize(new[] { FullyPopulated }, JvmJson.ArrayTypeInfo);
@@ -200,4 +231,7 @@ public class JvmJsonContractTests
 }
 
 [JsonSerializable(typeof(Jvm))]
+[JsonSerializable(typeof(JvmVersion))]
+[JsonSerializable(typeof(JvmVendor))]
+[JsonSerializable(typeof(JvmDistribution))]
 internal sealed partial class TestJsonContext : JsonSerializerContext;

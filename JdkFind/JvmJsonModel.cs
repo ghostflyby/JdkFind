@@ -16,7 +16,7 @@ internal sealed class JvmJsonModel
 
     public string Home => _value.Home.FullName;
 
-    public string Version => _value.Version.Original;
+    public JvmVersion Version => _value.Version;
 
     public int? LanguageVersion => _value.LanguageVersion;
 
@@ -24,9 +24,9 @@ internal sealed class JvmJsonModel
 
     public bool Prerelease => _value.Version.IsPreRelease;
 
-    public string Vendor => _value.Vendor.ToString();
+    public JvmVendor Vendor => _value.Vendor;
 
-    public string Distribution => _value.Distribution.ToString();
+    public JvmDistribution Distribution => _value.Distribution;
 
     public string VendorRaw => _value.Executable.VendorRaw;
 

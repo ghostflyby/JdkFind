@@ -8,3 +8,7 @@ JdkFind.JvmJsonConverter
 JdkFind.JvmJsonConverter.JvmJsonConverter() -> void
 override JdkFind.JvmJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, JdkFind.Jvm! value, System.Text.Json.JsonSerializerOptions! options) -> void
 override JdkFind.JvmJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> JdkFind.Jvm!
+JdkFind.JvmVersionJsonConverter
+JdkFind.JvmVersionJsonConverter.JvmVersionJsonConverter() -> void
+override JdkFind.JvmVersionJsonConverter.Write(System.Text.Json.Utf8JsonWriter! writer, JdkFind.JvmVersion value, System.Text.Json.JsonSerializerOptions! options) -> void
+override JdkFind.JvmVersionJsonConverter.Read(ref System.Text.Json.Utf8JsonReader reader, System.Type! typeToConvert, System.Text.Json.JsonSerializerOptions! options) -> JdkFind.JvmVersion

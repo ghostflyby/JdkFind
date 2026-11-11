@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace JdkFind;
 
 /// <summary>
@@ -7,6 +9,8 @@ namespace JdkFind;
 ///     ship several distributions — e.g. Oracle ships both
 ///     <see cref="OracleOpenJdk" /> and <see cref="OracleGraalVm" />.
 /// </summary>
+/// <remarks>Serializes as its enum name, for example <c>OracleOpenJdk</c>.</remarks>
+[JsonConverter(typeof(JsonStringEnumConverter<JvmDistribution>))]
 public enum JvmDistribution
 {
     /// <summary>The distribution could not be determined.</summary>

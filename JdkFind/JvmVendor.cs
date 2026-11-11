@@ -1,6 +1,10 @@
+using System.Text.Json.Serialization;
+
 namespace JdkFind;
 
 /// <summary>Normalized upstream organizations behind JVM installations.</summary>
+/// <remarks>Serializes as its enum name, for example <c>OracleOpenJdk</c>.</remarks>
+[JsonConverter(typeof(JsonStringEnumConverter<JvmVendor>))]
 public enum JvmVendor
 {
     /// <summary>The IMPLEMENTOR was missing or unrecognized.</summary>
