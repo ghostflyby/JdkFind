@@ -67,7 +67,7 @@ public class JvmJsonContractTests
         var root = doc.RootElement;
 
         Assert.Equal(JsonValueKind.Object, root.ValueKind);
-        Assert.Equal("/jvm/zulu", root.GetProperty("home").GetString());
+        Assert.Equal(FullyPopulated.Home.FullName, root.GetProperty("home").GetString());
         Assert.Equal("21.0.12.1", root.GetProperty("version").GetString());
         Assert.Equal(21, root.GetProperty("languageVersion").GetInt32());
         Assert.True(root.GetProperty("hasCompiler").GetBoolean());
@@ -114,7 +114,7 @@ public class JvmJsonContractTests
         var actualExecutable = executable.EnumerateObject().Select(p => (p.Name, p.Value.ValueKind)).ToArray();
         Assert.Equal(expectedExecutable, actualExecutable);
         Assert.Equal("/jvm/zulu/bin/java", executable.GetProperty("path").GetString());
-        Assert.Equal("/jvm/zulu", executable.GetProperty("home").GetString());
+        Assert.Equal(FullyPopulated.Executable.Home!.FullName, executable.GetProperty("home").GetString());
         Assert.False(executable.TryGetProperty("installation", out _));
     }
 
@@ -232,7 +232,7 @@ public class JvmJsonContractTests
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
         Assert.Equal("/jvm/zulu/bin/java", root.GetProperty("path").GetString());
-        Assert.Equal("/jvm/zulu", root.GetProperty("home").GetString());
+        Assert.Equal(FullyPopulated.Executable.Home!.FullName, root.GetProperty("home").GetString());
         Assert.False(root.TryGetProperty("installation", out _));
     }
 
@@ -285,7 +285,7 @@ public class JvmJsonContractTests
         Assert.Equal(FullyPopulated.Executable.VmVersion, executable.VmVersion);
         Assert.Null(executable.StartFailure);
         Assert.NotNull(executable.Home);
-        Assert.Equal("/jvm/zulu", executable.Home.FullName);
+        Assert.Equal(FullyPopulated.Executable.Home!.FullName, executable.Home.FullName);
     }
 }
 
