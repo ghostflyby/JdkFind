@@ -107,6 +107,41 @@ public sealed record JavaExecutable
     /// it.</summary>
     public string VmVersion { get; init; } = string.Empty;
 
+    /// <summary>Compares all stored properties; paths use the platform path comparer.</summary>
+    public bool Equals(JavaExecutable? other) =>
+        other is not null &&
+        PathComparison.PathEquals(Path, other.Path) &&
+        PathComparison.DirectoryEquals(Home, other.Home) &&
+        string.Equals(StartFailure, other.StartFailure, StringComparison.Ordinal) &&
+        Version.Equals(other.Version) &&
+        string.Equals(VendorRaw, other.VendorRaw, StringComparison.Ordinal) &&
+        Vendor == other.Vendor &&
+        string.Equals(OsName, other.OsName, StringComparison.Ordinal) &&
+        string.Equals(Architecture, other.Architecture, StringComparison.Ordinal) &&
+        string.Equals(RuntimeName, other.RuntimeName, StringComparison.Ordinal) &&
+        string.Equals(RuntimeVersion, other.RuntimeVersion, StringComparison.Ordinal) &&
+        string.Equals(VmName, other.VmName, StringComparison.Ordinal) &&
+        string.Equals(VmVersion, other.VmVersion, StringComparison.Ordinal);
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(PathComparison.PathHash(Path));
+        hash.Add(PathComparison.DirectoryHash(Home));
+        hash.Add(StartFailure);
+        hash.Add(Version);
+        hash.Add(VendorRaw);
+        hash.Add(Vendor);
+        hash.Add(OsName);
+        hash.Add(Architecture);
+        hash.Add(RuntimeName);
+        hash.Add(RuntimeVersion);
+        hash.Add(VmName);
+        hash.Add(VmVersion);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Summarizes the binary: version, vendor and path.</summary>
     public override string ToString() => $"{Version} {Vendor} — {Path}";
 }

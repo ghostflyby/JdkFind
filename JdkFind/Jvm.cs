@@ -72,6 +72,35 @@ public sealed record Jvm
     /// <summary>The distribution per the foojay API naming, or <see cref="JvmDistribution.Unknown" />.</summary>
     public JvmDistribution Distribution { get; init; }
 
+    /// <summary>Compares all stored properties; paths use the platform path comparer.</summary>
+    public bool Equals(Jvm? other) =>
+        other is not null &&
+        PathComparison.DirectoryEquals(Home, other.Home) &&
+        ProviderSequence.Equals(Providers, other.Providers) &&
+        EqualityComparer<JavaExecutable>.Default.Equals(Executable, other.Executable) &&
+        Version.Equals(other.Version) &&
+        LanguageVersion == other.LanguageVersion &&
+        HasCompiler == other.HasCompiler &&
+        string.Equals(VendorRaw, other.VendorRaw, StringComparison.Ordinal) &&
+        Vendor == other.Vendor &&
+        Distribution == other.Distribution;
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(PathComparison.DirectoryHash(Home));
+        ProviderSequence.AddHash(ref hash, Providers);
+        hash.Add(Executable);
+        hash.Add(Version);
+        hash.Add(LanguageVersion);
+        hash.Add(HasCompiler);
+        hash.Add(VendorRaw);
+        hash.Add(Vendor);
+        hash.Add(Distribution);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Summarizes the installation: language version, full version, distribution and home.</summary>
     public override string ToString() =>
         $"{LanguageVersion?.ToString() ?? "?"} ({Version}) {Distribution} — {Home.FullName}";

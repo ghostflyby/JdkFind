@@ -10,11 +10,6 @@ namespace JdkFind;
 /// </summary>
 public sealed record JdkFinder
 {
-    private static readonly StringComparer PathComparer =
-        OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal;
-
     /// <summary>Sources consulted in order; candidates reported by several sources
     /// merge into one <see cref="Jvm" /> listing every source. Defaults to no
     /// sources at all — start from <see cref="Default" /> or set this explicitly.</summary>
@@ -269,7 +264,9 @@ public sealed record JdkFinder
         JdkFinder finder, CancellationToken cancellationToken)
     {
         var order = new List<(string HomePath, List<string> Providers)>();
-        var indexByKey = finder.DeduplicateHomes ? new Dictionary<string, int>(PathComparer) : null;
+        var indexByKey = finder.DeduplicateHomes
+            ? new Dictionary<string, int>(PathComparison.Comparer)
+            : null;
 
         foreach (var provider in finder.Providers)
         {

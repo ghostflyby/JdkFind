@@ -55,6 +55,45 @@ public sealed record JvmInfo
     /// <summary>Identifiers of every provider that reported this home.</summary>
     public required IReadOnlyList<string> Providers { get; init; }
 
+    /// <summary>Compares all stored properties; paths use the platform path comparer.</summary>
+    public bool Equals(JvmInfo? other) =>
+        other is not null &&
+        PathComparison.DirectoryEquals(Home, other.Home) &&
+        Version.Equals(other.Version) &&
+        LanguageVersion == other.LanguageVersion &&
+        HasCompiler == other.HasCompiler &&
+        Vendor == other.Vendor &&
+        Distribution == other.Distribution &&
+        string.Equals(VendorRaw, other.VendorRaw, StringComparison.Ordinal) &&
+        string.Equals(RuntimeName, other.RuntimeName, StringComparison.Ordinal) &&
+        string.Equals(RuntimeVersion, other.RuntimeVersion, StringComparison.Ordinal) &&
+        string.Equals(VmName, other.VmName, StringComparison.Ordinal) &&
+        string.Equals(VmVersion, other.VmVersion, StringComparison.Ordinal) &&
+        string.Equals(Architecture, other.Architecture, StringComparison.Ordinal) &&
+        string.Equals(OsName, other.OsName, StringComparison.Ordinal) &&
+        ProviderSequence.Equals(Providers, other.Providers);
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(PathComparison.DirectoryHash(Home));
+        hash.Add(Version);
+        hash.Add(LanguageVersion);
+        hash.Add(HasCompiler);
+        hash.Add(Vendor);
+        hash.Add(Distribution);
+        hash.Add(VendorRaw);
+        hash.Add(RuntimeName);
+        hash.Add(RuntimeVersion);
+        hash.Add(VmName);
+        hash.Add(VmVersion);
+        hash.Add(Architecture);
+        hash.Add(OsName);
+        ProviderSequence.AddHash(ref hash, Providers);
+        return hash.ToHashCode();
+    }
+
     /// <summary>Projects an installation into its flattened view.</summary>
     public static JvmInfo From(Jvm jvm) => new()
     {
