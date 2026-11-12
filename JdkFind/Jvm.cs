@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using JdkFind.Json;
 
 namespace JdkFind;
 
@@ -8,15 +9,10 @@ namespace JdkFind;
 ///     <see cref="Executable" /> — while the installation owns the layout
 ///     questions (the compiler, other executables via <see cref="Resolve" />).
 /// </summary>
-/// <remarks>
-///     Serializes through <see cref="JvmJsonConverter" /> to a fixed, primitive-only
-///     JSON projection; the converter keeps <see cref="System.IO.DirectoryInfo" />
-///     and computed members out of the payload.
-/// </remarks>
-[JsonConverter(typeof(JvmJsonConverter))]
 public sealed record Jvm
 {
     /// <summary>The Java home directory.</summary>
+    [JsonConverter(typeof(DirectoryInfoJsonConverter))]
     public required DirectoryInfo Home { get; init; }
 
     /// <summary>Identifiers of every provider that reported this home, in provider order.</summary>
@@ -63,6 +59,9 @@ public sealed record Jvm
     ///     JDK rather than a runtime-only image (standalone JREs, jlink runtimes).
     /// </summary>
     public bool HasCompiler { get; init; }
+
+    /// <summary>True when <see cref="Version" /> is a pre-release build.</summary>
+    public bool Prerelease => Version.IsPreRelease;
 
     /// <summary>The release file's raw <c>IMPLEMENTOR</c> string; null when absent.</summary>
     public string? VendorRaw { get; init; }

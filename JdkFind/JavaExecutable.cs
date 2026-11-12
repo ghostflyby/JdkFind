@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using JdkFind.Json;
+
 namespace JdkFind;
 
 /// <summary>
@@ -19,6 +22,7 @@ public sealed record JavaExecutable
 
     /// <summary>The installation directory backing this binary, when one was
     /// recognized; null for a standalone binary.</summary>
+    [JsonConverter(typeof(DirectoryInfoJsonConverter))]
     public DirectoryInfo? Home { get; init; }
 
     /// <summary>
@@ -34,6 +38,7 @@ public sealed record JavaExecutable
     ///     better handle. Null when no home is recognizable or its release file
     ///     is unreadable.
     /// </summary>
+    [JsonIgnore]
     public Jvm? Installation
     {
         get

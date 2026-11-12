@@ -64,32 +64,41 @@ so use run mode (`jdkfind 21 -- java -version`) or `--format powershell`; raw
 
 ## JSON output
 
-`--json` is a stable machine-readable contract: camelCase keys, UTF-8, every
-key always present (`null` for nullable fields, an empty string for the
-non-nullable ones when unknown), additive-only within a major version.
+`--json` is a machine-readable contract: camelCase keys, UTF-8, every key
+always present (`null` for nullable fields, an empty string for the
+non-nullable ones when unknown). Before 1.0, minor releases may break the
+shape; this release nests the probed facts under `executable`. From 1.0,
+changes are additive-only within a major version.
+
+| Key                    | Type           | Meaning                                                                 |
+|------------------------|----------------|-------------------------------------------------------------------------|
+| `home`                 | string         | Installation home directory                                             |
+| `version`              | string         | Raw `JAVA_VERSION` from the release file                                |
+| `languageVersion`      | number \| null | Feature version (e.g. `21`)                                             |
+| `hasCompiler`          | boolean        | Ships `javac`                                                           |
+| `prerelease`           | boolean        | `version` is a pre-release build (`25-ea`, `24.0.1-ea+5`)               |
+| `vendor`               | string         | Normalized vendor from the release `IMPLEMENTOR` (e.g. `Azul`)          |
+| `distribution`         | string         | foojay-style distribution name (e.g. `Zulu`)                            |
+| `vendorRaw`            | string \| null | Raw release `IMPLEMENTOR`; null when absent                             |
+| `providers`            | string[]       | Detection sources that reported this home                               |
+| `executable`           | object         | The home's `java` binary, see below                                     |
+
+`executable` mirrors `JavaExecutable`: the binary's own values come first, and
+the release file fills what the probe did not report.
 
 | Key                              | Type           | Meaning                                                                 |
 |----------------------------------|----------------|-------------------------------------------------------------------------|
-| `home`                           | string         | Installation home directory                                             |
-| `version`                        | string         | Raw `JAVA_VERSION` from the release file                                |
-| `languageVersion`                | number \| null | Feature version (e.g. `21`)                                             |
-| `hasCompiler`                    | boolean        | Ships `javac`                                                           |
-| `prerelease`                     | boolean        | Pre-release build (`25-ea`, `24.0.1-ea+5`)                              |
-| `vendor`                         | string         | Normalized upstream vendor (e.g. `Azul`)                                |
-| `distribution`                   | string         | foojay-style distribution name (e.g. `Zulu`)                            |
-| `vendorRaw`                      | string         | The binary's reported vendor, falling back to the release `IMPLEMENTOR` (empty when unknown) |
+| `path`                           | string         | Binary path                                                             |
+| `home`                           | string \| null | Backing installation directory; null for a standalone binary            |
+| `startFailure`                   | string \| null | Why the probe failed; null when it ran or was skipped                   |
+| `version`                        | string         | Probed `java.version`, falling back to `JAVA_VERSION`                    |
+| `vendor`                         | string         | Normalized vendor from the probed `java.vendor`                          |
+| `vendorRaw`                      | string         | Probed `java.vendor`, falling back to `IMPLEMENTOR` (empty when unknown) |
+| `osName` / `architecture`        | string         | Probed, falling back to the release file (empty when unknown)           |
 | `runtimeName` / `runtimeVersion` | string \| null | Probed, falling back to the release file (null when unknown)             |
 | `vmName` / `vmVersion`           | string         | Probed, falling back to the release file (empty when unknown)           |
-| `architecture` / `osName`        | string         | Probed, falling back to the release file (empty when unknown)           |
-| `providers`                      | string[]       | Detection sources that reported this home                               |
 
-The same projection is available to library consumers through `JvmJson`;
-`JvmJsonConverter` fixes the key set, so serializer options cannot add, remove,
-rename, or reorder keys. For custom presentation (for example, indentation),
-declare a source-generated context for `Jvm` with the desired options — the
-converter attribute supplies the fixed shape. The library types follow the same
-conventions: `JvmVersion` serializes as its raw `JAVA_VERSION` string, and
-`JvmVendor`/`JvmDistribution` serialize as their enum names.
+`Jvm` and `JavaExecutable` can be serialized with `System.Text.Json`.
 
 Exit codes: `0` found, `1` none found, `2` usage error, `130` cancelled;
 run mode (`--`) adds `126`/`127` when the command cannot be executed or is
@@ -99,7 +108,6 @@ killed — and exit with `130`.
 ## Library usage
 
 ```csharp
-using System.Text.Json;
 using JdkFind;
 
 // Every locate is a fresh scan; the result merges every source that reported
@@ -111,9 +119,6 @@ foreach (var jvm in JdkFinder.Default.Locate())
 // token for probes and release reads.
 var finder = JdkFinder.Default with { Providers = [new NasSource()], ProbeRuntimeProperties = false };
 IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
-
-// The fixed JSON projection is source-generated and AOT-safe.
-var json = JsonSerializer.Serialize(jvms, JvmJson.ListTypeInfo);
 ```
 
 ## Discovery sources

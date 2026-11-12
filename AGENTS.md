@@ -29,14 +29,8 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
 
 - **AOT compatibility.** Both assemblies carry `IsAotCompatible`. No
   reflection-based discovery: providers are assembled as an explicit list
-  behind `JdkFinder.Default`. JSON goes through the source generator
-  (`JvmJsonContext`), exposed to consumers as the pre-generated `JvmJson` type
-  infos, and `Jvm` serializes only through `JvmJsonConverter` (applied via
-  `[JsonConverter]` on `Jvm`) — never let the generated serializer
-  walk `Jvm`'s properties: `DirectoryInfo` and the computed
-  `JavaExecutable.Installation` recurse without bound. The converter delegates to
-  an internal wire model and fixes the key set, so serializer options cannot
-  change the shape.
+  behind `JdkFinder.Default`. JSON serialization is source-generated; do not
+  add reflection-based serialization.
 - **Environment variables win.** Version-manager providers read their env vars
   before falling back to default locations: `JAVA_HOME`, `GRADLE_USER_HOME`,
   `JABBA_HOME`, `SDKMAN_CANDIDATES_DIR`/`SDKMAN_DIR`, `SCOOP`/`SCOOP_GLOBAL`,
@@ -69,8 +63,9 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
   directory-enumeration API to make it real. A future genuinely-async provider
   should add a parallel async interface instead of converting this contract.
 - Namespaces: the root carries the facade and core abstractions; built-in
-  providers live in `JdkFind.Providers`. No `.Models`/`.Helpers`-style
-  namespaces; helpers are `internal`, exposed to tests via `InternalsVisibleTo`.
+  providers live in `JdkFind.Providers`; JSON converter plumbing lives in
+  `JdkFind.Json`. No `.Models`/`.Helpers`-style namespaces; helpers are
+  `internal`, exposed to tests via `InternalsVisibleTo`.
 
 ## Public API contract
 
