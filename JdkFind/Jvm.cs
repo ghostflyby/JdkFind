@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using JdkFind.Json;
+
 namespace JdkFind;
 
 /// <summary>
@@ -9,6 +12,7 @@ namespace JdkFind;
 public sealed record Jvm
 {
     /// <summary>The Java home directory.</summary>
+    [JsonConverter(typeof(DirectoryInfoJsonConverter))]
     public required DirectoryInfo Home { get; init; }
 
     /// <summary>Identifiers of every provider that reported this home, in provider order.</summary>
@@ -56,6 +60,9 @@ public sealed record Jvm
     /// </summary>
     public bool HasCompiler { get; init; }
 
+    /// <summary>True when <see cref="Version" /> is a pre-release build.</summary>
+    public bool Prerelease => Version.IsPreRelease;
+
     /// <summary>The release file's raw <c>IMPLEMENTOR</c> string; null when absent.</summary>
     public string? VendorRaw { get; init; }
 
@@ -64,6 +71,35 @@ public sealed record Jvm
 
     /// <summary>The distribution per the foojay API naming, or <see cref="JvmDistribution.Unknown" />.</summary>
     public JvmDistribution Distribution { get; init; }
+
+    /// <summary>Compares all value properties; <see cref="JvmVersion" /> compares its canonical parsed value, not the exact original text. Paths use the platform comparer (case-insensitive on Windows/macOS), without resolving symlinks.</summary>
+    public bool Equals(Jvm? other) =>
+        other is not null &&
+        PathComparison.DirectoryEquals(Home, other.Home) &&
+        ProviderSequence.Equals(Providers, other.Providers) &&
+        EqualityComparer<JavaExecutable>.Default.Equals(Executable, other.Executable) &&
+        Version.Equals(other.Version) &&
+        LanguageVersion == other.LanguageVersion &&
+        HasCompiler == other.HasCompiler &&
+        string.Equals(VendorRaw, other.VendorRaw, StringComparison.Ordinal) &&
+        Vendor == other.Vendor &&
+        Distribution == other.Distribution;
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(PathComparison.DirectoryHash(Home));
+        ProviderSequence.AddHash(ref hash, Providers);
+        hash.Add(Executable);
+        hash.Add(Version);
+        hash.Add(LanguageVersion);
+        hash.Add(HasCompiler);
+        hash.Add(VendorRaw);
+        hash.Add(Vendor);
+        hash.Add(Distribution);
+        return hash.ToHashCode();
+    }
 
     /// <summary>Summarizes the installation: language version, full version, distribution and home.</summary>
     public override string ToString() =>

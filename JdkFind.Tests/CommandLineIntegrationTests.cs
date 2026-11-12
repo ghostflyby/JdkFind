@@ -124,6 +124,10 @@ public class CommandLineIntegrationTests : IDisposable
 
         Assert.StartsWith("[", stdout);
         Assert.EndsWith("]" + Environment.NewLine, stdout);
+        using var doc = JsonDocument.Parse(stdout);
+        var first = doc.RootElement[0];
+        Assert.Equal(15, first.EnumerateObject().Count());
+        Assert.False(first.TryGetProperty("executable", out _));
     }
 
     [Fact]
@@ -236,6 +240,7 @@ public class CommandLineIntegrationTests : IDisposable
 
         using var doc = JsonDocument.Parse(stdout);
         var root = doc.RootElement;
+        Assert.False(root.TryGetProperty("executable", out _));
         Assert.Equal(JsonValueKind.Null, root.GetProperty("runtimeName").ValueKind);
         Assert.Equal(JsonValueKind.String, root.GetProperty("vmName").ValueKind);
         Assert.Equal(string.Empty, root.GetProperty("vmName").GetString());

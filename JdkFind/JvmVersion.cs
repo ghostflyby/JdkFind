@@ -1,5 +1,7 @@
 using System.Numerics;
 using System.Text;
+using System.Text.Json.Serialization;
+using JdkFind.Json;
 
 namespace JdkFind;
 
@@ -14,6 +16,9 @@ namespace JdkFind;
 ///     is not SemVer — real JDK versions like <c>21.0.12.1</c> and <c>1.8.0_402</c>
 ///     are outside the SemVer grammar.
 /// </summary>
+/// <remarks>Serializes as its raw <c>JAVA_VERSION</c> string through
+/// <see cref="JvmVersionJsonConverter" />.</remarks>
+[JsonConverter(typeof(JvmVersionJsonConverter))]
 public readonly record struct JvmVersion : IComparable<JvmVersion>,
     IComparisonOperators<JvmVersion, JvmVersion, bool>
 {

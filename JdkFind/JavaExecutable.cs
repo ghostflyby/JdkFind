@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using JdkFind.Json;
+
 namespace JdkFind;
 
 /// <summary>
@@ -19,6 +22,7 @@ public sealed record JavaExecutable
 
     /// <summary>The installation directory backing this binary, when one was
     /// recognized; null for a standalone binary.</summary>
+    [JsonConverter(typeof(DirectoryInfoJsonConverter))]
     public DirectoryInfo? Home { get; init; }
 
     /// <summary>
@@ -34,6 +38,7 @@ public sealed record JavaExecutable
     ///     better handle. Null when no home is recognizable or its release file
     ///     is unreadable.
     /// </summary>
+    [JsonIgnore]
     public Jvm? Installation
     {
         get
@@ -101,6 +106,41 @@ public sealed record JavaExecutable
     /// the release file's <c>JAVA_VM_VERSION</c>; empty when neither reports
     /// it.</summary>
     public string VmVersion { get; init; } = string.Empty;
+
+    /// <summary>Compares all value properties; <see cref="JvmVersion" /> compares its canonical parsed value, not the exact original text. Paths use the platform comparer (case-insensitive on Windows/macOS), without resolving symlinks.</summary>
+    public bool Equals(JavaExecutable? other) =>
+        other is not null &&
+        PathComparison.PathEquals(Path, other.Path) &&
+        PathComparison.DirectoryEquals(Home, other.Home) &&
+        string.Equals(StartFailure, other.StartFailure, StringComparison.Ordinal) &&
+        Version.Equals(other.Version) &&
+        string.Equals(VendorRaw, other.VendorRaw, StringComparison.Ordinal) &&
+        Vendor == other.Vendor &&
+        string.Equals(OsName, other.OsName, StringComparison.Ordinal) &&
+        string.Equals(Architecture, other.Architecture, StringComparison.Ordinal) &&
+        string.Equals(RuntimeName, other.RuntimeName, StringComparison.Ordinal) &&
+        string.Equals(RuntimeVersion, other.RuntimeVersion, StringComparison.Ordinal) &&
+        string.Equals(VmName, other.VmName, StringComparison.Ordinal) &&
+        string.Equals(VmVersion, other.VmVersion, StringComparison.Ordinal);
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(PathComparison.PathHash(Path));
+        hash.Add(PathComparison.DirectoryHash(Home));
+        hash.Add(StartFailure);
+        hash.Add(Version);
+        hash.Add(VendorRaw);
+        hash.Add(Vendor);
+        hash.Add(OsName);
+        hash.Add(Architecture);
+        hash.Add(RuntimeName);
+        hash.Add(RuntimeVersion);
+        hash.Add(VmName);
+        hash.Add(VmVersion);
+        return hash.ToHashCode();
+    }
 
     /// <summary>Summarizes the binary: version, vendor and path.</summary>
     public override string ToString() => $"{Version} {Vendor} — {Path}";
