@@ -106,6 +106,55 @@ var finder = JdkFinder.Default with { Providers = [new NasSource()], ProbeRuntim
 IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
 ```
 
+## Watching for changes
+
+`JvmMonitor` turns discovery into a long-running stream. The first item is the
+initial snapshot; later items carry the complete snapshot plus what was added,
+removed or changed since the previous update. Scans run on the configured poll
+interval and on demand; by default each located home is also watched for file
+system changes as an additional hint.
+
+```csharp
+var monitor = new JvmMonitor(
+    JdkFinder.Default with { ProbeRuntimeProperties = false },
+    new JvmMonitorOptions { PollInterval = TimeSpan.FromSeconds(30) });
+
+// Elsewhere, when the caller's configuration changes or a scan is due:
+monitor.UpdateFinder(reconfiguredFinder);
+monitor.RequestRefresh();
+
+await foreach (var update in monitor.WatchAsync(cancellationToken))
+{
+    foreach (var jvm in update.Added)
+        Console.WriteLine($"added: {jvm}");
+    // update.Snapshot is the complete current state.
+}
+```
+
+The monitor owns the previous snapshot, the polling loop and the optional home
+watchers; discovery itself stays stateless and can still be called directly.
+
+### Data binding
+
+`JvmObservableMonitor` wraps a monitor in the
+`INotifyPropertyChanged`/`ObservableCollection` model used by XAML, WinForms and
+MAUI. `Jvms` is a read-only observable collection; `Count`, `IsRunning`,
+`LastUpdate`, `LastUpdated` and `LastError` raise property changes. A changed
+installation is replaced in place (`CollectionChanged` with `Replace`), so item
+templates refresh without making `Jvm` mutable.
+
+```csharp
+var state = JvmObservableMonitor.Start(monitor); // captures the UI SynchronizationContext
+
+// Bind an items control to state.Jvms and labels to the properties above.
+await state.DisposeAsync();
+```
+
+`Start` captures `SynchronizationContext.Current`; call it on the UI thread (or
+pass the UI context explicitly) so notifications arrive on the thread bindings
+expect. With no context at all, updates are applied on the monitoring loop's
+thread.
+
 ## Discovery sources
 
 - **All platforms** — `JAVA_HOME`, `PATH` entries.

@@ -418,7 +418,7 @@ public sealed record JdkFinder
     ///     <c>/Library/Java</c> aliases); compared case-insensitively on the
     ///     case-insensitive platforms.
     /// </summary>
-    private static string GetDeduplicationKey(string path)
+    internal static string GetDeduplicationKey(string path)
     {
         try
         {
