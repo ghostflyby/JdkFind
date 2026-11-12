@@ -179,6 +179,109 @@ public class JvmJsonContractTests
     }
 
     [Fact]
+    public void JvmInfo_FlattensBothTypesIntoTheFlatContract()
+    {
+        var json = JsonSerializer.Serialize(JvmInfo.From(FullyPopulated), TestJsonContext.Default.JvmInfo);
+
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        var expected = new (string Name, JsonValueKind Kind)[]
+        {
+            ("home", JsonValueKind.String),
+            ("version", JsonValueKind.String),
+            ("languageVersion", JsonValueKind.Number),
+            ("hasCompiler", JsonValueKind.True),
+            ("prerelease", JsonValueKind.False),
+            ("vendor", JsonValueKind.String),
+            ("distribution", JsonValueKind.String),
+            ("vendorRaw", JsonValueKind.String),
+            ("runtimeName", JsonValueKind.String),
+            ("runtimeVersion", JsonValueKind.String),
+            ("vmName", JsonValueKind.String),
+            ("vmVersion", JsonValueKind.String),
+            ("architecture", JsonValueKind.String),
+            ("osName", JsonValueKind.String),
+            ("providers", JsonValueKind.Array),
+        };
+
+        var actual = root.EnumerateObject().Select(p => (p.Name, p.Value.ValueKind)).ToArray();
+        Assert.Equal(expected, actual);
+        Assert.Equal(FullyPopulated.Home.FullName, root.GetProperty("home").GetString());
+        Assert.Equal("21.0.12.1", root.GetProperty("version").GetString());
+        Assert.Equal(21, root.GetProperty("languageVersion").GetInt32());
+        Assert.Equal("Azul", root.GetProperty("vendor").GetString());
+        Assert.Equal("Zulu", root.GetProperty("distribution").GetString());
+        Assert.Equal("Azul Systems, Inc.", root.GetProperty("vendorRaw").GetString());
+        Assert.Equal("OpenJDK Runtime Environment", root.GetProperty("runtimeName").GetString());
+        Assert.Equal("aarch64", root.GetProperty("architecture").GetString());
+        Assert.Equal(1, root.GetProperty("providers").GetArrayLength());
+    }
+
+    [Fact]
+    public void JvmInfo_SerializesExactlyLikeTheLegacyFlatContract()
+    {
+        var legacy = new LegacyJvmDto(
+            FullyPopulated.Home.FullName,
+            FullyPopulated.Version.Original,
+            FullyPopulated.LanguageVersion,
+            FullyPopulated.HasCompiler,
+            FullyPopulated.Version.IsPreRelease,
+            FullyPopulated.Vendor.ToString(),
+            FullyPopulated.Distribution.ToString(),
+            FullyPopulated.Executable.VendorRaw,
+            FullyPopulated.Executable.RuntimeName,
+            FullyPopulated.Executable.RuntimeVersion,
+            FullyPopulated.Executable.VmName,
+            FullyPopulated.Executable.VmVersion,
+            FullyPopulated.Executable.Architecture,
+            FullyPopulated.Executable.OsName,
+            FullyPopulated.Providers);
+
+        var legacyJson = JsonSerializer.Serialize(legacy, LegacyJsonContext.Default.LegacyJvmDto);
+        var currentJson = JsonSerializer.Serialize(JvmInfo.From(FullyPopulated), LegacyJsonContext.Default.JvmInfo);
+
+        Assert.Equal(legacyJson, currentJson);
+    }
+
+    [Fact]
+    public void JvmInfo_VendorRaw_ComesFromTheExecutable()
+    {
+        var jvm = FullyPopulated with
+        {
+            VendorRaw = "release vendor",
+            Executable = FullyPopulated.Executable with { VendorRaw = "probe vendor" },
+        };
+
+        Assert.Equal("probe vendor", JvmInfo.From(jvm).VendorRaw);
+    }
+
+    [Fact]
+    public void JvmInfo_RoundTrips()
+    {
+        var info = JvmInfo.From(FullyPopulated);
+        var json = JsonSerializer.Serialize(info, TestJsonContext.Default.JvmInfo);
+        var roundTripped = JsonSerializer.Deserialize(json, TestJsonContext.Default.JvmInfo);
+
+        Assert.NotNull(roundTripped);
+        Assert.Equal(info.Home.FullName, roundTripped.Home.FullName);
+        Assert.Equal(info.Version, roundTripped.Version);
+        Assert.Equal(info.LanguageVersion, roundTripped.LanguageVersion);
+        Assert.Equal(info.HasCompiler, roundTripped.HasCompiler);
+        Assert.Equal(info.Prerelease, roundTripped.Prerelease);
+        Assert.Equal(info.Vendor, roundTripped.Vendor);
+        Assert.Equal(info.Distribution, roundTripped.Distribution);
+        Assert.Equal(info.VendorRaw, roundTripped.VendorRaw);
+        Assert.Equal(info.RuntimeName, roundTripped.RuntimeName);
+        Assert.Equal(info.RuntimeVersion, roundTripped.RuntimeVersion);
+        Assert.Equal(info.VmName, roundTripped.VmName);
+        Assert.Equal(info.VmVersion, roundTripped.VmVersion);
+        Assert.Equal(info.Architecture, roundTripped.Architecture);
+        Assert.Equal(info.OsName, roundTripped.OsName);
+        Assert.Equal(info.Providers, roundTripped.Providers);
+    }
+
+    [Fact]
     public void Prerelease_True_RoundTrips()
     {
         var jvm = FullyPopulated with
@@ -202,7 +305,7 @@ public class JvmJsonContractTests
 
         using var doc = JsonDocument.Parse(json);
         Assert.Equal("21.0.5+9-LTS", doc.RootElement.GetString());
-        Assert.Equal(version, JsonSerializer.Deserialize<JvmVersion>(json, TestJsonContext.Default.JvmVersion));
+        Assert.Equal(version, JsonSerializer.Deserialize(json, TestJsonContext.Default.JvmVersion));
     }
 
     [Fact]
@@ -214,7 +317,7 @@ public class JvmJsonContractTests
 
         using var doc = JsonDocument.Parse(json);
         Assert.Equal("not-a-version", doc.RootElement.GetString());
-        Assert.Equal(version, JsonSerializer.Deserialize<JvmVersion>(json, TestJsonContext.Default.JvmVersion));
+        Assert.Equal(version, JsonSerializer.Deserialize(json, TestJsonContext.Default.JvmVersion));
     }
 
     [Fact]
@@ -239,21 +342,21 @@ public class JvmJsonContractTests
     [Fact]
     public void ArrayAndListMetadata_ShareTheSameProjection()
     {
-        var array = JsonSerializer.Serialize(new[] { FullyPopulated }, TestJsonContext.Default.JvmArray);
+        var array = JsonSerializer.Serialize([FullyPopulated], TestJsonContext.Default.JvmArray);
         var list = JsonSerializer.Serialize<IReadOnlyList<Jvm>>([FullyPopulated], TestJsonContext.Default.IReadOnlyListJvm);
 
         Assert.Equal(array, list);
     }
 
     [Fact]
-    public void CliContext_IsIndentedAndUsesTheSameProjection()
+    public void CliContext_IsIndentedAndUsesTheFlatProjection()
     {
-        var json = JsonSerializer.Serialize(FullyPopulated, CliJsonContext.Default.Jvm);
+        var json = JsonSerializer.Serialize(JvmInfo.From(FullyPopulated), CliJsonContext.Default.JvmInfo);
 
         Assert.Contains(Environment.NewLine, json);
         using var doc = JsonDocument.Parse(json);
-        Assert.Equal(10, doc.RootElement.EnumerateObject().Count());
-        Assert.Equal(12, doc.RootElement.GetProperty("executable").EnumerateObject().Count());
+        Assert.Equal(15, doc.RootElement.EnumerateObject().Count());
+        Assert.False(doc.RootElement.TryGetProperty("executable", out _));
     }
 
     [Fact]
@@ -291,6 +394,7 @@ public class JvmJsonContractTests
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(Jvm))]
+[JsonSerializable(typeof(JvmInfo))]
 [JsonSerializable(typeof(Jvm[]))]
 [JsonSerializable(typeof(IReadOnlyList<Jvm>))]
 [JsonSerializable(typeof(JavaExecutable))]
@@ -298,3 +402,27 @@ public class JvmJsonContractTests
 [JsonSerializable(typeof(JvmVendor))]
 [JsonSerializable(typeof(JvmDistribution))]
 internal sealed partial class TestJsonContext : JsonSerializerContext;
+
+internal sealed record LegacyJvmDto(
+    string Home,
+    string Version,
+    int? LanguageVersion,
+    bool HasCompiler,
+    bool Prerelease,
+    string Vendor,
+    string Distribution,
+    string? VendorRaw,
+    string? RuntimeName,
+    string? RuntimeVersion,
+    string? VmName,
+    string? VmVersion,
+    string? Architecture,
+    string? OsName,
+    IReadOnlyList<string> Providers);
+
+[JsonSourceGenerationOptions(
+    WriteIndented = true,
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(JvmInfo))]
+[JsonSerializable(typeof(LegacyJvmDto))]
+internal sealed partial class LegacyJsonContext : JsonSerializerContext;

@@ -107,11 +107,12 @@ internal static class CommandLine
         {
             if (options.Command == SubCommand.List)
             {
-                Console.WriteLine(JsonSerializer.Serialize(matches.ToArray(), CliJsonContext.Default.JvmArray));
+                Console.WriteLine(JsonSerializer.Serialize(
+                    matches.Select(JvmInfo.From).ToArray(), CliJsonContext.Default.JvmInfoArray));
             }
             else
             {
-                Console.WriteLine(JsonSerializer.Serialize(chosen, CliJsonContext.Default.Jvm));
+                Console.WriteLine(JsonSerializer.Serialize(JvmInfo.From(chosen), CliJsonContext.Default.JvmInfo));
             }
 
             return ExitSuccess;

@@ -124,6 +124,10 @@ public class CommandLineIntegrationTests : IDisposable
 
         Assert.StartsWith("[", stdout);
         Assert.EndsWith("]" + Environment.NewLine, stdout);
+        using var doc = JsonDocument.Parse(stdout);
+        var first = doc.RootElement[0];
+        Assert.Equal(15, first.EnumerateObject().Count());
+        Assert.False(first.TryGetProperty("executable", out _));
     }
 
     [Fact]
@@ -228,17 +232,18 @@ public class CommandLineIntegrationTests : IDisposable
     public void JsonCommand_UnknownVmFields_SerializeEmptyNotMissing()
     {
         // The fixture's release file carries no JAVA_VM_*/JAVA_RUNTIME_* keys, and
-        // probing is off: inside "executable" the runtime pair serializes as null
-        // while the VM pair degrades to the empty string — both keys stay present.
+        // probing is off: the runtime pair serializes as null while the VM pair
+        // degrades to the empty string — both keys stay present.
         var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdks", "jdk");
 
         var (_, stdout, _) = RunCli(["--json", "--no-probe"], StubFinder(jdk));
 
         using var doc = JsonDocument.Parse(stdout);
-        var executable = doc.RootElement.GetProperty("executable");
-        Assert.Equal(JsonValueKind.Null, executable.GetProperty("runtimeName").ValueKind);
-        Assert.Equal(JsonValueKind.String, executable.GetProperty("vmName").ValueKind);
-        Assert.Equal(string.Empty, executable.GetProperty("vmName").GetString());
+        var root = doc.RootElement;
+        Assert.False(root.TryGetProperty("executable", out _));
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("runtimeName").ValueKind);
+        Assert.Equal(JsonValueKind.String, root.GetProperty("vmName").ValueKind);
+        Assert.Equal(string.Empty, root.GetProperty("vmName").GetString());
     }
 
     [Fact]

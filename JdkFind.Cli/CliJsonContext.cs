@@ -6,6 +6,6 @@ namespace JdkFind.Cli;
 [JsonSourceGenerationOptions(
     WriteIndented = true,
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-[JsonSerializable(typeof(Jvm))]
-[JsonSerializable(typeof(Jvm[]))]
+[JsonSerializable(typeof(JvmInfo))]
+[JsonSerializable(typeof(JvmInfo[]))]
 internal sealed partial class CliJsonContext : JsonSerializerContext;
