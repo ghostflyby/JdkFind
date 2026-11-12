@@ -55,7 +55,7 @@ public sealed record JvmInfo
     /// <summary>Identifiers of every provider that reported this home.</summary>
     public required IReadOnlyList<string> Providers { get; init; }
 
-    /// <summary>Compares all value properties; <see cref="JvmVersion" /> ignores its original text. Paths compare lexically, without resolving symlinks.</summary>
+    /// <summary>Compares all value properties; <see cref="JvmVersion" /> compares its canonical parsed value, not the exact original text. Paths use the platform comparer (case-insensitive on Windows/macOS), without resolving symlinks.</summary>
     public bool Equals(JvmInfo? other) =>
         other is not null &&
         PathComparison.DirectoryEquals(Home, other.Home) &&

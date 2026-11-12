@@ -282,11 +282,11 @@ public class JvmJsonContractTests
         {
             Version = JvmVersion.Parse("21.0.11"),
             LanguageVersion = 17,
-            HasCompiler = false,
             Vendor = JvmVendor.Oracle,
             Distribution = JvmDistribution.OracleOpenJdk,
             Executable = FullyPopulated.Executable with
             {
+                Home = new DirectoryInfo("/jvm/executable"),
                 Version = JvmVersion.Parse("21.0.12.1"),
                 Vendor = JvmVendor.Azul,
                 VendorRaw = "probe vendor",
@@ -295,9 +295,10 @@ public class JvmJsonContractTests
 
         var info = JvmInfo.From(jvm);
 
+        Assert.Equal(jvm.Home.FullName, info.Home.FullName);
         Assert.Equal(JvmVersion.Parse("21.0.11"), info.Version);
         Assert.Equal(17, info.LanguageVersion);
-        Assert.False(info.HasCompiler);
+        Assert.True(info.HasCompiler);
         Assert.Equal(JvmVendor.Oracle, info.Vendor);
         Assert.Equal(JvmDistribution.OracleOpenJdk, info.Distribution);
         Assert.Equal("probe vendor", info.VendorRaw);

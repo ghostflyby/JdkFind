@@ -171,6 +171,7 @@ public class EqualityTests
 
         Assert.Equal(nullProviders, nullProvidersAgain);
         Assert.Equal(nullProviders.GetHashCode(), nullProvidersAgain.GetHashCode());
+        Assert.NotEqual(nullProviders, empty);
     }
 
     [Fact]
