@@ -107,7 +107,7 @@ public sealed record JavaExecutable
     /// it.</summary>
     public string VmVersion { get; init; } = string.Empty;
 
-    /// <summary>Compares all stored properties; paths use the platform path comparer.</summary>
+    /// <summary>Compares all value properties; <see cref="JvmVersion" /> ignores its original text. Paths compare lexically, without resolving symlinks.</summary>
     public bool Equals(JavaExecutable? other) =>
         other is not null &&
         PathComparison.PathEquals(Path, other.Path) &&

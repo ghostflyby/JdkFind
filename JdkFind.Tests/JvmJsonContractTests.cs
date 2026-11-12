@@ -219,6 +219,25 @@ public class JvmJsonContractTests
     }
 
     [Fact]
+    public void JvmInfo_UnknownValues_KeepTheFlatShape()
+    {
+        var json = JsonSerializer.Serialize(JvmInfo.From(UnknownValues), TestJsonContext.Default.JvmInfo);
+
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        Assert.Equal(15, root.EnumerateObject().Count());
+        Assert.Equal(string.Empty, root.GetProperty("vendorRaw").GetString());
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("runtimeName").ValueKind);
+        Assert.Equal(JsonValueKind.Null, root.GetProperty("runtimeVersion").ValueKind);
+        Assert.Equal(string.Empty, root.GetProperty("vmName").GetString());
+        Assert.Equal(string.Empty, root.GetProperty("vmVersion").GetString());
+        Assert.Equal(string.Empty, root.GetProperty("architecture").GetString());
+        Assert.Equal(string.Empty, root.GetProperty("osName").GetString());
+        Assert.Equal(0, root.GetProperty("providers").GetArrayLength());
+    }
+
+    [Fact]
     public void JvmInfo_SerializesExactlyLikeTheLegacyFlatContract()
     {
         var legacy = new LegacyJvmDto(
@@ -257,6 +276,34 @@ public class JvmJsonContractTests
     }
 
     [Fact]
+    public void JvmInfo_From_UsesInstallationFields()
+    {
+        var jvm = FullyPopulated with
+        {
+            Version = JvmVersion.Parse("21.0.11"),
+            LanguageVersion = 17,
+            HasCompiler = false,
+            Vendor = JvmVendor.Oracle,
+            Distribution = JvmDistribution.OracleOpenJdk,
+            Executable = FullyPopulated.Executable with
+            {
+                Version = JvmVersion.Parse("21.0.12.1"),
+                Vendor = JvmVendor.Azul,
+                VendorRaw = "probe vendor",
+            },
+        };
+
+        var info = JvmInfo.From(jvm);
+
+        Assert.Equal(JvmVersion.Parse("21.0.11"), info.Version);
+        Assert.Equal(17, info.LanguageVersion);
+        Assert.False(info.HasCompiler);
+        Assert.Equal(JvmVendor.Oracle, info.Vendor);
+        Assert.Equal(JvmDistribution.OracleOpenJdk, info.Distribution);
+        Assert.Equal("probe vendor", info.VendorRaw);
+    }
+
+    [Fact]
     public void JvmInfo_RoundTrips()
     {
         var info = JvmInfo.From(FullyPopulated);
@@ -279,6 +326,7 @@ public class JvmJsonContractTests
         Assert.Equal(info.Architecture, roundTripped.Architecture);
         Assert.Equal(info.OsName, roundTripped.OsName);
         Assert.Equal(info.Providers, roundTripped.Providers);
+        Assert.Equal(info, roundTripped);
     }
 
     [Fact]

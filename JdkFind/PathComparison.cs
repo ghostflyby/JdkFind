@@ -1,6 +1,6 @@
 namespace JdkFind;
 
-/// <summary>Lexical path equality for local directories and files.</summary>
+/// <summary>Lexical path equality for local directories and files; symlinks are not resolved.</summary>
 internal static class PathComparison
 {
     internal static readonly StringComparer Comparer =
