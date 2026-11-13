@@ -1,9 +1,9 @@
 {
   // Same convention as dotnet-pty: pin the SDK floor so local builds and CI share
-  // one toolchain; latestFeature accepts any newer 10.0.x feature band.
+  // one toolchain; Major accepts any installed SDK at or above this floor.
   "sdk": {
     "version": "10.0.100",
-    "rollForward": "latestFeature",
+    "rollForward": "Major",
     "allowPrerelease": false
   },
   // Puts dotnet test into its .NET 10 MTP mode, which is how the xunit.v3 test
