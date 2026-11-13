@@ -2,7 +2,7 @@
   // Same convention as dotnet-pty: pin the SDK floor so local builds and CI share
   // one toolchain; Major accepts any installed SDK at or above this floor.
   "sdk": {
-    "version": "10.0.100",
+    "version": "10.0.404",
     "rollForward": "Major",
     "allowPrerelease": false
   },
