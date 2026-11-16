@@ -104,6 +104,16 @@ foreach (var jvm in JdkFinder.Default.Locate())
 // token for probes and release reads.
 var finder = JdkFinder.Default with { Providers = [new NasSource()], ProbeRuntimeProperties = false };
 IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
+
+// Locate java executables directly: every installation's own java plus standalone
+// binaries found in the configured directories. A standalone binary has Home == null.
+foreach (var java in JdkFinder.Default.LocateExecutables())
+    Console.WriteLine($"{java.Version} -> {java.Path} (home: {java.Home?.FullName ?? "none"})");
+
+// Default scans PATH; custom finders opt in explicitly. ProbeRuntimeProperties
+// only affects home-backed entries — standalone candidates are always probed.
+var executableFinder = JdkFinder.Default with { ExecutableDirectories = ["/opt/custom/bin"] };
+IReadOnlyList<JavaExecutable> executables = await executableFinder.LocateExecutablesAsync(cancellationToken);
 ```
 
 ## Discovery sources
@@ -134,6 +144,11 @@ IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
 Environment variables win over defaults; missing or unreadable locations are
 skipped silently; results are deduplicated by canonical path (symlinks
 expanded), and `Providers` lists every source that reported the home.
+
+`LocateExecutables` additionally checks every `ExecutableDirectories` entry
+(`PATH` in `Default`) for a standalone `java` binary. Such a binary is reported
+with `Executable.Home == null` and is always probed, even when
+`ProbeRuntimeProperties` is false.
 
 ## Probing a specific JVM
 

@@ -28,8 +28,22 @@ public sealed record JdkFinder
     /// </summary>
     public bool ProbeRuntimeProperties { get; init; } = true;
 
+    /// <summary>
+    ///     Directories scanned for a standalone <c>java</c> executable by
+    ///     <see cref="LocateExecutables" />: each entry is checked for the
+    ///     platform's java executable directly (<c>java</c>, <c>java.exe</c> on
+    ///     Windows), not for a <c>bin</c> subdirectory. Empty, missing and
+    ///     unreadable entries are skipped silently. Defaults to no directories;
+    ///     <see cref="Default" /> uses the <c>PATH</c> entries.
+    /// </summary>
+    public IReadOnlyList<string> ExecutableDirectories { get; init; } = [];
+
     /// <summary>The shared ready-to-use finder bound to the platform's built-in sources.</summary>
-    public static JdkFinder Default { get; } = new() { Providers = CreateDefaultProviders() };
+    public static JdkFinder Default { get; } = new()
+    {
+        Providers = CreateDefaultProviders(),
+        ExecutableDirectories = CreateDefaultExecutableDirectories(),
+    };
 
     /// <summary>
     ///     Locates JVMs from all sources, in source order. Every source reports
@@ -77,6 +91,70 @@ public sealed record JdkFinder
         }
 
         return results.OfType<Jvm>().ToArray();
+    }
+
+    /// <summary>
+    ///     Locates java executables directly: every located installation's own
+    ///     <see cref="Jvm.Executable" /> plus a standalone <c>java</c> binary found
+    ///     in each <see cref="ExecutableDirectories" /> entry. Home-backed results
+    ///     honor <see cref="ProbeRuntimeProperties" />; standalone candidates are
+    ///     always probed — identifying a binary requires running it — and carry a
+    ///     null <see cref="JavaExecutable.Home" /> when no installation is
+    ///     recognized. Home-backed results come first in provider order, then
+    ///     standalone candidates in directory order. Results are deduplicated by
+    ///     canonical executable path, first occurrence wins.
+    /// </summary>
+    public IEnumerable<JavaExecutable> LocateExecutables()
+    {
+        var seen = new HashSet<string>(PathComparison.Comparer);
+        foreach (var jvm in Locate())
+            if (seen.Add(GetExecutableDeduplicationKey(jvm.Executable.Path)))
+                yield return jvm.Executable;
+
+        foreach (var executable in CollectStandaloneExecutableCandidates(seen)
+                     .AsParallel()
+                     .AsOrdered()
+                     .Select(TryFromExecutable)
+                     .OfType<JavaExecutable>())
+            yield return executable;
+    }
+
+    /// <summary>
+    ///     Async twin of <see cref="LocateExecutables" />: the same home projection
+    ///     and standalone-directory scan, with concurrent probes that a cancellation
+    ///     token kills. Results keep first-discovery order.
+    /// </summary>
+    public async Task<IReadOnlyList<JavaExecutable>> LocateExecutablesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var jvms = await LocateAsync(cancellationToken).ConfigureAwait(false);
+        var seen = new HashSet<string>(PathComparison.Comparer);
+        var results = new List<JavaExecutable>(jvms.Count);
+        foreach (var jvm in jvms)
+            if (seen.Add(GetExecutableDeduplicationKey(jvm.Executable.Path)))
+                results.Add(jvm.Executable);
+
+        var candidates = CollectStandaloneExecutableCandidates(seen);
+        if (candidates.Count == 0)
+            return results;
+
+        var probed = new JavaExecutable?[candidates.Count];
+        await Parallel.ForEachAsync(
+                Enumerable.Range(0, candidates.Count),
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    CancellationToken = cancellationToken,
+                },
+                async (index, token) =>
+                    probed[index] = await TryFromExecutableAsync(candidates[index], token).ConfigureAwait(false))
+            .ConfigureAwait(false);
+
+        foreach (var executable in probed)
+            if (executable is not null)
+                results.Add(executable);
+
+        return results;
     }
 
     /// <summary>
@@ -209,6 +287,15 @@ public sealed record JdkFinder
         return BuildHomeJvm(home, outcome, ReleaseFile.TryParse(home));
     }
 
+    /// <summary>The platform <c>PATH</c> entries, the default standalone executable scan roots.</summary>
+    private static string[] CreateDefaultExecutableDirectories()
+    {
+        var path = Environment.GetEnvironmentVariable("PATH");
+        return string.IsNullOrWhiteSpace(path)
+            ? []
+            : path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
     /// <summary>The built-in provider set for the current platform, in priority order.</summary>
     private static List<IJvmProvider> CreateDefaultProviders() =>
     [
@@ -258,6 +345,70 @@ public sealed record JdkFinder
         return order
             .Select(entry => CreateJvm(entry.HomePath, entry.Providers, probeRuntime: false))
             .OfType<Jvm>();
+    }
+
+    /// <summary>Collects standalone java candidates from
+    /// <see cref="ExecutableDirectories" />, skipping entries already seen and
+    /// recording each accepted canonical path in <paramref name="seen" />.</summary>
+    private List<string> CollectStandaloneExecutableCandidates(HashSet<string> seen)
+    {
+        var candidates = new List<string>();
+        foreach (var directory in ExecutableDirectories)
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+                continue;
+
+            string candidate;
+            try
+            {
+                candidate = Path.Combine(directory, JavaHomeLayout.JavaExecutableName);
+            }
+            catch (ArgumentException)
+            {
+                // A malformed directory must not abort the scan.
+                continue;
+            }
+
+            if (File.Exists(candidate) && seen.Add(GetExecutableDeduplicationKey(candidate)))
+                candidates.Add(candidate);
+        }
+
+        return candidates;
+    }
+
+    /// <summary>Probes a standalone candidate, treating a malformed or unreadable
+    /// path as absent; cancellation is not swallowed.</summary>
+    private JavaExecutable? TryFromExecutable(string path)
+    {
+        try
+        {
+            return FromExecutable(path);
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or IOException or UnauthorizedAccessException
+                or SecurityException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Async twin of <see cref="TryFromExecutable" />.</summary>
+    private async Task<JavaExecutable?> TryFromExecutableAsync(string path, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await FromExecutableAsync(path, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or IOException or UnauthorizedAccessException
+                or SecurityException or NotSupportedException)
+        {
+            return null;
+        }
     }
 
     private static List<(string HomePath, List<string> Providers)> CollectCandidates(
@@ -426,6 +577,36 @@ public sealed record JdkFinder
         }
         catch (Exception exception) when (exception is IOException or SecurityException
                                               or ArgumentException)
+        {
+            return path;
+        }
+    }
+
+    /// <summary>
+    ///     Deduplication key for an executable: the canonical path with every
+    ///     directory symlink expanded and the final file symlink resolved, compared
+    ///     with the platform comparer. Returns the input when the path cannot be
+    ///     canonicalized.
+    /// </summary>
+    private static string GetExecutableDeduplicationKey(string path)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (Path.GetDirectoryName(fullPath) is not { } directory)
+                return fullPath;
+
+            var candidate = Path.Combine(ResolveSymlinks(directory), Path.GetFileName(fullPath));
+            if (File.ResolveLinkTarget(candidate, returnFinalTarget: true) is not { } target)
+                return candidate;
+
+            return Path.GetDirectoryName(target.FullName) is { } targetDirectory
+                ? Path.Combine(ResolveSymlinks(targetDirectory), Path.GetFileName(target.FullName))
+                : target.FullName;
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or SecurityException
+                or ArgumentException or NotSupportedException)
         {
             return path;
         }
