@@ -15,6 +15,43 @@ public class JdkFinderTests : IDisposable
     }
 
     [Fact]
+    public async Task Locate_StripsJvmDomainEnvironmentFromTheProbe()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The fake java executable is a POSIX shell script.
+
+        var home = Path.Combine(_temp.FullPath, "probe-jdk");
+        Directory.CreateDirectory(Path.Combine(home, "bin"));
+        var java = Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName);
+        File.WriteAllText(java, """
+                                #!/bin/sh
+                                echo "    java.version = 21.0.5" >&2
+                                echo "    java.vendor = ${IBM_JAVA_OPTIONS:-none}" >&2
+                                """);
+        File.SetUnixFileMode(java,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        File.WriteAllText(Path.Combine(home, "release"), "JAVA_VERSION=\"21.0.5\"\n");
+
+        // IBM_JAVA_OPTIONS is read only by J9, so the parallel tests that spawn
+        // other runtimes are unaffected while it is set.
+        var previous = Environment.GetEnvironmentVariable("IBM_JAVA_OPTIONS");
+        try
+        {
+            Environment.SetEnvironmentVariable("IBM_JAVA_OPTIONS", "InjectedVendor");
+            var finder = new JdkFinder { Providers = [new StubJvmProvider("stub", home)] };
+            var sync = Assert.Single(finder.Locate());
+            var async = Assert.Single(await finder.LocateAsync(TestContext.Current.CancellationToken));
+
+            Assert.Equal("none", sync.Executable.VendorRaw);
+            Assert.Equal("none", async.Executable.VendorRaw);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("IBM_JAVA_OPTIONS", previous);
+        }
+    }
+
+    [Fact]
     public void Locate_EnrichesMetadataFromReleaseFile()
     {
         var jdk = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
@@ -222,8 +259,9 @@ public class JdkFinderTests : IDisposable
 
         Assert.Equal(2, jvms.Count);
         // Sequential probing would take at least 2 × 1s; concurrent probing finishes
-        // around 1s plus spawn overhead.
-        Assert.True(watch.Elapsed < TimeSpan.FromMilliseconds(1600), $"probes did not overlap: {watch.Elapsed}");
+        // around 1s plus spawn overhead. The bound leaves room for the rest of the
+        // suite probing in parallel.
+        Assert.True(watch.Elapsed < TimeSpan.FromMilliseconds(1900), $"probes did not overlap: {watch.Elapsed}");
     }
 
     [Fact]

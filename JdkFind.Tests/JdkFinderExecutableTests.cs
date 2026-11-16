@@ -159,6 +159,40 @@ public sealed class JdkFinderExecutableTests : IDisposable
     }
 
     [Fact]
+    public async Task LocateExecutables_IdentifiedStandaloneBinaryThatFails_ReportsStartFailureOnBothPipelines()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        // The home is not reported by any provider, so the candidate reaches the
+        // scan through its directory; the release file still identifies it.
+        var home = Path.Combine(_temp.FullPath, "broken-home");
+        Directory.CreateDirectory(Path.Combine(home, "bin"));
+        File.WriteAllText(Path.Combine(home, "release"), "JAVA_VERSION=\"21.0.6\"\n");
+        var java = Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName);
+        File.WriteAllText(java, "#!/bin/sh\nexit 1\n");
+        File.SetUnixFileMode(java,
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        var finder = new JdkFinder
+        {
+            ExecutableDirectories = [Path.Combine(home, "bin")],
+            ProbeRuntimeProperties = false,
+        };
+
+        var sync = Assert.Single(finder.LocateExecutables());
+        var async = Assert.Single(
+            await finder.LocateExecutablesAsync(TestContext.Current.CancellationToken));
+
+        Assert.Equal(java, sync.Path);
+        Assert.NotNull(sync.Home);
+        Assert.Equal(home, sync.Home.FullName);
+        Assert.NotNull(sync.StartFailure);
+        Assert.Equal(JvmVersion.Parse("21.0.6"), sync.Version);
+        Assert.Equal(sync.Path, async.Path);
+        Assert.NotNull(async.StartFailure);
+    }
+
+    [Fact]
     public void LocateExecutables_NoSources_ReturnsEmpty()
     {
         Assert.Empty(new JdkFinder().LocateExecutables());

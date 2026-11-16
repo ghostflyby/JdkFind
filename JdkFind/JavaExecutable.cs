@@ -17,7 +17,10 @@ namespace JdkFind;
 /// </summary>
 public sealed record JavaExecutable
 {
-    /// <summary>The binary's path, taken verbatim.</summary>
+    /// <summary>The binary's path. The probe factories and standalone discovery
+    /// report it absolute; a home-backed instance reports the path under the
+    /// provider's home, which may be relative when that source supplied a
+    /// relative directory.</summary>
     public required string Path { get; init; }
 
     /// <summary>The installation directory backing this binary, when one was
