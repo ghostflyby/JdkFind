@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using JdkFind.Providers;
 
 namespace JdkFind.Tests;
@@ -246,22 +245,27 @@ public class JdkFinderTests : IDisposable
         if (OperatingSystem.IsWindows())
             return; // The fake java executable is a POSIX shell script.
 
-        var slow1 = TestJdk.CreateSlowProbe(_temp.FullPath, "21.0.5", "jdks", "slow1");
-        var slow2 = TestJdk.CreateSlowProbe(_temp.FullPath, "17.0.2", "jdks", "slow2");
+        // Each probe waits for the other's marker before finishing and records
+        // whether it saw it. Serialized probes leave only the second marker; no
+        // wall-clock threshold can be flaky on a loaded runner.
+        var rendezvous = Path.Combine(_temp.FullPath, "rendezvous");
+        Directory.CreateDirectory(rendezvous);
+        var first = TestJdk.CreateRendezvousProbe(_temp.FullPath, "21.0.5", rendezvous,
+            "first", "second", "jdks", "first");
+        var second = TestJdk.CreateRendezvousProbe(_temp.FullPath, "17.0.2", rendezvous,
+            "second", "first", "jdks", "second");
         var finder = new JdkFinder
         {
-            Providers = [new StubJvmProvider("stub", slow1, slow2)],
+            Providers = [new StubJvmProvider("stub", first, second)],
         };
 
-        var watch = Stopwatch.StartNew();
         var jvms = finder.Locate().ToList();
-        watch.Stop();
 
         Assert.Equal(2, jvms.Count);
-        // Sequential probing would take at least 2 × 1s; concurrent probing finishes
-        // around 1s plus spawn overhead. The bound leaves room for the rest of the
-        // suite probing in parallel.
-        Assert.True(watch.Elapsed < TimeSpan.FromMilliseconds(1900), $"probes did not overlap: {watch.Elapsed}");
+        Assert.True(File.Exists(Path.Combine(rendezvous, "first.overlap")),
+            "the first probe never observed the second probe");
+        Assert.True(File.Exists(Path.Combine(rendezvous, "second.overlap")),
+            "the second probe never observed the first probe");
     }
 
     [Fact]
