@@ -237,6 +237,24 @@ public class JdkFinderProbeTests : IDisposable
     }
 
     [Fact]
+    public async Task FromExecutableAsync_FailedProbeInHome_ReportsStartFailure()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The fake java executable is a POSIX shell script.
+
+        var home = CreateFakeHome(_temp.FullPath, "17.0.5",
+            "echo 'Unrecognized option: -XshowSettings:properties' >&2\nexit 1");
+
+        var executable = await new JdkFinder().FromExecutableAsync(
+            Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName),
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(executable);
+        Assert.Contains("exit code 1", executable.StartFailure);
+        Assert.Equal("17.0.5", executable.Version.Original);
+    }
+
+    [Fact]
     public void FromExecutable_NonJavaBinary_ReturnsNull()
     {
         if (OperatingSystem.IsWindows())
@@ -278,6 +296,44 @@ public class JdkFinderProbeTests : IDisposable
         Assert.Throws<ArgumentException>(() => new JdkFinder().FromExecutable(string.Empty));
         Assert.Throws<ArgumentException>(() => new JdkFinder().FromExecutable("  "));
         Assert.Throws<ArgumentException>(() => new JdkFinder().FromHome("  "));
+    }
+
+    [Fact]
+    public async Task FromExecutable_BareFileName_Throws()
+    {
+        var finder = new JdkFinder();
+
+        Assert.Throws<ArgumentException>(() => finder.FromExecutable("java"));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            finder.FromExecutableAsync("java", TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void FromExecutable_RelativePath_IsAbsolutizedBeforeProbing()
+    {
+        if (OperatingSystem.IsWindows())
+            return; // The fake java executable is a POSIX shell script.
+
+        // The lexical path collapses "link/.." to the temp root, while the kernel
+        // resolves the symlink first and lands in deep/. The reported version
+        // proves which path the probe actually executed.
+        var lexicalHome = CreateFakeHome(_temp.FullPath, "21.0.5",
+            "echo '    java.version = 21.0.5' >&2");
+        var deep = Path.Combine(_temp.FullPath, "deep");
+        Directory.CreateDirectory(Path.Combine(deep, "inner"));
+        CreateFakeHome(deep, "17.0.2", "echo '    java.version = 17.0.2' >&2");
+        var link = Path.Combine(_temp.FullPath, "link");
+        Directory.CreateSymbolicLink(link, Path.Combine(deep, "inner"));
+
+        var relativeRoot = Path.GetRelativePath(Directory.GetCurrentDirectory(), _temp.FullPath);
+        var relative = Path.Combine(relativeRoot, "link", "..", "fake-jdk", "bin",
+            JavaHomeLayout.JavaExecutableName);
+
+        var executable = new JdkFinder().FromExecutable(relative);
+
+        Assert.NotNull(executable);
+        Assert.Equal("21.0.5", executable.Version.Original);
+        Assert.Equal(lexicalHome, executable.Home?.FullName);
     }
 
     [Fact]
@@ -324,9 +380,15 @@ public class JdkFinderProbeTests : IDisposable
             ["_JAVA_OPTIONS"] = "-Xbroken",
             ["JDK_JAVA_OPTIONS"] = "-Xbroken",
             ["JAVA_TOOL_OPTIONS"] = "-Xbroken",
+            ["JAVA_OPTIONS"] = "-Xbroken",
+            ["IBM_JAVA_OPTIONS"] = "-Xbroken",
+            ["OPENJ9_JAVA_OPTIONS"] = "-Xbroken",
             ["CLASSPATH"] = "/evil",
             ["LD_PRELOAD"] = "/evil.so",
             ["LD_LIBRARY_PATH"] = "/evil",
+            ["DYLD_INSERT_LIBRARIES"] = "/evil.dylib",
+            ["DYLD_LIBRARY_PATH"] = "/evil",
+            ["DYLD_FALLBACK_LIBRARY_PATH"] = "/evil",
         };
 
         JvmRuntimeProbe.SanitizeEnvironment(environment);

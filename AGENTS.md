@@ -52,6 +52,11 @@ legacy VSTest mode on the .NET 10 SDK refuses the xunit.v3 project.
   segment; case-insensitive on Windows and macOS). `Jvm.Providers` lists every
   provider that reported the home, in provider order — enumeration therefore
   materializes all providers before yielding, it does not stream incrementally.
+- Executable-level discovery projects every located home's `Jvm.Executable` and
+  scans `ExecutableDirectories` (the `PATH` entries in `Default`) for standalone
+  `java` binaries. Home-backed entries honor `ProbeRuntimeProperties`; standalone
+  candidates are always probed, appear with `Home == null` when no home is
+  recognized, and results are deduplicated by canonical executable path.
 - Injection constructors take clean non-null roots; env-var lookups and null
   handling stay inside the parameterless constructors' default resolution.
 - The facade exposes no selection helpers: callers filter and pick over the

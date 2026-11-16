@@ -8,7 +8,10 @@ namespace JdkFind;
 ///     Executes a java executable to read its runtime system properties (the
 ///     Gradle approach): runtime and VM name/version are always present there,
 ///     while the release file's key set varies by vendor. The shared pipeline
-///     behind runtime enrichment and JdkFinder's probe factories.
+///     behind runtime enrichment and JdkFinder's probe factories. Every probe
+///     strips the JVM-domain environment so the metadata describes the binary.
+///     The home-backed discovery probe tolerates a non-zero exit; the explicit
+///     factories require success.
 /// </summary>
 internal static class JvmRuntimeProbe
 {
@@ -18,15 +21,22 @@ internal static class JvmRuntimeProbe
 
     /// <summary>Environment variables removed from a sanitized probe child's
     /// environment: every JVM-domain variable that can distort what the binary
-    /// reports — injected options, a foreign <c>libjvm</c> through the dynamic loader.</summary>
+    /// reports — injected options (HotSpot and J9), a foreign <c>libjvm</c>
+    /// through either platform's dynamic loader.</summary>
     private static readonly string[] SanitizedVariables =
     [
         "_JAVA_OPTIONS",
         "JDK_JAVA_OPTIONS",
         "JAVA_TOOL_OPTIONS",
+        "JAVA_OPTIONS",
+        "IBM_JAVA_OPTIONS",
+        "OPENJ9_JAVA_OPTIONS",
         "CLASSPATH",
         "LD_PRELOAD",
         "LD_LIBRARY_PATH",
+        "DYLD_INSERT_LIBRARIES",
+        "DYLD_LIBRARY_PATH",
+        "DYLD_FALLBACK_LIBRARY_PATH",
     ];
 
     internal sealed record Info(
@@ -52,16 +62,20 @@ internal static class JvmRuntimeProbe
     internal static Info? Probe(string homePath) =>
         ProbeWithFailure(homePath).Properties is { } properties ? Project(properties) : null;
 
-    /// <summary>Probes the candidate, returning the raw pipeline outcome. Properties
-    /// and Failure both null means the java executable is missing (or ran but
-    /// printed nothing parseable — not a start failure).</summary>
+    /// <summary>Probes the candidate, returning the raw pipeline outcome. The
+    /// home-backed discovery probe strips the JVM-domain environment so the
+    /// metadata describes the binary, but tolerates a non-zero exit: a runtime
+    /// that printed properties and then exited non-zero still contributes them.
+    /// A runtime that printed nothing contributes nothing, and the release file
+    /// stands in. Properties and Failure both null means the java executable is
+    /// missing (or ran but printed nothing parseable — not a start failure).</summary>
     internal static Outcome ProbeWithFailure(string homePath)
     {
         var java = JavaHomeLayout.JavaExecutablePath(homePath);
         if (!File.Exists(java))
             return new Outcome(null, null);
 
-        return Run(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false);
+        return Run(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: true);
     }
 
     /// <summary>Runs the probe pipeline against one executable: spawn, drain both
@@ -122,7 +136,7 @@ internal static class JvmRuntimeProbe
         if (!File.Exists(java))
             return new Outcome(null, null);
 
-        return await RunAsync(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: false,
+        return await RunAsync(java, DefaultTimeout, requireExitSuccess: false, sanitizeEnvironment: true,
             cancellationToken).ConfigureAwait(false);
     }
 

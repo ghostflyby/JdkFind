@@ -104,6 +104,17 @@ foreach (var jvm in JdkFinder.Default.Locate())
 // token for probes and release reads.
 var finder = JdkFinder.Default with { Providers = [new NasSource()], ProbeRuntimeProperties = false };
 IReadOnlyList<Jvm> jvms = await finder.LocateAsync(cancellationToken);
+
+// Locate java executables directly: every installation's own java plus java
+// binaries found in the configured directories. Home is null when no installation
+// is recognized.
+foreach (var java in JdkFinder.Default.LocateExecutables())
+    Console.WriteLine($"{java.Version} -> {java.Path} (home: {java.Home?.FullName ?? "none"})");
+
+// Default scans PATH; custom finders opt in explicitly. ProbeRuntimeProperties
+// only affects home-backed entries — standalone candidates are always probed.
+var executableFinder = JdkFinder.Default with { ExecutableDirectories = ["/opt/custom/bin"] };
+IReadOnlyList<JavaExecutable> executables = await executableFinder.LocateExecutablesAsync(cancellationToken);
 ```
 
 ## Discovery sources
@@ -135,6 +146,16 @@ Environment variables win over defaults; missing or unreadable locations are
 skipped silently; results are deduplicated by canonical path (symlinks
 expanded), and `Providers` lists every source that reported the home.
 
+`LocateExecutables` additionally checks every `ExecutableDirectories` entry
+(`PATH` in `Default`) for a `java` binary. A binary with no recognized home is
+reported with `Executable.Home == null`; one that resolves to a home carries it.
+Standalone candidates are always probed, even when `ProbeRuntimeProperties` is
+false (unless executable-path dedup matches a home-backed result); a candidate
+that cannot be identified as Java is omitted, while one whose release file
+identifies it still appears with `StartFailure` when the probe fails.
+Executable-path deduplication always applies, independently of
+`DeduplicateHomes`.
+
 ## Probing a specific JVM
 
 Discovery answers what exists; probing answers whether a given binary runs and
@@ -146,12 +167,15 @@ JavaExecutable? runtime = JdkFinder.Default.FromExecutable(userConfiguredJavaPat
 // or: JdkFinder.Default.FromHome(javaHomeDirectory);  → Jvm?, with jvm.Executable
 if (runtime is null)
 {
-    // The path does not yield a JVM at all.
+    // Not identified as Java: the probe produced no java.version and no
+    // release file backs the path. An unidentified binary that fails to
+    // run also lands here — there is no evidence it is a Java runtime.
 }
 else if (runtime.StartFailure is { } failure)
 {
-    // Did not run to completion: spawn error, exit code or timeout,
-    // plus the output tail for display.
+    // Identified by a backing release file but did not run to completion:
+    // spawn error, exit code or timeout, plus the output tail for display.
+    // (Probe output implies success, so it never coexists with this.)
 }
 else
 {
@@ -162,10 +186,16 @@ else
 
 The probe runs `-XshowSettings:properties -version` with a 15-second cap that
 kills the child on overrun (the synchronous factories take a `timeout`
-override; the async twins take a cancellation token). JVM-affecting variables (`_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`, `CLASSPATH`,
-`LD_PRELOAD`, `LD_LIBRARY_PATH`) are stripped, so the verdict describes the
-binary, not the shell. Binary-reported values win over the release file, which
-fills only the gaps; a binary that rejects the option is a start failure.
+override; the async twins take a cancellation token). JVM-affecting variables
+(`_JAVA_OPTIONS`, `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`, the J9
+`JAVA_OPTIONS`/`IBM_JAVA_OPTIONS`/`OPENJ9_JAVA_OPTIONS`, `CLASSPATH`,
+`LD_PRELOAD`/`LD_LIBRARY_PATH` and `DYLD_*`) are stripped, so the verdict
+describes the binary, not the shell — discovery probes strip the same
+variables. The factories treat a non-zero exit as a start failure; the
+home-backed discovery probe tolerates it, so a runtime that printed properties
+and then exited non-zero still contributes them. Binary-reported values win over
+the release file, which fills only the gaps. `FromExecutable` requires a path (a
+bare `java` is rejected because the OS would resolve it through `PATH`).
 
 ## Build and test
 
