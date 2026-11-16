@@ -39,6 +39,8 @@ JdkFind.JdkFinder.<Clone>$() -> JdkFind.JdkFinder!
 JdkFind.JdkFinder.DeduplicateHomes.get -> bool
 JdkFind.JdkFinder.DeduplicateHomes.init -> void
 JdkFind.JdkFinder.Equals(JdkFind.JdkFinder? other) -> bool
+JdkFind.JdkFinder.ExecutableDirectories.get -> System.Collections.Generic.IReadOnlyList<string!>!
+JdkFind.JdkFinder.ExecutableDirectories.init -> void
 JdkFind.JdkFinder.FromExecutable(string! javaExecutablePath, System.TimeSpan? timeout = null) -> JdkFind.JavaExecutable?
 JdkFind.JdkFinder.FromExecutableAsync(string! javaExecutablePath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<JdkFind.JavaExecutable?>!
 JdkFind.JdkFinder.FromHome(string! homeDirectory, System.TimeSpan? timeout = null) -> JdkFind.Jvm?
@@ -46,6 +48,8 @@ JdkFind.JdkFinder.FromHomeAsync(string! homeDirectory, System.Threading.Cancella
 JdkFind.JdkFinder.JdkFinder() -> void
 JdkFind.JdkFinder.Locate() -> System.Collections.Generic.IEnumerable<JdkFind.Jvm!>!
 JdkFind.JdkFinder.LocateAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<JdkFind.Jvm!>!>!
+JdkFind.JdkFinder.LocateExecutables() -> System.Collections.Generic.IEnumerable<JdkFind.JavaExecutable!>!
+JdkFind.JdkFinder.LocateExecutablesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<JdkFind.JavaExecutable!>!>!
 JdkFind.JdkFinder.ProbeRuntimeProperties.get -> bool
 JdkFind.JdkFinder.ProbeRuntimeProperties.init -> void
 JdkFind.JdkFinder.Providers.get -> System.Collections.Generic.IReadOnlyList<JdkFind.IJvmProvider!>!

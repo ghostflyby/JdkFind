@@ -1,6 +1,1 @@
 #nullable enable
-
-JdkFind.JdkFinder.ExecutableDirectories.get -> System.Collections.Generic.IReadOnlyList<string!>!
-JdkFind.JdkFinder.ExecutableDirectories.init -> void
-JdkFind.JdkFinder.LocateExecutables() -> System.Collections.Generic.IEnumerable<JdkFind.JavaExecutable!>!
-JdkFind.JdkFinder.LocateExecutablesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<JdkFind.JavaExecutable!>!>!
