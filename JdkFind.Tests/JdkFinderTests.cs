@@ -305,5 +305,14 @@ public class JdkFinderTests : IDisposable
         Assert.Equal(expected, JdkFinder.Default.Providers.Select(p => p.Name).ToArray());
     }
 
+    [Fact]
+    public void Default_ScansThePathVariableForStandaloneExecutables()
+    {
+        var expected = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        Assert.Equal(expected, JdkFinder.Default.ExecutableDirectories);
+    }
+
     public void Dispose() => _temp.Dispose();
 }

@@ -50,14 +50,17 @@ internal static class TestJdk
     /// <summary>
     ///     Creates a standalone POSIX <c>java</c> script (no home layout and no
     ///     release file) that reports <paramref name="javaVersion" /> to stderr.
+    ///     <paramref name="slow" /> delays the report, for ordering tests.
     /// </summary>
     [UnsupportedOSPlatform("windows")]
-    internal static string CreateStandaloneJava(string directory, string javaVersion)
+    internal static string CreateStandaloneJava(string directory, string javaVersion, bool slow = false)
     {
         Directory.CreateDirectory(directory);
         var java = Path.Combine(directory, JavaHomeLayout.JavaExecutableName);
+        var prelude = slow ? "sleep 0.2" : ":";
         File.WriteAllText(java, $"""
                                   #!/bin/sh
+                                  {prelude}
                                   cat >&2 <<'EOPROBE'
                                       java.version = {javaVersion}
                                       java.vendor = Test Vendor

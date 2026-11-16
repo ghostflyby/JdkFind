@@ -101,8 +101,10 @@ public sealed record JdkFinder
     ///     always probed — identifying a binary requires running it — and carry a
     ///     null <see cref="JavaExecutable.Home" /> when no installation is
     ///     recognized. Home-backed results come first in provider order, then
-    ///     standalone candidates in directory order. Results are deduplicated by
-    ///     canonical executable path, first occurrence wins.
+    ///     standalone candidates in directory order. A standalone candidate that
+    ///     does not run successfully or reports no <c>java.version</c> is omitted.
+    ///     Results are deduplicated by canonical executable path, first occurrence
+    ///     wins.
     /// </summary>
     public IEnumerable<JavaExecutable> LocateExecutables()
     {
@@ -127,6 +129,7 @@ public sealed record JdkFinder
     public async Task<IReadOnlyList<JavaExecutable>> LocateExecutablesAsync(
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var jvms = await LocateAsync(cancellationToken).ConfigureAwait(false);
         var seen = new HashSet<string>(PathComparison.Comparer);
         var results = new List<JavaExecutable>(jvms.Count);
@@ -134,7 +137,7 @@ public sealed record JdkFinder
             if (seen.Add(GetExecutableDeduplicationKey(jvm.Executable.Path)))
                 results.Add(jvm.Executable);
 
-        var candidates = CollectStandaloneExecutableCandidates(seen);
+        var candidates = CollectStandaloneExecutableCandidates(seen, cancellationToken);
         if (candidates.Count == 0)
             return results;
 
@@ -350,11 +353,13 @@ public sealed record JdkFinder
     /// <summary>Collects standalone java candidates from
     /// <see cref="ExecutableDirectories" />, skipping entries already seen and
     /// recording each accepted canonical path in <paramref name="seen" />.</summary>
-    private List<string> CollectStandaloneExecutableCandidates(HashSet<string> seen)
+    private List<string> CollectStandaloneExecutableCandidates(
+        HashSet<string> seen, CancellationToken cancellationToken = default)
     {
         var candidates = new List<string>();
         foreach (var directory in ExecutableDirectories)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(directory))
                 continue;
 
@@ -590,9 +595,20 @@ public sealed record JdkFinder
     /// </summary>
     private static string GetExecutableDeduplicationKey(string path)
     {
+        string fullPath;
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            fullPath = Path.GetFullPath(path);
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or SecurityException
+                or ArgumentException or NotSupportedException)
+        {
+            return path;
+        }
+
+        try
+        {
             if (Path.GetDirectoryName(fullPath) is not { } directory)
                 return fullPath;
 
@@ -608,7 +624,7 @@ public sealed record JdkFinder
             exception is IOException or UnauthorizedAccessException or SecurityException
                 or ArgumentException or NotSupportedException)
         {
-            return path;
+            return fullPath;
         }
     }
 
@@ -619,7 +635,10 @@ public sealed record JdkFinder
             return fullPath;
 
         var root = Path.GetPathRoot(fullPath) ?? string.Empty;
-        var segments = fullPath[root.Length..].Split('/', '\\', StringSplitOptions.RemoveEmptyEntries);
+        char[] separators = OperatingSystem.IsWindows()
+            ? [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]
+            : [Path.DirectorySeparatorChar];
+        var segments = fullPath[root.Length..].Split(separators, StringSplitOptions.RemoveEmptyEntries);
         var resolved = root;
         for (var index = 0; index < segments.Length; index++)
         {

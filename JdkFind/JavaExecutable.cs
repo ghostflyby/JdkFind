@@ -21,7 +21,7 @@ public sealed record JavaExecutable
     public required string Path { get; init; }
 
     /// <summary>The installation directory backing this binary, when one was
-    /// recognized; null for a standalone binary.</summary>
+    /// recognized; null when no installation is recognized.</summary>
     [JsonConverter(typeof(DirectoryInfoJsonConverter))]
     public DirectoryInfo? Home { get; init; }
 
