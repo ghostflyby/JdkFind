@@ -31,7 +31,7 @@ internal static class TestJdk
 
     /// <summary>
     ///     Same as <see cref="Create" />, but the fake java executable sleeps before
-    ///     answering — for asserting concurrent probing behavior. POSIX only.
+    ///     answering — for tests that need a probe slow enough to observe. POSIX only.
     /// </summary>
     [UnsupportedOSPlatform("windows")]
     internal static string CreateSlowProbe(string root, string javaVersion, params string[] segments)
@@ -43,6 +43,36 @@ internal static class TestJdk
                                 sleep 1
                                 echo "    java.version = 99.0" >&2
                                 """);
+        File.SetUnixFileMode(java, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        return home;
+    }
+
+    /// <summary>
+    ///     Creates a home whose java waits for a peer probe's marker before finishing,
+    ///     and records that it observed the peer. Two probes running concurrently
+    ///     therefore leave both overlap markers; serialized probes leave only the
+    ///     second — no wall-clock threshold is involved. POSIX only.
+    /// </summary>
+    [UnsupportedOSPlatform("windows")]
+    internal static string CreateRendezvousProbe(string root, string javaVersion, string rendezvousDirectory,
+        string id, string peerId, params string[] segments)
+    {
+        var home = Create(root, javaVersion, segments);
+        var java = Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName);
+        var started = Path.Combine(rendezvousDirectory, id);
+        var peer = Path.Combine(rendezvousDirectory, peerId);
+        var overlap = Path.Combine(rendezvousDirectory, id + ".overlap");
+        File.WriteAllText(java, $"""
+                                  #!/bin/sh
+                                  touch "{started}"
+                                  i=0
+                                  while [ ! -f "{peer}" ] && [ "$i" -lt 200 ]; do
+                                      sleep 0.05
+                                      i=$((i + 1))
+                                  done
+                                  [ -f "{peer}" ] && touch "{overlap}"
+                                  echo "    java.version = {javaVersion}" >&2
+                                  """);
         File.SetUnixFileMode(java, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         return home;
     }
