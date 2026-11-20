@@ -20,6 +20,7 @@ public sealed class JvmObservableMonitor : INotifyPropertyChanged, IAsyncDisposa
     private readonly JvmMonitor _monitor;
     private readonly SynchronizationContext? _synchronizationContext;
     private readonly ObservableCollection<Jvm> _jvms = [];
+    private readonly Dictionary<Jvm, string> _identities = new(ReferenceEqualityComparer.Instance);
     private readonly CancellationTokenSource _stop = new();
     private readonly Task _completion;
     private int _disposed;
@@ -29,7 +30,7 @@ public sealed class JvmObservableMonitor : INotifyPropertyChanged, IAsyncDisposa
         _monitor = monitor;
         _synchronizationContext = synchronizationContext;
         Jvms = new ReadOnlyObservableCollection<Jvm>(_jvms);
-        _completion = RunAsync();
+        _completion = Task.Run(RunAsync);
     }
 
     /// <summary>
@@ -50,8 +51,12 @@ public sealed class JvmObservableMonitor : INotifyPropertyChanged, IAsyncDisposa
     /// <summary>The current installations, kept in scan order.</summary>
     public ReadOnlyObservableCollection<Jvm> Jvms { get; }
 
-    /// <summary>The number of entries in <see cref="Jvms" />.</summary>
-    public int Count => _jvms.Count;
+    /// <summary>The number of entries in <see cref="Jvms" />, updated after each applied scan.</summary>
+    public int Count
+    {
+        get;
+        private set => SetProperty(ref field, value);
+    }
 
     /// <summary>True until the monitoring loop stops, whether by disposal or error.</summary>
     public bool IsRunning
@@ -106,7 +111,12 @@ public sealed class JvmObservableMonitor : INotifyPropertyChanged, IAsyncDisposa
         try
         {
             await foreach (var update in _monitor.WatchAsync(_stop.Token).ConfigureAwait(false))
-                await MarshalAsync(() => Apply(update), _stop.Token).ConfigureAwait(false);
+            {
+                // Canonical-path work stays on the monitoring thread; the UI thread
+                // only applies collection mutations and property notifications.
+                var identities = BuildIdentities(update);
+                await MarshalAsync(() => Apply(update, identities), _stop.Token).ConfigureAwait(false);
+            }
         }
         catch (OperationCanceledException) when (_stop.IsCancellationRequested)
         {
@@ -114,38 +124,62 @@ public sealed class JvmObservableMonitor : INotifyPropertyChanged, IAsyncDisposa
         }
         catch (Exception exception)
         {
-            await MarshalAsync(() => LastError = exception.Message, CancellationToken.None)
-                .ConfigureAwait(false);
+            await ApplyBestEffortAsync(() => LastError = exception.Message).ConfigureAwait(false);
         }
         finally
         {
-            await MarshalAsync(() => IsRunning = false, CancellationToken.None).ConfigureAwait(false);
+            await ApplyBestEffortAsync(() => IsRunning = false).ConfigureAwait(false);
         }
     }
 
-    /// <summary>Applies one update on the captured context: remove, replace, insert.</summary>
-    private void Apply(JvmUpdate update)
+    private static Dictionary<Jvm, string> BuildIdentities(JvmUpdate update)
     {
+        var identities = new Dictionary<Jvm, string>(ReferenceEqualityComparer.Instance);
+        foreach (var jvm in update.Snapshot)
+            identities[jvm] = JvmUpdate.Identity(jvm);
+        foreach (var jvm in update.Removed)
+            identities.TryAdd(jvm, JvmUpdate.Identity(jvm));
+        foreach (var change in update.Changed)
+        {
+            identities.TryAdd(change.Previous, JvmUpdate.Identity(change.Previous));
+            identities.TryAdd(change.Current, JvmUpdate.Identity(change.Current));
+        }
+
+        return identities;
+    }
+
+    /// <summary>Applies one update on the captured context: remove, replace, insert.</summary>
+    private void Apply(JvmUpdate update, IReadOnlyDictionary<Jvm, string> identities)
+    {
+        string KeyOf(Jvm jvm) =>
+            identities.TryGetValue(jvm, out var key) ? key
+            : _identities.TryGetValue(jvm, out key) ? key
+            : JvmUpdate.Identity(jvm);
+
         foreach (var removed in update.Removed)
-            Remove(removed);
+            Remove(removed, KeyOf);
 
         foreach (var change in update.Changed)
-            Replace(change);
+            Replace(change, KeyOf);
 
         foreach (var added in update.Added)
         {
-            if (IndexOf(Identity(added)) < 0)
-                _jvms.Insert(InsertionIndex(added, update.Snapshot), added);
+            var key = KeyOf(added);
+            if (IndexOf(key) >= 0)
+                continue;
+
+            _jvms.Insert(InsertionIndex(added, update.Snapshot, KeyOf), added);
+            _identities[added] = key;
         }
 
         LastUpdate = update;
         LastUpdated = DateTimeOffset.UtcNow;
-        OnPropertyChanged(nameof(Count));
+        Count = _jvms.Count;
     }
 
     /// <summary>Finds the position an added home occupies in the new snapshot so
     /// insertions keep scan order relative to the entries already present.</summary>
-    private int InsertionIndex(Jvm added, IReadOnlyList<Jvm> snapshot)
+    private int InsertionIndex(Jvm added, IReadOnlyList<Jvm> snapshot, Func<Jvm, string> keyOf)
     {
         var addedIndex = snapshot.Count;
         for (var index = 0; index < snapshot.Count; index++)
@@ -159,7 +193,7 @@ public sealed class JvmObservableMonitor : INotifyPropertyChanged, IAsyncDisposa
 
         for (var index = addedIndex + 1; index < snapshot.Count; index++)
         {
-            var existing = IndexOf(Identity(snapshot[index]));
+            var existing = IndexOf(keyOf(snapshot[index]));
             if (existing >= 0)
                 return existing;
         }
@@ -167,27 +201,34 @@ public sealed class JvmObservableMonitor : INotifyPropertyChanged, IAsyncDisposa
         return _jvms.Count;
     }
 
-    private void Remove(Jvm removed)
+    private void Remove(Jvm removed, Func<Jvm, string> keyOf)
     {
         var index = ReferenceIndexOf(removed);
         if (index < 0)
-            index = IndexOf(Identity(removed));
+            index = IndexOf(keyOf(removed));
 
-        if (index >= 0)
-            _jvms.RemoveAt(index);
+        if (index < 0)
+            return;
+
+        _identities.Remove(_jvms[index]);
+        _jvms.RemoveAt(index);
     }
 
     /// <summary>Replaces by the previous instance, falling back to canonical
     /// identity; replacement keeps <see cref="ReadOnlyObservableCollection{T}" />
     /// subscribers on the Replace path instead of a remove/add pair.</summary>
-    private void Replace(JvmChange change)
+    private void Replace(JvmChange change, Func<Jvm, string> keyOf)
     {
         var index = ReferenceIndexOf(change.Previous);
         if (index < 0)
-            index = IndexOf(Identity(change.Current));
+            index = IndexOf(keyOf(change.Current));
 
-        if (index >= 0)
-            _jvms[index] = change.Current;
+        if (index < 0)
+            return;
+
+        _identities.Remove(_jvms[index]);
+        _jvms[index] = change.Current;
+        _identities[change.Current] = keyOf(change.Current);
     }
 
     private int ReferenceIndexOf(Jvm jvm)
@@ -205,14 +246,31 @@ public sealed class JvmObservableMonitor : INotifyPropertyChanged, IAsyncDisposa
     {
         for (var index = 0; index < _jvms.Count; index++)
         {
-            if (PathComparison.Comparer.Equals(Identity(_jvms[index]), identity))
+            var key = _identities.TryGetValue(_jvms[index], out var cached)
+                ? cached
+                : JvmUpdate.Identity(_jvms[index]);
+            if (PathComparison.Comparer.Equals(key, identity))
                 return index;
         }
 
         return -1;
     }
 
-    private static string Identity(Jvm jvm) => JdkFinder.GetDeduplicationKey(jvm.Home.FullName);
+    /// <summary>Terminal notifications must not keep <see cref="Completion" /> (and
+    /// therefore <see cref="DisposeAsync" />) hostage when the synchronization
+    /// context stopped pumping; fall back to an inline update after a bounded wait.</summary>
+    private async Task ApplyBestEffortAsync(Action action)
+    {
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            await MarshalAsync(action, timeout.Token).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            action();
+        }
+    }
 
     /// <summary>Runs <paramref name="action" /> on the captured context and
     /// completes after it has been applied, so updates stay ordered and a slow

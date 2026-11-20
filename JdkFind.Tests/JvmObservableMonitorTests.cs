@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Threading.Channels;
 
 namespace JdkFind.Tests;
 
@@ -34,6 +35,20 @@ public class JvmObservableMonitorTests : IDisposable
         {
             Interlocked.Increment(ref _posts);
             d(state);
+        }
+    }
+
+    private sealed class QueuedSynchronizationContext : SynchronizationContext
+    {
+        private readonly Channel<(SendOrPostCallback Callback, object? State)> _queue =
+            Channel.CreateUnbounded<(SendOrPostCallback Callback, object? State)>();
+
+        public override void Post(SendOrPostCallback d, object? state) => _queue.Writer.TryWrite((d, state));
+
+        internal async Task RunNextAsync(CancellationToken cancellationToken)
+        {
+            var (callback, state) = await _queue.Reader.ReadAsync(cancellationToken);
+            callback(state);
         }
     }
 
@@ -145,6 +160,29 @@ public class JvmObservableMonitorTests : IDisposable
 
         await WaitForAsync(state, () => state.Count == 1);
         Assert.True(context.PostCount > 0);
+    }
+
+    [Fact]
+    public async Task Start_AppliesUpdatesOnlyWhenTheCapturedContextPumps()
+    {
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
+        var monitor = CreateMonitor([home]);
+        var context = new QueuedSynchronizationContext();
+        var token = TestContext.Current.CancellationToken;
+
+        await using var state = JvmObservableMonitor.Start(monitor, context);
+
+        // Start runs the scan off the calling thread; nothing reaches the
+        // collection until the queued callbacks are pumped.
+        Assert.Equal(0, state.Count);
+        await context.RunNextAsync(token);
+        Assert.Equal(1, state.Count);
+
+        var dispose = state.DisposeAsync().AsTask();
+        await context.RunNextAsync(token);
+        await dispose;
+
+        Assert.False(state.IsRunning);
     }
 
     [Fact]

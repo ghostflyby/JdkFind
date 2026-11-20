@@ -42,7 +42,9 @@ public sealed record JvmMonitorOptions
 /// </summary>
 public sealed record JvmUpdate
 {
-    /// <summary>The complete set of JVMs visible at scan time, in discovery order.</summary>
+    /// <summary>The complete set of JVMs visible at scan time, in discovery order.
+    /// Entries that resolve to the same physical directory collapse to the first
+    /// reported one, even when <see cref="JdkFinder.DeduplicateHomes" /> is disabled.</summary>
     public required IReadOnlyList<Jvm> Snapshot { get; init; }
 
     /// <summary>Homes that appeared since the previous update.</summary>
@@ -55,9 +57,10 @@ public sealed record JvmUpdate
     public required IReadOnlyList<JvmChange> Changed { get; init; }
 
     /// <summary>Diffs two snapshots by canonical home path; the first update
-    /// against an empty snapshot reports every home as added. With
-    /// <see cref="JdkFinder.DeduplicateHomes" /> disabled, entries that resolve to
-    /// the same physical directory collapse in the diff.</summary>
+    /// against an empty snapshot reports every home as added. The monitor
+    /// identifies an installation by its physical directory, so duplicate entries
+    /// collapse to the first reported one even when
+    /// <see cref="JdkFinder.DeduplicateHomes" /> is disabled.</summary>
     internal static JvmUpdate Diff(IReadOnlyList<Jvm> previous, IReadOnlyList<Jvm> current)
     {
         var previousByKey = new Dictionary<string, Jvm>(PathComparison.Comparer);
@@ -65,29 +68,35 @@ public sealed record JvmUpdate
             previousByKey[Identity(jvm)] = jvm;
 
         var currentKeys = new HashSet<string>(PathComparison.Comparer);
+        var unique = new List<Jvm>(current.Count);
         var added = new List<Jvm>();
         var changed = new List<JvmChange>();
 
         foreach (var jvm in current)
         {
             var key = Identity(jvm);
-            currentKeys.Add(key);
+            if (!currentKeys.Add(key))
+                continue;
+
+            unique.Add(jvm);
             if (!previousByKey.TryGetValue(key, out var before))
                 added.Add(jvm);
             else if (!before.Equals(jvm))
                 changed.Add(new JvmChange { Previous = before, Current = jvm });
         }
 
+        var removedKeys = new HashSet<string>(PathComparison.Comparer);
         var removed = new List<Jvm>();
         foreach (var jvm in previous)
         {
-            if (!currentKeys.Contains(Identity(jvm)))
+            var key = Identity(jvm);
+            if (!currentKeys.Contains(key) && removedKeys.Add(key))
                 removed.Add(jvm);
         }
 
         return new JvmUpdate
         {
-            Snapshot = current,
+            Snapshot = unique.AsReadOnly(),
             Added = added,
             Removed = removed,
             Changed = changed,
@@ -119,17 +128,39 @@ public sealed record JvmChange
 /// </summary>
 public sealed class JvmMonitor
 {
+    private static readonly TimeSpan MaxInterval = TimeSpan.FromMilliseconds(uint.MaxValue - 1);
+
     private readonly JvmMonitorOptions _options;
     private readonly Channel<byte> _refreshRequests;
+    private readonly Func<TimeSpan, CancellationToken, Task> _quietDelay;
     private JdkFinder _finder;
     private int _active;
+    private long _activityVersion;
 
     /// <summary>Creates a monitor over <paramref name="finder" />.</summary>
     public JvmMonitor(JdkFinder finder, JvmMonitorOptions? options = null)
+        : this(finder, options, static (interval, token) => Task.Delay(interval, token))
+    {
+    }
+
+    internal JvmMonitor(
+        JdkFinder finder,
+        JvmMonitorOptions? options,
+        Func<TimeSpan, CancellationToken, Task> quietDelay)
     {
         ArgumentNullException.ThrowIfNull(finder);
+        ArgumentNullException.ThrowIfNull(quietDelay);
         _finder = finder;
         _options = options ?? new JvmMonitorOptions();
+        _quietDelay = quietDelay;
+
+        if (_options.PollInterval > MaxInterval)
+            throw new ArgumentOutOfRangeException(nameof(options), _options.PollInterval,
+                "The poll interval is too long for the system timer.");
+        if (_options.SettleInterval > MaxInterval)
+            throw new ArgumentOutOfRangeException(nameof(options), _options.SettleInterval,
+                "The settle interval is too long for the system timer.");
+
         _refreshRequests = Channel.CreateBounded<byte>(new BoundedChannelOptions(1)
         {
             FullMode = BoundedChannelFullMode.DropOldest,
@@ -153,8 +184,14 @@ public sealed class JvmMonitor
         RequestRefresh();
     }
 
-    /// <summary>Requests a scan; repeated requests collapse into one pending scan.</summary>
-    public void RequestRefresh() => _refreshRequests.Writer.TryWrite(0);
+    /// <summary>Requests a scan; repeated requests collapse into one pending scan.
+    /// A request extends the settle window because the caller is reacting to a
+    /// change; the poll timer deliberately does not.</summary>
+    public void RequestRefresh()
+    {
+        Interlocked.Increment(ref _activityVersion);
+        _refreshRequests.Writer.TryWrite(0);
+    }
 
     /// <summary>
     ///     Streams updates until <paramref name="cancellationToken" /> is
@@ -174,36 +211,39 @@ public sealed class JvmMonitor
                 "A JvmMonitor supports one active WatchAsync enumeration at a time.");
         }
 
-        using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var watchers = new Dictionary<string, WatchedHome>(PathComparison.Comparer);
+        CancellationTokenSource? stop = null;
         PeriodicTimer? timer = null;
         Task? timerPump = null;
         try
         {
+            stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var token = stop.Token;
+
             var previous = (IReadOnlyList<Jvm>)Array.Empty<Jvm>();
-            var current = await ScanAsync(stop.Token).ConfigureAwait(false);
+            var current = await ScanAsync(token).ConfigureAwait(false);
             var update = JvmUpdate.Diff(previous, current);
-            previous = current;
+            previous = update.Snapshot;
 
             // Activate watchers before the caller sees the snapshot: otherwise a
             // change between the update and the next MoveNext would be missed.
             if (_options.WatchHomes)
-                ReconcileWatchers(current, watchers);
+                ReconcileWatchers(update.Snapshot, watchers);
             yield return update;
 
             if (_options.PollInterval > TimeSpan.Zero)
             {
                 timer = new PeriodicTimer(_options.PollInterval);
-                timerPump = PumpAsync(timer, stop.Token);
+                timerPump = PumpAsync(timer, token);
             }
 
             while (true)
             {
-                await _refreshRequests.Reader.ReadAsync(stop.Token).ConfigureAwait(false);
+                await _refreshRequests.Reader.ReadAsync(token).ConfigureAwait(false);
 
                 // An upgrade writes in bursts; wait until the burst has been quiet
                 // for the settle window so the scan cannot probe a half-replaced home.
-                await WaitForQuietAsync(stop.Token).ConfigureAwait(false);
+                await WaitForQuietAsync(token).ConfigureAwait(false);
 
                 // Scans are serialized; everything requested while one was running
                 // is satisfied by the next scan.
@@ -211,35 +251,48 @@ public sealed class JvmMonitor
                 {
                 }
 
-                current = await ScanAsync(stop.Token).ConfigureAwait(false);
+                current = await ScanAsync(token).ConfigureAwait(false);
                 update = JvmUpdate.Diff(previous, current);
-                previous = current;
+                previous = update.Snapshot;
 
                 if (_options.WatchHomes)
-                    ReconcileWatchers(current, watchers);
+                    ReconcileWatchers(update.Snapshot, watchers);
                 yield return update;
             }
         }
         finally
         {
-            stop.Cancel();
-            foreach (var watchedHome in watchers.Values)
-                watchedHome.Watcher.Dispose();
-
-            timer?.Dispose();
-            if (timerPump is not null)
+            try
             {
-                try
+                stop?.Cancel();
+                foreach (var watchedHome in watchers.Values)
+                    watchedHome.Watcher.Dispose();
+
+                if (timerPump is not null)
                 {
-                    await timerPump.ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    // Shutdown.
+                    try
+                    {
+                        // Cancel first, then let the pump observe it; disposing the
+                        // timer before the pump finishes can make it throw
+                        // ObjectDisposedException out of this finally.
+                        await timerPump.ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Shutdown.
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // A pump that raced with timer disposal.
+                    }
                 }
             }
-
-            Volatile.Write(ref _active, 0);
+            finally
+            {
+                timer?.Dispose();
+                stop?.Dispose();
+                Volatile.Write(ref _active, 0);
+            }
         }
     }
 
@@ -249,8 +302,12 @@ public sealed class JvmMonitor
     private async Task PumpAsync(PeriodicTimer timer, CancellationToken cancellationToken)
     {
         while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
-            RequestRefresh();
+            RequestPoll();
     }
+
+    /// <summary>Wakes the scan loop without extending the quiet window; the poll
+    /// timer must not feed its own debounce.</summary>
+    private void RequestPoll() => _refreshRequests.Writer.TryWrite(0);
 
     /// <summary>
     ///     Incrementally reconciles one recursive watcher per canonical home. Homes
@@ -301,9 +358,10 @@ public sealed class JvmMonitor
 
     private WatchedHome? TryCreateWatcher(string homePath)
     {
+        FileSystemWatcher? watcher = null;
         try
         {
-            var watcher = new FileSystemWatcher(homePath)
+            watcher = new FileSystemWatcher(homePath)
             {
                 IncludeSubdirectories = true,
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName |
@@ -327,50 +385,31 @@ public sealed class JvmMonitor
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException or ArgumentException or SecurityException)
         {
+            watcher?.Dispose();
             return null;
         }
     }
 
-    /// <summary>Waits until no refresh request arrives for the settle interval,
-    /// restarting the window on each request. The scan therefore starts only after
-    /// an upgrade's write burst has stopped.</summary>
+    /// <summary>Waits until no file-system activity arrives for the settle interval.
+    /// The activity version is bumped by watcher events and explicit refreshes, not
+    /// by the poll timer, so polling cannot keep restarting its own quiet window.
+    /// The scan therefore starts only after an upgrade's write burst has stopped.</summary>
     private async Task WaitForQuietAsync(CancellationToken cancellationToken)
     {
         var settleInterval = _options.SettleInterval;
         if (settleInterval <= TimeSpan.Zero)
             return;
 
+        var observed = Volatile.Read(ref _activityVersion);
         while (true)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            await _quietDelay(settleInterval, cancellationToken).ConfigureAwait(false);
 
-            using var window = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            var quiet = Task.Delay(settleInterval, window.Token);
-            var activity = _refreshRequests.Reader.ReadAsync(window.Token).AsTask();
-            var completed = await Task.WhenAny(quiet, activity).ConfigureAwait(false);
-
-            cancellationToken.ThrowIfCancellationRequested();
-            window.Cancel();
-
-            if (completed == quiet)
-            {
-                await IgnoreCancellationAsync(activity).ConfigureAwait(false);
+            var current = Volatile.Read(ref _activityVersion);
+            if (current == observed)
                 return;
-            }
 
-            await IgnoreCancellationAsync(quiet).ConfigureAwait(false);
-        }
-    }
-
-    private static async Task IgnoreCancellationAsync(Task task)
-    {
-        try
-        {
-            await task.ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            // The other side of the quiet-period race.
+            observed = current;
         }
     }
 

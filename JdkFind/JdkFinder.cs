@@ -610,8 +610,8 @@ public sealed record JdkFinder
         {
             return ResolveSymlinks(Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)));
         }
-        catch (Exception exception) when (exception is IOException or SecurityException
-                                              or ArgumentException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
+                                              or SecurityException or ArgumentException or NotSupportedException)
         {
             return path;
         }
@@ -678,7 +678,8 @@ public sealed record JdkFinder
             {
                 target = new DirectoryInfo(resolved).LinkTarget;
             }
-            catch (Exception exception) when (exception is IOException or SecurityException)
+            catch (Exception exception) when (
+                exception is IOException or UnauthorizedAccessException or SecurityException)
             {
                 return fullPath;
             }

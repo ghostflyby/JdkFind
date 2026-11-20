@@ -1,3 +1,5 @@
+using System.Threading.Channels;
+
 namespace JdkFind.Tests;
 
 public class JvmMonitorTests : IDisposable
@@ -26,6 +28,22 @@ public class JvmMonitorTests : IDisposable
             Interlocked.Increment(ref _calls);
             return homes;
         }
+    }
+
+    private sealed class DelayGate
+    {
+        private readonly Channel<TaskCompletionSource> _delays =
+            Channel.CreateUnbounded<TaskCompletionSource>();
+
+        internal Task Delay(TimeSpan interval, CancellationToken cancellationToken)
+        {
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _delays.Writer.TryWrite(completion);
+            return completion.Task.WaitAsync(cancellationToken);
+        }
+
+        internal async Task<TaskCompletionSource> NextAsync(CancellationToken cancellationToken) =>
+            await _delays.Reader.ReadAsync(cancellationToken);
     }
 
     private static JdkFinder FinderFor(IJvmProvider provider) =>
@@ -128,7 +146,9 @@ public class JvmMonitorTests : IDisposable
         {
             PollInterval = TimeSpan.FromMilliseconds(50),
             WatchHomes = false,
-            SettleInterval = TimeSpan.Zero,
+            // Poll ticks must not restart the settle window; otherwise a poll
+            // shorter than the window would starve every scan.
+            SettleInterval = TimeSpan.FromMilliseconds(100),
         });
         var token = TestContext.Current.CancellationToken;
 
@@ -186,16 +206,28 @@ public class JvmMonitorTests : IDisposable
     }
 
     [Fact]
-    public async Task WatchAsync_CoalescesABurstIntoOneSettledScan()
+    public void Constructor_RejectsIntervalsBeyondTheSystemTimer()
+    {
+        var finder = FinderFor(new StubProvider("stub", []));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new JvmMonitor(
+            finder, new JvmMonitorOptions { PollInterval = TimeSpan.MaxValue }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new JvmMonitor(
+            finder, new JvmMonitorOptions { SettleInterval = TimeSpan.MaxValue }));
+    }
+
+    [Fact]
+    public async Task WatchAsync_RestartsTheSettleWindowOnActivity()
     {
         var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         var provider = new CountingProvider([home]);
+        var gate = new DelayGate();
         var monitor = new JvmMonitor(FinderFor(provider), new JvmMonitorOptions
         {
             PollInterval = TimeSpan.Zero,
             WatchHomes = false,
-            SettleInterval = TimeSpan.FromMilliseconds(250),
-        });
+            SettleInterval = TimeSpan.FromMilliseconds(1),
+        }, gate.Delay);
         var token = TestContext.Current.CancellationToken;
 
         await using var enumerator = monitor.WatchAsync(TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
@@ -205,15 +237,17 @@ public class JvmMonitorTests : IDisposable
         // Resume the loop first; it is now waiting for refresh requests.
         var next = enumerator.MoveNextAsync().AsTask();
         monitor.RequestRefresh();
-        await Task.Delay(100, token);
+        var first = await gate.NextAsync(token).WaitAsync(TimeSpan.FromSeconds(10), token);
+
+        // Activity while the window is open must restart it, not scan immediately.
+        monitor.RequestRefresh();
+        first.SetResult();
+
+        var second = await gate.NextAsync(token).WaitAsync(TimeSpan.FromSeconds(10), token);
         Assert.False(next.IsCompleted);
         Assert.Equal(1, provider.Calls);
 
-        // A second request inside the settle window restarts it.
-        monitor.RequestRefresh();
-        await Task.Delay(100, token);
-        Assert.False(next.IsCompleted);
-
+        second.SetResult();
         Assert.True(await next.WaitAsync(TimeSpan.FromSeconds(10), token));
         Assert.Equal(2, provider.Calls);
     }
@@ -242,6 +276,50 @@ public class JvmMonitorTests : IDisposable
         Assert.Empty(update.Added);
         Assert.Empty(update.Removed);
         Assert.Empty(update.Changed);
+    }
+
+    [Fact]
+    public async Task WatchAsync_CollapsesDuplicatePhysicalHomes()
+    {
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
+        var finder = new JdkFinder
+        {
+            Providers = [new StubProvider("first", [home]), new StubProvider("second", [home])],
+            DeduplicateHomes = false,
+            ProbeRuntimeProperties = false,
+        };
+        var monitor = new JvmMonitor(finder, new JvmMonitorOptions
+        {
+            PollInterval = TimeSpan.Zero,
+            WatchHomes = false,
+            SettleInterval = TimeSpan.Zero,
+        });
+        var token = TestContext.Current.CancellationToken;
+
+        await using var enumerator = monitor.WatchAsync(TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        var initial = await NextAsync(enumerator, token);
+
+        var jvm = Assert.Single(initial.Snapshot);
+        Assert.Equal(["first"], jvm.Providers);
+        Assert.Single(initial.Added);
+        Assert.Empty(initial.Removed);
+    }
+
+    [Fact]
+    public async Task WatchAsync_CanRunAgainAfterTheFirstEnumerationEnds()
+    {
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
+        var monitor = CreateMonitor(new StubProvider("stub", [home]));
+        var token = TestContext.Current.CancellationToken;
+
+        await using (var first = monitor.WatchAsync(TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken))
+        {
+            _ = await NextAsync(first, token);
+        }
+
+        await using var second = monitor.WatchAsync(TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        var update = await NextAsync(second, token);
+        Assert.Single(update.Snapshot);
     }
 
     [Fact]
