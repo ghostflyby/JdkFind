@@ -132,21 +132,28 @@ public class JvmObservableMonitorTests : IDisposable
     {
         var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         var monitor = CreateMonitor([home]);
-        await using var state = JvmObservableMonitor.Start(monitor, synchronizationContext: null);
-        await WaitForAsync(state, () => state.Count == 1);
+        var state = JvmObservableMonitor.Start(monitor, synchronizationContext: null);
+        try
+        {
+            await WaitForAsync(state, () => state.Count == 1);
 
-        var properties = new ConcurrentQueue<string?>();
-        state.PropertyChanged += (_, e) => properties.Enqueue(e.PropertyName);
+            var properties = new ConcurrentQueue<string?>();
+            state.PropertyChanged += (_, e) => properties.Enqueue(e.PropertyName);
 
-        await state.DisposeAsync();
+            await state.DisposeAsync();
 
-        Assert.False(state.IsRunning);
-        Assert.True(state.Completion.IsCompletedSuccessfully);
-        Assert.Contains(nameof(JvmObservableMonitor.IsRunning), properties);
+            Assert.False(state.IsRunning);
+            Assert.True(state.Completion.IsCompletedSuccessfully);
+            Assert.Contains(nameof(JvmObservableMonitor.IsRunning), properties);
 
-        // Disposal is idempotent.
-        await state.DisposeAsync();
-        Assert.True(state.Completion.IsCompletedSuccessfully);
+            // Disposal is idempotent.
+            await state.DisposeAsync();
+            Assert.True(state.Completion.IsCompletedSuccessfully);
+        }
+        finally
+        {
+            await state.DisposeAsync();
+        }
     }
 
     [Fact]
@@ -170,19 +177,28 @@ public class JvmObservableMonitorTests : IDisposable
         var context = new QueuedSynchronizationContext();
         var token = TestContext.Current.CancellationToken;
 
-        await using var state = JvmObservableMonitor.Start(monitor, context);
+        var state = JvmObservableMonitor.Start(monitor, context);
+        try
+        {
+            // Start runs the scan off the calling thread; nothing reaches the
+            // collection until the queued callbacks are pumped.
+            Assert.Equal(0, state.Count);
+            await context.RunNextAsync(token);
+            Assert.Equal(1, state.Count);
 
-        // Start runs the scan off the calling thread; nothing reaches the
-        // collection until the queued callbacks are pumped.
-        Assert.Equal(0, state.Count);
-        await context.RunNextAsync(token);
-        Assert.Equal(1, state.Count);
+            var dispose = state.DisposeAsync().AsTask();
+            await context.RunNextAsync(token);
+            await dispose;
 
-        var dispose = state.DisposeAsync().AsTask();
-        await context.RunNextAsync(token);
-        await dispose;
-
-        Assert.False(state.IsRunning);
+            Assert.False(state.IsRunning);
+        }
+        finally
+        {
+            var disposing = state.DisposeAsync().AsTask();
+            while (!disposing.IsCompleted)
+                await context.RunNextAsync(token);
+            await disposing;
+        }
     }
 
     [Fact]
