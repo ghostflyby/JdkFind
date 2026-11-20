@@ -122,8 +122,10 @@ IReadOnlyList<JavaExecutable> executables = await executableFinder.LocateExecuta
 `JvmMonitor` turns discovery into a long-running stream. The first item is the
 initial snapshot; later items carry the complete snapshot plus what was added,
 removed or changed since the previous update. Scans run on the configured poll
-interval and on demand; by default each located home is also watched for file
-system changes as an additional hint.
+interval and on demand; by default each located home is watched recursively, and
+a burst of file-system events is debounced until it stays quiet for
+`SettleInterval` before the scan starts — probing a home while an upgrade is
+still writing it can run a half-replaced `java`.
 
 ```csharp
 var monitor = new JvmMonitor(

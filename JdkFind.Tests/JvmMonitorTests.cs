@@ -13,6 +13,21 @@ public class JvmMonitorTests : IDisposable
         public IEnumerable<string> GetJavaHomes() => homes;
     }
 
+    private sealed class CountingProvider(IReadOnlyList<string> homes) : IJvmProvider
+    {
+        private int _calls;
+
+        public string Name => "counting";
+
+        public int Calls => Volatile.Read(ref _calls);
+
+        public IEnumerable<string> GetJavaHomes()
+        {
+            Interlocked.Increment(ref _calls);
+            return homes;
+        }
+    }
+
     private static JdkFinder FinderFor(IJvmProvider provider) =>
         new() { Providers = [provider], ProbeRuntimeProperties = false };
 
@@ -21,6 +36,7 @@ public class JvmMonitorTests : IDisposable
         {
             PollInterval = TimeSpan.Zero,
             WatchHomes = false,
+            SettleInterval = TimeSpan.Zero,
         });
 
     private static async Task<JvmUpdate> NextAsync(
@@ -112,6 +128,7 @@ public class JvmMonitorTests : IDisposable
         {
             PollInterval = TimeSpan.FromMilliseconds(50),
             WatchHomes = false,
+            SettleInterval = TimeSpan.Zero,
         });
         var token = TestContext.Current.CancellationToken;
 
@@ -134,6 +151,7 @@ public class JvmMonitorTests : IDisposable
         {
             PollInterval = TimeSpan.Zero,
             WatchHomes = true,
+            SettleInterval = TimeSpan.Zero,
         });
         var token = TestContext.Current.CancellationToken;
 
@@ -165,6 +183,65 @@ public class JvmMonitorTests : IDisposable
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => enumerator.MoveNextAsync().AsTask());
+    }
+
+    [Fact]
+    public async Task WatchAsync_CoalescesABurstIntoOneSettledScan()
+    {
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
+        var provider = new CountingProvider([home]);
+        var monitor = new JvmMonitor(FinderFor(provider), new JvmMonitorOptions
+        {
+            PollInterval = TimeSpan.Zero,
+            WatchHomes = false,
+            SettleInterval = TimeSpan.FromMilliseconds(250),
+        });
+        var token = TestContext.Current.CancellationToken;
+
+        await using var enumerator = monitor.WatchAsync(TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        _ = await NextAsync(enumerator, token);
+        Assert.Equal(1, provider.Calls);
+
+        // Resume the loop first; it is now waiting for refresh requests.
+        var next = enumerator.MoveNextAsync().AsTask();
+        monitor.RequestRefresh();
+        await Task.Delay(100, token);
+        Assert.False(next.IsCompleted);
+        Assert.Equal(1, provider.Calls);
+
+        // A second request inside the settle window restarts it.
+        monitor.RequestRefresh();
+        await Task.Delay(100, token);
+        Assert.False(next.IsCompleted);
+
+        Assert.True(await next.WaitAsync(TimeSpan.FromSeconds(10), token));
+        Assert.Equal(2, provider.Calls);
+    }
+
+    [Fact]
+    public async Task WatchAsync_RecursiveHomeWatcherDetectsNestedChanges()
+    {
+        var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
+        var monitor = new JvmMonitor(FinderFor(new StubProvider("stub", [home])), new JvmMonitorOptions
+        {
+            PollInterval = TimeSpan.Zero,
+            WatchHomes = true,
+            SettleInterval = TimeSpan.FromMilliseconds(100),
+        });
+        var token = TestContext.Current.CancellationToken;
+
+        await using var enumerator = monitor.WatchAsync(TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        _ = await NextAsync(enumerator, token);
+
+        // A non-recursive watcher sees only the top level; this nested write must
+        // still schedule a settled scan.
+        File.WriteAllText(Path.Combine(home, "bin", JavaHomeLayout.JavaExecutableName), "changed");
+
+        var update = await NextAsync(enumerator, token);
+        Assert.Single(update.Snapshot);
+        Assert.Empty(update.Added);
+        Assert.Empty(update.Removed);
+        Assert.Empty(update.Changed);
     }
 
     [Fact]

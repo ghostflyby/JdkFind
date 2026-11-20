@@ -17,12 +17,23 @@ public sealed record JvmMonitorOptions
     public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    ///     Watch the top level of each located home directory for file-system
-    ///     changes. Watchers are hints only: polling and explicit refreshes remain
-    ///     the correctness baseline, because watch semantics differ across
-    ///     platforms and a watched path does not follow symbolic-link retargets.
+    ///     Watch each located home directory recursively. Every write under a home
+    ///     can affect whether the installation is runnable — an upgrade may replace
+    ///     <c>lib</c>, <c>bin</c> or the release file in any order — so nested
+    ///     changes matter. Polling remains the correctness baseline: watch
+    ///     descriptors can be exhausted, event queues can overflow, and a watched
+    ///     path does not follow symbolic-link retargets.
     /// </summary>
     public bool WatchHomes { get; init; } = true;
+
+    /// <summary>
+    ///     How long file-system events must stay quiet before a scan starts. A
+    ///     package upgrade writes many files; probing the installation mid-write can
+    ///     run a half-replaced <c>java</c>. The monitor restarts this window on every
+    ///     event, so a burst produces one scan after it settles. Zero disables the
+    ///     quiet period.
+    /// </summary>
+    public TimeSpan SettleInterval { get; init; } = TimeSpan.FromMilliseconds(500);
 }
 
 /// <summary>
@@ -83,7 +94,7 @@ public sealed record JvmUpdate
         };
     }
 
-    private static string Identity(Jvm jvm) => JdkFinder.GetDeduplicationKey(jvm.Home.FullName);
+    internal static string Identity(Jvm jvm) => JdkFinder.GetDeduplicationKey(jvm.Home.FullName);
 }
 
 /// <summary>A JVM whose metadata changed between two monitor scans.</summary>
@@ -100,9 +111,11 @@ public sealed record JvmChange
 ///     A long-running view of the machine's JVMs. The monitor scans once when
 ///     <see cref="WatchAsync" /> starts and then rescans on its poll interval,
 ///     on <see cref="RequestRefresh" />, when the finder is replaced through
-///     <see cref="UpdateFinder" />, or when one of the located home directories
-///     reports a top-level file-system change. Every update carries the complete
-///     snapshot; the deltas are relative to the update the caller last received.
+///     <see cref="UpdateFinder" />, or when a located home reports a file-system
+///     change. Homes are watched recursively, and a burst of events is debounced
+///     until it stays quiet for <see cref="JvmMonitorOptions.SettleInterval" />
+///     before the scan starts. Every update carries the complete snapshot; the
+///     deltas are relative to the update the caller last received.
 /// </summary>
 public sealed class JvmMonitor
 {
@@ -162,7 +175,7 @@ public sealed class JvmMonitor
         }
 
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var watchers = new List<FileSystemWatcher>();
+        var watchers = new Dictionary<string, WatchedHome>(PathComparison.Comparer);
         PeriodicTimer? timer = null;
         Task? timerPump = null;
         try
@@ -171,10 +184,12 @@ public sealed class JvmMonitor
             var current = await ScanAsync(stop.Token).ConfigureAwait(false);
             var update = JvmUpdate.Diff(previous, current);
             previous = current;
-            yield return update;
 
+            // Activate watchers before the caller sees the snapshot: otherwise a
+            // change between the update and the next MoveNext would be missed.
             if (_options.WatchHomes)
                 ReconcileWatchers(current, watchers);
+            yield return update;
 
             if (_options.PollInterval > TimeSpan.Zero)
             {
@@ -186,6 +201,10 @@ public sealed class JvmMonitor
             {
                 await _refreshRequests.Reader.ReadAsync(stop.Token).ConfigureAwait(false);
 
+                // An upgrade writes in bursts; wait until the burst has been quiet
+                // for the settle window so the scan cannot probe a half-replaced home.
+                await WaitForQuietAsync(stop.Token).ConfigureAwait(false);
+
                 // Scans are serialized; everything requested while one was running
                 // is satisfied by the next scan.
                 while (_refreshRequests.Reader.TryRead(out _))
@@ -195,17 +214,17 @@ public sealed class JvmMonitor
                 current = await ScanAsync(stop.Token).ConfigureAwait(false);
                 update = JvmUpdate.Diff(previous, current);
                 previous = current;
-                yield return update;
 
                 if (_options.WatchHomes)
                     ReconcileWatchers(current, watchers);
+                yield return update;
             }
         }
         finally
         {
             stop.Cancel();
-            foreach (var watcher in watchers)
-                watcher.Dispose();
+            foreach (var watchedHome in watchers.Values)
+                watchedHome.Watcher.Dispose();
 
             timer?.Dispose();
             if (timerPump is not null)
@@ -234,38 +253,124 @@ public sealed class JvmMonitor
     }
 
     /// <summary>
-    ///     Replaces the home watchers with one non-recursive watcher per located
-    ///     home. A home that cannot be watched still participates through polling.
+    ///     Incrementally reconciles one recursive watcher per canonical home. Homes
+    ///     that are still present keep their watcher; only additions, removals and a
+    ///     changed reported path (for example a retargeted symlink) create or drop
+    ///     one. A home that cannot be watched still participates through polling.
     /// </summary>
-    private void ReconcileWatchers(IReadOnlyList<Jvm> snapshot, List<FileSystemWatcher> watchers)
+    private void ReconcileWatchers(
+        IReadOnlyList<Jvm> snapshot, Dictionary<string, WatchedHome> watchers)
     {
-        foreach (var watcher in watchers)
-            watcher.Dispose();
-        watchers.Clear();
-
+        var seen = new HashSet<string>(PathComparison.Comparer);
         foreach (var jvm in snapshot)
         {
-            try
+            var identity = JvmUpdate.Identity(jvm);
+            if (!seen.Add(identity))
+                continue;
+
+            var homePath = jvm.Home.FullName;
+            if (watchers.TryGetValue(identity, out var existing))
             {
-                var watcher = new FileSystemWatcher(jvm.Home.FullName)
-                {
-                    IncludeSubdirectories = false,
-                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName |
-                                   NotifyFilters.LastWrite | NotifyFilters.Size,
-                };
-                watcher.Changed += OnFileSystemEvent;
-                watcher.Created += OnFileSystemEvent;
-                watcher.Deleted += OnFileSystemEvent;
-                watcher.Renamed += OnRenamed;
-                watcher.Error += OnWatcherError;
-                watcher.EnableRaisingEvents = true;
-                watchers.Add(watcher);
+                if (PathComparison.Comparer.Equals(existing.Path, homePath) && !existing.Failed)
+                    continue;
+
+                existing.Watcher.Dispose();
+                watchers.Remove(identity);
             }
-            catch (Exception exception) when (
-                exception is IOException or UnauthorizedAccessException or ArgumentException or SecurityException)
+
+            if (TryCreateWatcher(homePath) is { } watchedHome)
+                watchers[identity] = watchedHome;
+        }
+
+        List<string>? removed = null;
+        foreach (var identity in watchers.Keys)
+        {
+            if (!seen.Contains(identity))
+                (removed ??= []).Add(identity);
+        }
+
+        if (removed is null)
+            return;
+
+        foreach (var identity in removed)
+        {
+            watchers[identity].Watcher.Dispose();
+            watchers.Remove(identity);
+        }
+    }
+
+    private WatchedHome? TryCreateWatcher(string homePath)
+    {
+        try
+        {
+            var watcher = new FileSystemWatcher(homePath)
             {
-                // Watching is an optimization; scanning still reports this home.
+                IncludeSubdirectories = true,
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName |
+                               NotifyFilters.LastWrite | NotifyFilters.Size,
+            };
+            var watchedHome = new WatchedHome(homePath, watcher);
+            watcher.Changed += OnFileSystemEvent;
+            watcher.Created += OnFileSystemEvent;
+            watcher.Deleted += OnFileSystemEvent;
+            watcher.Renamed += OnRenamed;
+            watcher.Error += (_, _) =>
+            {
+                // An overflow or a dead handle: let the next scan recreate the
+                // watcher instead of silently degrading to polling.
+                watchedHome.Failed = true;
+                RequestRefresh();
+            };
+            watcher.EnableRaisingEvents = true;
+            return watchedHome;
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or ArgumentException or SecurityException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Waits until no refresh request arrives for the settle interval,
+    /// restarting the window on each request. The scan therefore starts only after
+    /// an upgrade's write burst has stopped.</summary>
+    private async Task WaitForQuietAsync(CancellationToken cancellationToken)
+    {
+        var settleInterval = _options.SettleInterval;
+        if (settleInterval <= TimeSpan.Zero)
+            return;
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            using var window = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var quiet = Task.Delay(settleInterval, window.Token);
+            var activity = _refreshRequests.Reader.ReadAsync(window.Token).AsTask();
+            var completed = await Task.WhenAny(quiet, activity).ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            window.Cancel();
+
+            if (completed == quiet)
+            {
+                await IgnoreCancellationAsync(activity).ConfigureAwait(false);
+                return;
             }
+
+            await IgnoreCancellationAsync(quiet).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task IgnoreCancellationAsync(Task task)
+    {
+        try
+        {
+            await task.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The other side of the quiet-period race.
         }
     }
 
@@ -273,5 +378,12 @@ public sealed class JvmMonitor
 
     private void OnRenamed(object sender, RenamedEventArgs e) => RequestRefresh();
 
-    private void OnWatcherError(object sender, ErrorEventArgs e) => RequestRefresh();
+    private sealed class WatchedHome(string path, FileSystemWatcher watcher)
+    {
+        internal string Path { get; } = path;
+
+        internal FileSystemWatcher Watcher { get; } = watcher;
+
+        internal volatile bool Failed;
+    }
 }

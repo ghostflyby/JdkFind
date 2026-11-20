@@ -39,7 +39,7 @@ public class JvmObservableMonitorTests : IDisposable
 
     private static JvmMonitor CreateMonitor(IReadOnlyList<string> homes) =>
         new(new JdkFinder { Providers = [new StubProvider("stub", homes)], ProbeRuntimeProperties = false },
-            new JvmMonitorOptions { PollInterval = TimeSpan.Zero, WatchHomes = false });
+            new JvmMonitorOptions { PollInterval = TimeSpan.Zero, WatchHomes = false, SettleInterval = TimeSpan.Zero });
 
     /// <summary>Waits for a property notification that satisfies
     /// <paramref name="condition" />; the initial check covers an update that
@@ -152,7 +152,7 @@ public class JvmObservableMonitorTests : IDisposable
     {
         var monitor = new JvmMonitor(
             new JdkFinder { Providers = [new ThrowingProvider()], ProbeRuntimeProperties = false },
-            new JvmMonitorOptions { PollInterval = TimeSpan.Zero, WatchHomes = false });
+            new JvmMonitorOptions { PollInterval = TimeSpan.Zero, WatchHomes = false, SettleInterval = TimeSpan.Zero });
 
         await using var state = JvmObservableMonitor.Start(monitor, synchronizationContext: null);
         await WaitForAsync(state, () => !state.IsRunning);

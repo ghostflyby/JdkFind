@@ -18,6 +18,8 @@ JdkFind.JvmMonitorOptions.Equals(JdkFind.JvmMonitorOptions? other) -> bool
 JdkFind.JvmMonitorOptions.JvmMonitorOptions() -> void
 JdkFind.JvmMonitorOptions.PollInterval.get -> System.TimeSpan
 JdkFind.JvmMonitorOptions.PollInterval.init -> void
+JdkFind.JvmMonitorOptions.SettleInterval.get -> System.TimeSpan
+JdkFind.JvmMonitorOptions.SettleInterval.init -> void
 JdkFind.JvmMonitorOptions.WatchHomes.get -> bool
 JdkFind.JvmMonitorOptions.WatchHomes.init -> void
 JdkFind.JvmObservableMonitor
