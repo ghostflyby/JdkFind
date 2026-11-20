@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
+using System.ComponentModel;
 
 namespace JdkFind.Tests;
 
@@ -40,13 +41,30 @@ public class JvmObservableMonitorTests : IDisposable
         new(new JdkFinder { Providers = [new StubProvider("stub", homes)], ProbeRuntimeProperties = false },
             new JvmMonitorOptions { PollInterval = TimeSpan.Zero, WatchHomes = false });
 
-    private static async Task WaitUntilAsync(Func<bool> condition)
+    /// <summary>Waits for a property notification that satisfies
+    /// <paramref name="condition" />; the initial check covers an update that
+    /// landed before the subscription, so no state is polled.</summary>
+    private static async Task WaitForAsync(JvmObservableMonitor state, Func<bool> condition)
     {
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
-        while (!condition())
+        var signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            Assert.True(DateTime.UtcNow < deadline, "Timed out waiting for the observable monitor.");
-            await Task.Delay(10, TestContext.Current.CancellationToken);
+            if (condition())
+                signal.TrySetResult();
+        }
+
+        state.PropertyChanged += OnPropertyChanged;
+        try
+        {
+            if (condition())
+                return;
+
+            await signal.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            state.PropertyChanged -= OnPropertyChanged;
         }
     }
 
@@ -58,7 +76,7 @@ public class JvmObservableMonitorTests : IDisposable
         var monitor = CreateMonitor(homes);
         await using var state = JvmObservableMonitor.Start(monitor, synchronizationContext: null);
 
-        await WaitUntilAsync(() => state.Count == 1);
+        await WaitForAsync(state, () => state.LastUpdated is not null);
         Assert.True(state.IsRunning);
         Assert.Null(state.LastError);
         Assert.NotNull(state.LastUpdate);
@@ -72,7 +90,7 @@ public class JvmObservableMonitorTests : IDisposable
         homes.Add(second);
         monitor.RequestRefresh();
 
-        await WaitUntilAsync(() => state.Count == 2 && state.LastUpdate?.Added.Count == 1);
+        await WaitForAsync(state, () => state.Count == 2 && state.LastUpdate?.Added.Count == 1);
         Assert.Single(state.LastUpdate!.Added);
         Assert.Contains(NotifyCollectionChangedAction.Add, actions);
 
@@ -80,7 +98,7 @@ public class JvmObservableMonitorTests : IDisposable
         TestJdk.Create(_temp.FullPath, "26.0.1", "jdk-21");
         monitor.RequestRefresh();
 
-        await WaitUntilAsync(() => state.LastUpdate?.Changed.Count == 1);
+        await WaitForAsync(state, () => state.LastUpdate?.Changed.Count == 1);
         Assert.Equal("26.0.1", state.Jvms[0].Version.Original);
         Assert.Single(state.LastUpdate!.Changed);
         Assert.Contains(NotifyCollectionChangedAction.Replace, actions);
@@ -88,7 +106,7 @@ public class JvmObservableMonitorTests : IDisposable
         homes.Remove(second);
         monitor.RequestRefresh();
 
-        await WaitUntilAsync(() => state.Count == 1 && state.LastUpdate?.Removed.Count == 1);
+        await WaitForAsync(state, () => state.Count == 1 && state.LastUpdate?.Removed.Count == 1);
         Assert.Single(state.LastUpdate!.Removed);
         Assert.Contains(NotifyCollectionChangedAction.Remove, actions);
         Assert.Equal(first, state.Jvms[0].Home.FullName);
@@ -100,7 +118,7 @@ public class JvmObservableMonitorTests : IDisposable
         var home = TestJdk.Create(_temp.FullPath, "21.0.5", "jdk-21");
         var monitor = CreateMonitor([home]);
         await using var state = JvmObservableMonitor.Start(monitor, synchronizationContext: null);
-        await WaitUntilAsync(() => state.Count == 1);
+        await WaitForAsync(state, () => state.Count == 1);
 
         var properties = new ConcurrentQueue<string?>();
         state.PropertyChanged += (_, e) => properties.Enqueue(e.PropertyName);
@@ -125,7 +143,7 @@ public class JvmObservableMonitorTests : IDisposable
 
         await using var state = JvmObservableMonitor.Start(monitor, context);
 
-        await WaitUntilAsync(() => state.Count == 1);
+        await WaitForAsync(state, () => state.Count == 1);
         Assert.True(context.PostCount > 0);
     }
 
@@ -137,7 +155,8 @@ public class JvmObservableMonitorTests : IDisposable
             new JvmMonitorOptions { PollInterval = TimeSpan.Zero, WatchHomes = false });
 
         await using var state = JvmObservableMonitor.Start(monitor, synchronizationContext: null);
-        await WaitUntilAsync(() => !state.IsRunning);
+        await WaitForAsync(state, () => !state.IsRunning);
+        await state.Completion;
 
         Assert.Contains("boom", state.LastError);
         Assert.Empty(state.Jvms);
